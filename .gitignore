@@ -1,8 +1,13 @@
 *.o
 *~
+*.in
 .deps
 /build
 autom4te.cache
 /crrcsim
 Makefile
 /compile
+/config.log
+/config.status
+/stamp-h1
+crrc_config.h
