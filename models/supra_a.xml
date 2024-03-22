@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+<CRRCSim_airplane version="2">
+  <name>
+    <en>Supra</en>
+  </name>
+  <categories>
+    <category>Gliders</category>
+    <category>F3J</category>
+  </categories>
+  <description>
+    <en>
+Supra by Mark Drela.
+The Supra is a light-weight (48 oz.) 3.4 m glider
+designed for F3J/TD competitions.
+See http://www.charlesriverrc.org/articles/supra/supra.htm
+for more details.
+
+This model makes use of the spoiler input.
+      
+AVL input files created by Mark Drela.
+Aerodynamic parameters calculated by Paul Jacobson.
+3D model and XML file created by Jan Reucker.
+
+Revised by Bob Parks and Mark Drela
+    </en>
+  </description>
+  <changelog>
+    <change>
+      <date>2006-06-02</date>
+      <author>Jan Reucker</author>
+      <en>File created.</en>
+    </change>
+    <change>
+      <date>2006-06-08</date>
+      <author>Jan Reucker</author>
+      <en>Corrected location of the hardpoints.</en>
+    </change>
+    <change>
+      <date>2006-11-05</date>
+      <author>Jan Reucker</author>
+      <en>Reversed rudder travel direction.</en>
+    </change>
+     <change>
+      <date>2007-03-14</date>
+      <author>Bob Parks and Mark Drela</author>
+      <en>Several tweaks to aero parameters to make handling more realistic.
+      The CG_arm was reduced from .25 to .1, the CL_drop from .5 to .1 to give more realistic stall
+      The Cn-dr was changed from -0.027530 to -0.045530 to match Mark's AVL results  </en>
+    </change>
+    <change>
+      <date>2009-02-25</date>
+      <author>Jens W. Wulf</author>
+      <en>Added launch default</en>
+    </change>
+     <change>
+      <date>2010-05-15</date>
+      <author>J. Reucker</author>
+      <en>Added max_force to springs</en>
+    </change>
+     <change>
+      <date>2011-04-25</date>
+      <author>J. Reucker</author>
+      <en>Added spoiler settings.</en>
+    </change>
+</changelog>
+  <aero version="1" units="0">
+     <ref chord="0.633" span="11.15" area="7.181" speed="26.316901" />
+     <misc Alpha_0="0.0238011" eta_loc="0.15" CG_arm="0.1"  
+           span_eff="0.95" />
+     <m Cm_0="0" Cm_a="-0.583383" Cm_q="-16.861408" Cm_de="-0.517913" />
+     <lift CL_0="0.46650" CL_max="1.1" CL_min="-0.6" CL_a="5.900288"  
+           CL_q="7.889002" CL_de="0.120916" CL_drop="0.1" CL_CD0="0" />
+     <drag CD_prof="0.015" Uexp_CD="-0.5" CD_stall="0" CD_CLsq="0.01"  
+           CD_AIsq="0" CD_ELsq="0" />
+     <Y CY_b="-0.246774" CY_p="-0.189781" CY_r="0.167718"  
+        CY_dr="0.087699" CY_da="0.060702" />
+     <l Cl_b="-0.130917" Cl_p="-0.657000" Cl_r="0.120091"  
+        Cl_dr="0.003944" Cl_da="0.245995" />
+     <n Cn_b="0.051543" Cn_p="-0.046908" Cn_r="-0.040895"  
+        Cn_dr="-0.045530" Cn_da="0.012100" />
+     <spoiler drag="0.06"  lift="-0.4" />
+  </aero>
+  <config version="1">
+    <descr_long>
+      <en>
+        Default configuration from Mark Drela's set of AVL files.
+      </en>
+    </descr_long>
+    <descr_short>
+      <en>default</en>
+    </descr_short>
+    <mass_inertia version="1" units="1" Mass="1.25020" I_xx="0.474178"
+                  I_yy="0.0957865" I_zz="0.566328" I_xz="-0.00265910" />
+  </config>
+  <graphics version="1" model="supra.ac">
+    <descr_long>
+      <en>Default 3D model.</en>
+    </descr_long>
+    <descr_short>
+      <en>default</en>
+    </descr_short>
+  </graphics>
+  <wheels version="1" units="0">
+    <!-- right wingtip -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.12" y="5.57" z="-0.53" />
+      <spring constant="10" damping="0.2" max_force="12.0" />
+    </wheel>
+    <!-- left wingtip -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.12" y="-5.57" z="-0.53" />
+      <spring constant="10" damping="0.2" max_force="12.0" />
+    </wheel>
+    <!-- right wing -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="0.00" y="2.51" z="-0.13" />
+      <spring constant="10" damping="0.2" max_force="12.0" />
+    </wheel>
+    <!-- left wing -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="0.00" y="2.51" z="-0.13" />
+      <spring constant="10" damping="0.2" max_force="12.0" />
+    </wheel>
+    <!-- nose -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="1.55" y="0.00" z="0.10" />
+      <spring constant="10" damping="0.2" max_force="12.0" />
+    </wheel>
+    <!-- fuselage 1 -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="1.50" y="0.00" z="0.15" />
+      <spring constant="10" damping="0.2" max_force="12.0" />
+    </wheel>
+    <!-- fuselage 2 -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="1.02" y="0.00" z="0.19" />
+      <spring constant="10" damping="0.2" max_force="12.0" />
+    </wheel>
+    <!-- fuselage 3 -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="0.44" y="0.00" z="0.19" />
+      <spring constant="10" damping="0.2" max_force="12.0" />
+    </wheel>
+    <!-- fuselage 4 -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-3.72" y="0.00" z="0.13" />
+      <spring constant="10" damping="0.2" max_force="12.0" />
+    </wheel>
+    <!-- hook -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.05" y="0.00" z="0.19" />
+      <spring constant="10" damping="0.2" max_force="12.0" />
+    </wheel>
+    <!-- rudder -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-4.11" y="0.00" z="0.04" />
+      <spring constant="10" damping="0.2" max_force="12.0" />
+    </wheel>
+    <!-- fin -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-3.75" y="0.00" z="-1.03" />
+      <spring constant="10" damping="0.2" max_force="12.0" />
+    </wheel>
+    <!-- right elevator -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-3.26" y="1.09" z="-0.07" />
+      <spring constant="10" damping="0.2" max_force="12.0" />
+    </wheel>
+    <!-- left elevator -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-3.26" y="-1.09" z="-0.07" />
+      <spring constant="10" damping="0.2" max_force="12.0" />
+    </wheel>
+  </wheels>
+  <launch>
+    <preset name_en="glider default (hand)" altitude="6" velocity_rel="1" angle="0" sal="0" rel_to_player="1" rel_front="0" rel_right="2" />
+  </launch>  
+</CRRCSim_airplane>

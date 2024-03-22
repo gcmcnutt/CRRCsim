@@ -1,0 +1,241 @@
+<?xml version="1.0" ?>
+<CRRCSim_airplane version="3" type="heli01">
+  <categories>
+    <category>Rotorcraft</category>
+  </categories>
+  <description>
+    <en>
+This is a first helicopter model for CRRCSim. Simple graphics. 
+It is meant as a starting point and to try out what feels 
+realistic.
+It contains different configurations for several types of 
+helicopters and conditions.
+    </en>
+  </description>
+  <changelog>
+    <change>
+      <date>2008-09-05</date>
+      <author>Jens W. Wulf</author>
+      <en>Created it. Currently it has an invisible 'easy' landing gear. I
+          don't know if any of the configs feels realistic for some 
+          model helicopter.</en>
+    </change>
+    <change>
+      <date>2008-09-07</date>
+      <author>Jens W. Wulf</author>
+      <en>Added some configurations.</en>
+    </change>
+    <change>
+      <date>2008-09-15</date>
+      <author>Jens W. Wulf</author>
+      <en>Changed meaning of some parameters to make them indepedent of each other,
+          increased file version.</en>
+    </change>
+    <change>
+      <date>2009-02-25</date>
+      <author>Jens W. Wulf</author>
+      <en>Added default launch setting</en>
+    </change>
+    <change>
+      <date>2009-05-25</date>
+      <author>Jens W. Wulf</author>
+      <en>Stripped everything except "collective pitch, beginner, no wind", adapted to
+          current code. A helicopter pilot told me that these settings are "ok, but not 
+          suitable for 3D practise". Currently disturbances are set to zero, which is 
+          not quite realistic, I think.</en>
+    </change>
+    <change>
+      <date>2010-05-13</date>
+      <author>J. Reucker</author>
+      <en>Added max_force to springs</en>
+    </change>
+  </changelog>
+  <wheels version="1" units="0">
+    
+    <!-- these are the real gearing points for heli.ac:
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="35" damping="0.15" />
+      <pos x="0.22965879" y="0.164042" z="0.0065616798" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="35" damping="0.15" />
+      <pos x="-0.22965879" y="0.164042" z="0.0065616798" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="35" damping="0.15" />
+      <pos x="0.22965879" y="-0.164042" z="0.0065616798" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="35" damping="0.15" />
+      <pos x="-0.22965879" y="-0.164042" z="0.0065616798" />
+    </wheel>
+    -->
+    
+    
+    <!-- an easier gearing -->
+    <wheel percent_brake="0.8" caster_angle_rad="0">
+      <spring constant="35" damping="0.5" max_force="5.0" />
+      <pos x="0.4" y="0.3" z="0.0065616798" />
+    </wheel>
+    <wheel percent_brake="0.8" caster_angle_rad="0">
+      <spring constant="35" damping="0.5" max_force="5.0" />
+      <pos x="-0.4" y="0.3" z="0.0065616798" />
+    </wheel>
+    <wheel percent_brake="0.8" caster_angle_rad="0">
+      <spring constant="35" damping="0.5" max_force="5.0" />
+      <pos x="0.4" y="-0.3" z="0.0065616798" />
+    </wheel>
+    <wheel percent_brake="0.8" caster_angle_rad="0">
+      <spring constant="35" damping="0.5" max_force="5.0" />
+      <pos x="-0.4" y="-0.3" z="0.0065616798" />
+    </wheel>
+
+    
+    <!-- main rotor -->    
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <spring constant="35" damping="0.15" max_force="0.5" />
+      <pos x="-0.69597125" y="0.69597125" z="-0.73818898" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <spring constant="35" damping="0.15" max_force="0.5" />
+      <pos x="-0.37665692" y="0.90933026" z="-0.73818898" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <spring constant="35" damping="0.15" max_force="0.5" />
+      <pos x="-9.10616e-17" y="0.98425198" z="-0.73818898" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <spring constant="35" damping="0.15" max_force="0.5" />
+      <pos x="0.37665692" y="0.90933026" z="-0.73818898" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <spring constant="35" damping="0.15" max_force="0.5" />
+      <pos x="0.69597125" y="0.69597125" z="-0.73818898" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <spring constant="35" damping="0.15" max_force="0.5" />
+      <pos x="0.90933026" y="0.37665692" z="-0.73818898" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <spring constant="35" damping="0.15" max_force="0.5" />
+      <pos x="0.98425198" y="9.10616e-17" z="-0.73818898" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <spring constant="35" damping="0.15" max_force="0.5" />
+      <pos x="0.90933026" y="-0.37665692" z="-0.73818898" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <spring constant="35" damping="0.15" max_force="0.5" />
+      <pos x="0.69597125" y="-0.69597125" z="-0.73818898" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <spring constant="35" damping="0.15" max_force="0.5" />
+      <pos x="0.37665692" y="-0.90933026" z="-0.73818898" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <spring constant="35" damping="0.15" max_force="0.5" />
+      <pos x="1.821232e-16" y="-0.98425198" z="-0.73818898" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <spring constant="35" damping="0.15" max_force="0.5" />
+      <pos x="-0.37665692" y="-0.90933026" z="-0.73818898" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <spring constant="35" damping="0.15" max_force="0.5" />
+      <pos x="-0.69597125" y="-0.69597125" z="-0.73818898" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <spring constant="35" damping="0.15" max_force="0.5" />
+      <pos x="-0.98425198" y="-2.731848e-16" z="-0.73818898" />
+    </wheel>
+    
+    <!-- others -->
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="35" damping="0.15" max_force="5.0" />
+      <pos x="-1.1811024" y="0.049212599" z="-0.1476378" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="35" damping="0.15" max_force="5.0" />
+      <pos x="-1.2627114" y="0.049212599" z="-0.16387084" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="35" damping="0.15" max_force="5.0" />
+      <pos x="-1.3318961" y="0.049212599" z="-0.21009862" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="35" damping="0.15" max_force="5.0" />
+      <pos x="-1.3781239" y="0.049212599" z="-0.27928339" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="35" damping="0.15" max_force="5.0" />
+      <pos x="-1.394357" y="0.049212599" z="-0.36089239" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="35" damping="0.15" max_force="5.0" />
+      <pos x="-1.3781239" y="0.049212599" z="-0.44250139" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="35" damping="0.15" max_force="5.0" />
+      <pos x="-1.3318961" y="0.049212599" z="-0.51168616" />
+    </wheel>
+  </wheels>
+
+  <!-- Ground effect parameters should be quite independent of the helicopter 
+       parameters...shouldn't they? However, they can be adjusted to make it easier 
+       for users to get them right and provide feedback. -->
+  <GroundEffect>
+    <dist  mul="1.5" />
+  </GroundEffect>
+
+  <Disturbance tau_filter="0.2" time="0.2" />
+  
+  <CG units="1" x="0" y="0" z="-130E-3" />  
+  
+  <graphics version="1" model="heli.ac">
+    <descr_long>
+      <en>automatically created</en>
+    </descr_long>
+    <descr_short>
+      <en>auto</en>
+    </descr_short>
+  </graphics>
+      
+  <config version="1" adjust="0">
+    <descr_long>
+      <en>Collective pitch beginner, no wind</en>
+    </descr_long>
+    <descr_short>
+      <en>Collective pitch beginner, no wind</en>
+    </descr_short>
+    <mass_inertia version="1" units="1" Mass="0.56284" I_xx="0.007349664"
+      I_yy="0.006516176" I_zz="0.013747157" I_xz="0.00021689529" />
+    <sound version="1">
+      <sample filename="fan.wav" type="1" pitchfactor="0.03" maxvolume="1" />
+    </sound>
+    <aero version="1" >
+      <yaw   ctrl="12" damp="20" damp_min_rel="0.25" dist="0" vane="0.2" moment_mul="1" />
+      <pitch vane="0.04" />
+      <roll  ctrl="4" damp="4" dist="0" ForwardToRoll="0" />
+      <cp    ctrl="3" />
+      <speed damp="0.03" />
+    </aero>  
+    <power fixed_pitch="1" >
+      <automagic F="15" V="1">
+        <battery throttle_min="0">
+          <automagic T="420" />
+          <shaft J="0" brake="0">
+            <propeller D="0.6" H="0.3" J="2E-3" n_fold="-1" />
+            <engine>
+              <automagic omega_p="2827" eta_opt="0.78" eta="0.7" />
+            </engine>
+          </shaft>
+        </battery>
+      </automagic>
+    </power>
+  </config>
+    
+  <launch>
+    <preset name_en="heli default (ground)" altitude="0" velocity_rel="0" angle="0" sal="0" rel_to_player="1" rel_front="21" rel_right="0" />
+  </launch>
+  
+</CRRCSim_airplane>

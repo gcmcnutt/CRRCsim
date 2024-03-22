@@ -1,0 +1,17 @@
+CC = gcc
+
+all: rctran2.o
+
+
+# remove implicit rules
+.SUFFIXES:
+
+RCTRAN_CFLAGS = -Wall -Wstrict-prototypes -O2 -fomit-frame-pointer \
+                -fno-strength-reduce -D__RT__ -D__KERNEL__ -DMODULE -c
+
+rctran2.o: rctran2.c
+	$(CC) -o rctran2.o rctran2.c ${RCTRAN_CFLAGS} -I/lib/modules/`uname -r`/build/include
+
+install: rctran2.o
+	cp rctran2.o /lib/modules/`uname -r`/rctran2.o
+	depmod -a

@@ -1,0 +1,135 @@
+CRRCSim README
+--------------
+
+1. What is CRRCSim?
+-------------------
+
+CRRCSim is the "Charles River Radio Controllers Simulation",
+a multi-platform simulation for R/C model airplanes. It was
+originally written by Jan Kansky and Mark Drela, both members
+of the CRRC (http://www.charlesriverrc.org). The simulation
+focusses on the realistic simulation of gliders, but also
+provides some powered airplanes.
+
+Please take a look at the CRRCSim homepage for more information:
+
+http://crrcsim.berlios.de/wiki
+
+
+2. Installing CRRCSim
+---------------------
+
+Please take a look at the documents in the "Documentation"
+subdirectory which describe the installation on all
+supported platforms.
+
+
+3. Reporting bugs
+-----------------
+
+First of all, please note that CRRCSim is still considered to
+be beta software. We try to solve any problems as soon as
+they are reported, but there might still be a lot of bugs
+hidden in the software.
+
+If you find a bug in CRRCSim we'd really appreciate if you'd take
+the time to file a bug report at the CRRCSim project homepage
+(http://www.sourceforge.net/projects/crrcsim). You can access the
+bug-tracking system through the link "Bugs" on the aforementioned
+page. Before adding a new bug, please browse through the existing
+entries to prevent duplicates. You can always add aditional
+information to an existing bug.
+
+Please include as much information as possible in your bug report:
+Operating system, CRRCSim version string (menu Help-->About) and a
+description of the bug is the bare minimum. In addition you could
+add the debugging information which is printed to stdout and stderr.
+On GNU/Linux and MacOS-X simply start CRRCSim from a console window
+and redirect the output into a file or cut and paste it from the
+console window. On Windows you'll find two text files in the
+CRRCSim directory named 'stdout.txt' and 'stderr.txt' which contain
+all information from the last CRRCSim run.
+
+
+4. Feature requests
+-------------------
+
+If you are missing a feature in CRRCSim, please let us know.
+This helps us to priorize our future improvements. You can
+use the feature request system provided by Sourceforge.net
+which is accessible from the project development page
+(https://developer.berlios.de/projects/crrcsim/). Just click
+on the link "Features" on top of the page.
+
+
+5. Where to get help
+--------------------
+
+Although there's lot of information provided in the documentation
+directory, you might still run into problems when compiling,
+installing or running CRRCSim. The following ressources might help
+you in this case.
+
+The CRRCSim Wiki
+  
+  http://crrcsim.berlios.de/wiki/
+  
+  The CRRCSim Wiki is a collection of web pages dealing with
+  different aspects of CRRCSim. Here you'll find some documentation,
+  a list of frequently asked questions (FAQ) and lots of links
+  to CRRCSim-related web sites.
+  The Wiki also gives you a chance to contribute to CRRCSim if you
+  aren't familiar with programming. You can add information to the
+  existing pages or even create new pages. You can express your
+  opinion on existing feature requests by voting for them or adding
+  a comment on the RoadMap page.
+  Instructions on how to work with the Wiki are given at the bottom
+  of the Wiki's MainPage.
+
+
+The CRRCSim Yahoo! group
+  
+  http://groups.yahoo.com/group/crrcsim/
+  
+  This is the place where the CRRCSim users meet. The group is
+  unmoderated, so all you need to join is a valid Yahoo! Groups
+  account. For more info on Yahoo! Groups, see http://groups.yahoo.com.
+  The group is also frequently visited by the CRRCSim developers.
+
+
+The CRRCSim development home page
+  
+  https://developer.berlios.de/projects/crrcsim/
+  
+  If you want to participate in the development of CRRCSim or just
+  want to get the bleeding-edge CVS version of CRRCSim, this is
+  the place to go. You can also access the download section
+  containing previous releases from this page. Sourceforge also
+  provides the above-mentioned bug tracking system and a
+  sophisticated feature request management system.
+
+
+6. Legal notice
+---------------
+
+CRRCSim is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License version 2
+as published by the Free Software Foundation.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place, Suite 330,
+Boston, MA 02111-1307, USA.
+
+CRRCsim can optionally be linked with the CGAL library
+(http://www.cgal.org). Parts of this library are licensed
+under the QPL which is incompatible to the GPL. Therefore,
+as a special exception, you have permission to link this program
+with the CGAL library and distribute executables, as long as you
+follow the requirements of the GNU GPL in regard to all of the
+software in the executable aside from CGAL.

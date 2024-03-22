@@ -1,0 +1,33 @@
+How to control the plane and crrcsim
+------------------------------------
+
+Besides mouse/joystick/transmitter input, the following keys can be used:
+
+escape              show/hide graphical user interface
+q                   quit
+r                   restart after crash
+p                   pause/resume simulation
+c                   reload model configuration (see note below)
+d                   toggle control input debugging mode
+m                   toggle model's close-view window visualisation mode (0..2)
+t                   toggle training mode which displays the location of the thermals
+v                   toggle verbosity level (0..3) to display control inputs/FOV/FPS info
+h                   toggle HUD compass visualisation mode
+w                   toggle 3D wind vector visualisation mode (0..2)
+g                   toggle landing gear (if function is not mapped to a controller)
+b                   toggle spoiler/airbrake (if function is not mapped to a controller)
+space               toggle slow motion
+< and >             adjust slow motion time dilatation factor
+page up             increase throttle (if you aren't using JOYSTICK or better)
+page down           decrease throttle (if you aren't using JOYSTICK or better)
++                   zoom in (assuming zoom.control is KEYBOARD)
+-                   zoom out (assuming zoom.control is KEYBOARD)
+right/right arrow   rudder
+up/down arrow       elevator
+
+
+Note on reloading model configuration:
+This feature allows you to reread the models parameters while the simulation
+is running. Currently this does not affect its graphical representation, but
+only its behaviour, so it is useful for adjusting model parameters without 
+having to restart CRRCSim.

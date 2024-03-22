@@ -1,0 +1,67 @@
+--- an email I wrote to Jan and the list ----------------------------
+
+Hi Jan,
+
+as I wrote last week, I'm currently reworking a big part of the code.
+It is about LaRCSim mainly, but involves separating the physics of the plane
+(one class) from its visual and audible representation (another class).
+
+I first made some mistakes when I wanted to do this, so it takes longer than
+neccessary. Hopefully I can check something in the next days (I think so).
+It is not finished by then, but should work and the structure should be
+quite stable by then.
+
+About coordinates systems: LaRCSim uses geocentric and geodetic coordinate
+system, plus 'runway' coordinates and other things. Lots of stuff which we
+don't need. Regarding our short-range simulation the non-flat character of
+the real world is not important at all.
+
+So I want to use only two coordinate systems:
+ 1. local (inertial, earth, world, whatever you call it)
+ 2. body (aligned to stability axes of the plane)
+And both of them are set up like one can find it in lots of textbooks:
+
+local:
+  x -> north positive
+  y -> east  positive
+  z -> down  positive (so we'll have negative values)
+
+body:
+  x -> nose
+  y -> right wing
+  z -> down
+
+Euler angles phi, theta, psi as usual, too.
+
+No more latitude, longitude, earth radius, geocentric and geodetic, ...
+
+So x and y of this local frame are aligned to your axes. Can you agree to
+use z like described above (negative values up)?
+
+Best regards,
+Jens
+
+
+--- current state (east-south-down) ---------------------------------
+
+(as visible at davis)
+  east:  x positive
+  south: y positve
+So, the system in use is: east-south-down
+
+--- how it should be (north-east-down) ------------------------------
+
+Davis: see davis.jpg
+Cape Cod: seems to be 'Wellfleet - Great Island National Seashore Area',
+where the cliff faces to the west.
+
+north: x positive
+east:  y positive
+
+Wind:
+  Direction of air molecule travel: where do they come from?
+    0/360: from north
+    90   : from east
+    180  : from south
+    ...
+    

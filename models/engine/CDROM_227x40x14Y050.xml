@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+  <!--
+    Home-built brushless engine build from a 22.7 mm
+    CDROM drive stator and can (aka Powerschnurzz in
+    german bulletin boards). 14 windings of 0.5 sqmm
+    copper wire.
+     
+     J_M is just guessed.
+   -->
+   
+  <engine_dcm  J_M="3.0E-7" calc="1">
+    <data>
+      <data U_K="7.92" I_M="0.36" n="238.0" />
+      <data U_K="7.10" I_M="5.50" n="176.7" />
+    </data>  
+    <data_idle>
+      <data I_M="0.36" />
+    </data_idle>
+  </engine_dcm>

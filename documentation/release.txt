@@ -1,0 +1,18 @@
+How to create a new release
+===========================
+
+=== Source 
+
+Update documentation/ReleaseNotes
+
+From the base directory, run (use correct version number):
+
+  hg tag 0.9.13
+  ./packages/source/create_archive.sh 0.9.13
+  
+This one creates a .tar.bz2 (don't distribute that one) and a .tar.gz
+which is the source release you should distribute.
+
+=== windows binary
+
+todo

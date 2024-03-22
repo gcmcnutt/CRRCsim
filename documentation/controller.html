@@ -1,0 +1,240 @@
+<html>
+  <head>
+    <style type="text/css">
+    .fragment {
+       font-family: monospace
+}
+PRE.fragment {
+	border: 1px solid #CCCCCC;
+	background-color: #f5f5f5;
+	margin-top: 4px;
+	margin-bottom: 4px;
+	margin-left: 2px;
+	margin-right: 8px;
+	padding-left: 6px;
+	padding-right: 6px;
+	padding-top: 4px;
+	padding-bottom: 4px;
+}
+    </style>
+  </head>
+  
+  <body>
+  <div style="max-width:42em">
+
+  <h1>Controllers in CRRCSim</h1>
+
+  <h2>0 General information</h2>
+    <p>
+    CRRCSim comes with a number of controllers which can be used to alter a
+    model's behaviour. They can be controllers (in the meaning of closed
+    loop control) or simply save flight data to files or modify input
+    variables (the user's stick input) or something else. Controllers can
+    receive keyboard input and write to the logging console window as well.
+    </p>
+    <p>
+    They are activated and adjusted by tweaking either the xml
+    file which describes the model (currently only for multicopter models)
+    or CRRCSims global configuration file. There is no GUI.
+    </p>
+    
+  <h2>1 For users and model creators</h2>
+
+    <p>
+    As far as controllers are concerned, you become a "model creator" once 
+    you edit one, but in contrast to general "model creating" this is easy
+    and might therefore be done by a user, too. For example, if you don't
+    like the quadrocopter qc01 to limit throttle in flips automatically,
+    simply remove the corresponding line from <tt>qc01.xml</tt>.
+    </p>
+    <p>
+    Some controllers can be used together with other controllers, some can
+    not. 
+    </p>
+
+    <h3>1.1 Controller: <tt>ScaleThrottle</tt></h3>
+      <p>
+      This is not a real controller. The user's throttle input is in the range 0 .. 1. This controller alters
+      throttle in the following way:
+      </p>
+      <p>    
+      If throttle_in < <tt>off</tt>, throttle_out = 0.<br>
+      Otherwise, throttle_out = <tt>min</tt> + (throttle_in - <tt>off</tt>) * <tt>mul</tt>
+      </p>
+      <p>
+        It is defined like that:<br>
+        <tt>
+        &lt;ScaleThrottle off="0.06" min="0.178" mul="0.54" /&gt;
+        </tt>
+      </p>
+      <p>
+      It can be combined with controllers not altering throttle and with 
+      <tt>LimitFlipThrottle</tt>.
+      </p>
+    
+    <h3>1.2 Controller: <tt>LimitFlipThrottle</tt></h3>
+      <p>
+      Again, this is no real controller. It only limits throttle, which is 
+      interesting for multicopters while flying loopings or flips.
+      </p>
+      <p>    
+      If attitude is less than 60&deg; from horizontal, throttle is not limited.
+      At 90&deg; it is limited to <tt>max90</tt>, at 180&deg; (upside down) it is limited to
+      <tt>max180</tt>.
+      </p>
+      <p>
+        It is defined like that:<br>
+        <tt>
+        &lt;LimitFlipThrottle max90="0.618" max180="0.3" /&gt;
+        </tt>
+      </p>
+      <p>
+      It can be combined with controllers not altering throttle and with 
+      <tt>ScaleThrottle</tt>.
+      </p>
+    
+    <h3>1.3 Controller: <tt>Omega</tt></h3>
+    
+      <p>
+      To be used with multicopters, results in a rate controlled setup, so
+      the sticks command how fast the copter rotates around roll/nick/yaw
+      axis.
+      </p>
+      <p>    
+      This controller is explained in "How to adjust multicopter parameters,
+      multicopter model version 1" (<tt>qc01.tex</tt>), which is available
+      online as pdf.       
+      </p>
+      <p>
+      This one can not be combined with <tt>MCopter01</tt>.
+      </p>
+
+    <h3>1.4 Controller: <tt>MCopter01</tt></h3>
+    
+      <p>
+      To be used with multicopters, results in an attitude controlled setup
+      for roll/nick and rate controlled for yaw axis.
+<pre>
+      &lt;MCopter01&gt;
+        &lt;roll  scale="1.8"  kp="7"    kd="0.246" /&gt;
+        &lt;pitch scale="1.8"  kp="7"    kd="0.246" /&gt;
+        &lt;yaw   scale="-9.93" kp="0.352" ki="0.835" /&gt;
+      &lt;/MCopter01&gt;
+</pre>
+      </p>
+      <p>
+      The yaw controller is just like the <tt>Omega</tt> type (see above). For
+      roll and pitch, the setpoint is <tt>stick_input * scale</tt> (in
+      radians). Remember, stick input is -0.5 ... 0.5. <tt>kp</tt> is
+      multiplied with the difference in attitude and gives the setpoint for
+      the underlying rate controller. The difference in rotation rate is multiplied
+      with <tt>kd</tt>. The result is the controllers output. Therefore,
+      <tt>kd</tt> here is equivalent to <tt>kp</tt> of the <tt>Omega</tt>
+      controller.
+      </p>
+      <p>
+      This one can not be combined with <tt>Omega</tt>.
+      </p>
+      
+    <h3>1.5 Definition of global controllers</h3>
+      Add a section like the following to your global CRRCSim configuration
+      file <tt>crrcsim.xml</tt>:
+<pre>
+&lt;?xml version="1.0" ?&gt;
+&lt;crrcsimConfig version="2"&gt;
+  &lt;controllers&gt;
+    &lt;ScaleThrottle off="0.06" min="0.178" mul="0.54" /&gt;
+    &lt;LimitFlipThrottle max90="0.618" max180="0.3" /&gt;
+  &lt;/controllers&gt;
+  ...
+</pre>
+      The examples show the file's first two lines, too, to make clear that
+      the controller-section has to be a child of <tt>crrcsimConfig</tt>.
+    
+  <h2>2 For developers</h2>
+      
+    <p>
+    Every controller inherits its interface from <tt>Controller</tt>, which
+    is defined in <tt>src/mod_cntrl/controller.h</tt> and <tt>.cpp</tt>.
+    </p>
+    <p>      
+    They are instantiated via <tt>Controller::LoadList()</tt> in the same
+    files. It is up to the FDM to execute the controllers, even the global
+    ones. 
+    </p>
+    <p>    
+    To see how everything is done, it may be best to take a look at the class
+    <tt>CRRC_AirplaneSim_MCopter01</tt> in
+    <tt>src/mod_fdm/fdm_mcopter01/</tt> and <tt>Cntrl_MCopter01</tt> as an
+    example. If you are new to CRRCSim, you surely don't know 
+    <tt>SimpleXMLTransfer</tt>, which is the class used to read/write XML.
+    This controller shows its basic usage and makes use of keyboard input and log output, too.
+    </p>
+    <p>
+    The current controller implementation is not perfect; for example
+    a serial connection of controllers is not possible (while a parallel
+    connection is). However I felt it to be powerful enough while being
+    simple...
+    </p>
+      
+    <h3>2.1 MNav</h3>
+      
+      <p>
+      Before this controller framework was implemented, an interface to the "MNav" 
+      autopilot was implemented into CRRCSim. It was build as an input
+      method (similar to joystick, transmitter or whatever).
+      </p>
+      <p>
+      Doing it like this has several drawbacks:
+      <ul>
+        <li>
+          In contrast to the controller framework, the input methods are not
+          called with fixed timesteps, but dependent on screen refresh rate.
+        </li>
+        <li>
+          How to do user input if the autopilot is an input method?
+        </li>
+        <li>
+          A controller needs data from the flight dynamics model. In terms
+          of clean APIs, an input method should not know about any FDM at all.
+        </li>
+      </ul>
+      </p>
+      <p>
+      This subsection is not here to blame MNav but to explain why it is
+      different from other controllers and why better not doing it like this.
+      When it was implemented I, JWW, have not been interested and/or clever
+      enough to say 'hey, don't do it like that'.
+      </p>
+      
+  <h2>3 Ideas</h2>
+   
+    The list of things which can be done with controllers is quite big,
+    but here I want to list some more or less obvious ideas.
+      
+    <h3>3.1 Recorder</h3>
+      
+      This could be a useful global controller. By a keystroke it could
+      start/stop logging the model's position/speed/acceleration to a file
+      for playback.
+      
+    <h3>3.2 Altitude controller</h3>
+      
+    <h3>3.3 Thermalling controller</h3>
+      <a href="http://hem.passagen.se/skj/engelska/NEWS2005.HTM">like
+      this</a> or the one described in 
+      <p>
+        <em>Das Thermikbuch fuer Modellflieger</em> written by Markus Lisken and
+        Ulf Gerber, Verlag fuer Technik und Handwerk, Baden-Baden.
+      </p>
+      
+    <h3>3.4 Training helper</h3>
+      <p>
+        With a helicopter, a controller could take care of pitch, throttle
+        and yaw while the pilot practises nick and roll. Note: the heli01-FDM 
+        doesn't execute local controllers yet, only global ones.
+      </p>
+      
+  </div>
+  </body>
+</html>

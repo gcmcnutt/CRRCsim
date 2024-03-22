@@ -1,0 +1,128 @@
+<?xml version="1.0"?>
+
+<crrcsimSceneryFile version="3">
+  
+  <!-- Some general information -->
+  <name>Davis Field (model-based)</name>
+  <categories>
+    <category>Field</category>
+  </categories>
+  <description>
+    <en>The CRRC's home base at Davis.</en>
+  </description>
+  <changelog>
+    <change>
+      <date>2006-06-10</date>
+      <author>Jan Reucker (slowhand_47@gmx.de)</author>
+      <en>Adapted format of general information to the scheme used
+          in airplane files.</en>
+    </change>
+    <change>
+      <date>2010-01-07</date>
+      <author>Jan Reucker (slowhand_47@gmx.de)</author>
+      <en>Changed from x/y/z to north/east/height coordinates.</en>
+    </change>
+    <change>
+      <date>2015-01-31</date>
+      <author>Luca G.</author>
+      <en>Added sun position and haze</en>
+    </change>
+    <change>
+      <date>2016-03-28</date>
+      <author>Luca G.</author>
+      <en>Objects in scenery cast shadows</en>
+    </change>
+  </changelog>
+  
+  <!-- Player position. You may specify multiple <position>s. -->
+  <views>
+    <position name="default" north="0" east ="0" height="6"  />
+  </views>
+  
+  <!-- Starting position for the model. -->
+  <start>
+    <position name="field" north="-20" east="30"  />
+    <position name="parking" north="45" east="70"  />
+    <position name="freqboard" north="30" east="15"  />
+  </start>
+
+  <!-- Default settings -->
+  <default>
+    <wind velocity="3" direction="180" />
+  </default>
+  
+  <!-- Preview -->
+  <preview filename="textures/davis_preview.jpg" />
+
+  <!-- A sky box. -->
+  <sky type="box" size="10">
+    <descr_short >
+       <en>Little cloudy (Box) </en>
+    </descr_short>
+    <textures>
+      <north filename="textures/skybox_n.rgb" />
+      <south filename="textures/skybox_s.rgb" />
+      <west  filename="textures/skybox_w.rgb" />
+      <east  filename="textures/skybox_e.rgb" />
+      <up    filename="textures/skybox_u.rgb" />
+      <down  filename="" />
+    </textures>
+    <sun>
+      <position azimuth="210" elevation="25" />
+    </sun>    
+    <haze density="0.2">
+      <color r="0.85" g="0.90" b="0.95" />
+    </haze>    
+  </sky>
+  <!-- A sky dome, original style, textured -->
+  <sky type="original" texture="textures/clouds.rgb" radius="8000" >
+    <descr_short >
+       <en>Dome, textured</en>
+    </descr_short>
+    <sun>
+      <position azimuth="180" elevation="55" />
+    </sun>    
+    <haze density="0.2">
+      <color r="0.9" g="0.9" b="0.9" />
+    </haze>    
+  </sky>
+  <!-- A sky dome, original style, untextured -->
+  <sky type="original" radius="8000" >
+    <descr_short >
+       <en>Dome, untextured</en>
+    </descr_short>
+    <sun>
+      <position azimuth="180" elevation="55" />
+    </sun>    
+    <haze density="0.2">
+      <color r="0.9" g="0.9" b="0.9" />
+    </haze>    
+  </sky>
+
+  <!-- Scenery graphics. -->
+  <scene type="model-based">
+    <object filename="davis.ac" terrain="1">
+      <instance north="0" east="0" height="0" h="180.0" />
+    </object>
+    <object filename="outhouse.ac" shadow="1">
+      <instance above_ground="1" north="35" east="35" height="0.0" h="180.0" />
+    </object>
+    <object filename="freqboard.ac" shadow="1" translucent="0">
+      <instance above_ground="1" north="33.0" east="17.0" height="0" h="180.0" />
+    </object>
+    <object filename="trashcan.ac" shadow="1">
+      <instance above_ground="1" north="33.0" east="50.0" height="0.0" h="180.0" />
+    </object>
+    <object filename="log.ac" shadow="1">
+      <instance above_ground="1" north="50.5" height="0.0" east="157" h="180.0" p="0.0" r="0" />
+      <instance above_ground="1" north="50.5" height="0.0" east="120" h="180.0" p="0.0" r="0.0" />
+      <instance above_ground="1" north="50.5" height="0.0" east="77" h="180.0" p="0.0" r="0.0" />
+      <instance above_ground="1" north="50.5" height="0.0" east="44" h="180.0" p="0.0" r="0.0" />
+      <instance above_ground="1" north="50.5" height="0.0" east="5" h="180.0" p="0.0" r="0" />
+      <instance above_ground="1" north="50.5" height="0.0" east="-31.0" h="180.0" p="0.0" r="0"  />
+      <instance above_ground="1" north="50.5" height="0.0" east="-67.0" h="180.0" p="0.0" r="0" />
+    </object>   
+  </scene>
+ 
+</crrcsimSceneryFile>
+

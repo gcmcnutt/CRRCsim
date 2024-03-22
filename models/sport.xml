@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+<CRRCSim_airplane version="2">
+  <name>
+    <en>Sport</en>
+  </name>
+  <categories>
+    <category>Sports</category>
+  </categories>
+  <description>
+    <en>
+A typical glow engine aerobatics trainer. 
+Features retractable and steerable gear.</en>
+  </description>
+  <changelog>
+    <change>
+      <date>Unknown</date>
+      <author>CRRCSim 0.9.5</author>
+      <en>Automatically converted from .air file.</en>
+    </change>
+    <change>
+      <date>2006-11-18</date>
+      <author>Jan Reucker</author>
+      <en>Added steerable nosewheel.</en>
+    </change>
+    <change>
+      <date>2008-09-18</date>
+      <author>Jan Reucker</author>
+      <en>Retractable gear animation.</en>
+    </change>
+    <change>
+      <date>2008-09-27</date>
+      <author>Jan Reucker</author>
+      <en>Added hardpoint on bottom of fuselage behind spinner.</en>
+    </change>
+    <change>
+      <date>2008-10-26</date>
+      <author>Jan Reucker</author>
+      <en>Retract animation now moves the corresponding hardpoints.</en>
+    </change>
+    <change>
+      <date>2008-10-28</date>
+      <author>Jan Reucker</author>
+      <en>Aileron animation.</en>
+    </change>
+    <change>
+      <date>2008-11-02</date>
+      <author>Jan Reucker</author>
+      <en>Rudder and elevator animation.</en>
+    </change>
+    <change>
+      <date>2008-11-08</date>
+      <author>Jan Reucker</author>
+      <en>Fine-tuned nose gear retract animation.</en>
+    </change>
+    <change>
+      <date>2009-02-25</date>
+      <author>Jens W. Wulf</author>
+      <en>Extended launch default settings to what has been default on 'Davis'</en>
+    </change>
+    <change>
+      <date>2009-12-17</date>
+      <author>Jan Reucker</author>
+      <en>Added aero.retract section to simulate the lift loss and drag induced
+          by the retractable gear.</en>
+    </change>
+    <change>
+      <date>2009-12-23</date>
+      <author>J. Reucker</author>
+      <en>Added max_force to springs</en>
+    </change>
+  </changelog>
+  <aero version="1" units="0">
+    <ref chord="0.6875" span="4" area="2.75" speed="39.3701" />
+    <misc Alpha_0="0.0122173" eta_loc="0.3" CG_arm="0.75" span_eff="0.95" />
+    <m Cm_0="0.0142156" Cm_a="-0.298318" Cm_q="-10.2802" Cm_de="-0.621038" />
+    <lift CL_0="0.108991" CL_max="1.1" CL_min="-0.6" CL_a="4.81276" CL_q="7.24396"
+       CL_de="0.24722" CL_drop="0" CL_CD0="0" />
+    <drag CD_prof="0.067" Uexp_CD="-0.5" CD_stall="0.15" CD_CLsq="0.01" CD_AIsq="0"
+       CD_ELsq="0" />
+    <Y CY_b="-0.81642" CY_p="0.00979" CY_r="0.333907" CY_dr="0.22749"
+       CY_da="-0.02761" />
+    <l Cl_b="-0.0240925" Cl_p="-0.462504" Cl_r="0.0460948" Cl_dr="0.0188651"
+       Cl_da="0.143837" />
+    <n Cn_b="0.148155" Cn_p="-0.0138288" Cn_r="-0.157387" Cn_dr="-0.111666"
+       Cn_da="0.0117119" />
+    <retract lift="-0.3" drag="0.04" />
+  </aero>
+  <config version="1">
+    <descr_long>
+      <en>Automatically converted from sport.air.</en>
+    </descr_long>
+    <descr_short>
+      <en>default</en>
+    </descr_short>
+    <mass_inertia version="1" units="0" Mass="0.0932256" I_xx="0.0456257"
+       I_yy="0.0445163" I_zz="0.0882453" I_xz="0.00304607" />
+    <sound version="1">
+      <sample filename="fan.wav" type="0" pitchfactor="0.002" maxvolume="1" />
+    </sound>
+    <power units="1">
+      <automagic F="12.232605" V="15.877516">
+        <battery throttle_min="0.2">
+          <automagic T="420" />
+          <shaft J="0" brake="0">
+            <propeller D="0.24384" H="0.170688" J="0" n_fold="-1" />
+            <engine>
+              <automagic omega_p="2827" eta_opt="0.78" eta="0.7" />
+            </engine>
+          </shaft>
+        </battery>
+      </automagic>
+    </power>
+  </config>
+  <graphics version="1" model="sport.ac">
+    <descr_long>
+      <en>Automatically converted from sport.air.</en>
+    </descr_long>
+    <descr_short>
+      <en>default</en>
+    </descr_short>
+  </graphics>
+  <wheels version="1" units="0">
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <pos x="0.19159999" y="2" z="0.083300002" />
+      <spring constant="65" damping="0.25" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <pos x="0.19159999" y="-2" z="0.083300002" />
+      <spring constant="65" damping="0.25" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <pos x="-0.34999999" y="2" z="0.083300002" />
+      <spring constant="65" damping="0.25" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <pos x="-0.34999999" y="-2" z="0.083300002" />
+      <spring constant="65" damping="0.25" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <pos x="0.83329999" y="0" z="0" />
+      <spring constant="65" damping="0.25" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <pos x="-0.083329998" y="0" z="-0.25" />
+      <spring constant="65" damping="0.25" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <pos x="-0.083329998" y="0" z="0.25" />
+      <spring constant="65" damping="0.25" />
+    </wheel>
+    <!-- nose wheel -->
+    <wheel percent_brake="0.25" caster_angle_rad="0">
+      <pos x="0.41677001" y="0" z="0.52499998" animation="nose_gear" />
+      <spring constant="65" damping="0.25" max_force="15.000" />
+      <steering mapping="RUDDER" max_angle="-0.349" />
+    </wheel>
+    <!-- left wheel -->
+    <wheel percent_brake="0.25" caster_angle_rad="0">
+      <pos x="-0.083300002" y="-0.667" z="0.5" animation="left_gear" />
+      <spring constant="65" damping="0.25" max_force="15.000" />
+    </wheel>
+    <!-- right wheel -->
+    <wheel percent_brake="0.25" caster_angle_rad="0">
+      <pos x="-0.083300002" y="0.667" z="0.5" animation="right_gear" />
+      <spring constant="65" damping="0.25" max_force="15.000" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <pos x="-0.083300002" y="0" z="-0.25" />
+      <spring constant="65" damping="0.25" max_force="5.000" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <pos x="-0.41659999" y="0" z="0.25" />
+      <spring constant="65" damping="0.25" max_force="5.000" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <pos x="-2.1659999" y="0" z="0" />
+      <spring constant="65" damping="0.25" max_force="5.000" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <pos x="-1.875" y="0.66659999" z="0" />
+      <spring constant="65" damping="0.25" max_force="5.000" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <pos x="-1.875" y="-0.66659999" z="0" />
+      <spring constant="65" damping="0.25" max_force="5.000" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <pos x="-2.1666" y="0.66659999" z="0" />
+      <spring constant="65" damping="0.25" max_force="5.000" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <pos x="-2.1666" y="-0.66659999" z="0" />
+      <spring constant="65" damping="0.25" max_force="5.000" />
+    </wheel>
+    <!-- nose behind spinner -->
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <pos x="0.67" y="0.0" z="0.09" />
+      <spring constant="65" damping="0.25" max_force="0.1" />
+    </wheel>
+  </wheels>
+  <animations>
+    <animation type="ControlSurface">
+      <!-- right gear -->
+      <object name="right_gear" max_angle="1.57" />
+      <control mapping="RETRACT" gain="-1.0" />
+      <hinge x="-0.09" y="0.67" z="0.12" />
+      <hinge x="-1.09" y="0.67" z="0.12" />
+    </animation>
+    <animation type="ControlSurface">
+      <!-- left gear -->
+      <object name="left_gear" max_angle="1.57" />
+      <control mapping="RETRACT" gain="1.0" />
+      <hinge x="-0.09" y="-0.67" z="0.12" />
+      <hinge x="-1.09" y="-0.67" z="0.12" />
+    </animation>
+    <animation type="ControlSurface">
+      <!-- nose gear -->
+      <object name="nose_gear" max_angle="1.625" />
+      <control mapping="RETRACT" gain="1.0" />
+      <hinge x="0.42" y="-0.04" z="0.10" />
+      <hinge x="0.42" y="-1.04" z="0.10" />
+    </animation>
+    <animation type="ControlSurface">
+      <!-- left aileron -->
+      <object name="ail_left" max_angle="0.45" />
+      <control mapping="AILERON" gain="1.0" />
+      <hinge x="-0.24" y="-1.7" z="0.06" />
+      <hinge x="-0.33" y="-0.55" z="0.06" />
+    </animation>
+    <animation type="ControlSurface">
+      <!-- right aileron -->
+      <object name="ail_right" max_angle="0.45" />
+      <control mapping="AILERON" gain="1.0" />
+      <hinge x="-0.24" y="1.7" z="0.06" />
+      <hinge x="-0.33" y="0.55" z="0.06" />
+    </animation>
+    <animation type="ControlSurface">
+      <!-- rudder -->
+      <object name="rudder" max_angle="0.5" />
+      <control mapping="RUDDER" gain="1.0" />
+      <hinge x="-2.00" y="0" z="-0.57" />
+      <hinge x="-1.95" y="0" z="-0.09" />
+    </animation>
+    <animation type="ControlSurface">
+      <!-- elevator -->
+      <object name="elevator" max_angle="0.4" />
+      <control mapping="ELEVATOR" gain="1.0" />
+      <hinge x="-2.02" y="-0.6" z="0" />
+      <hinge x="-2.02" y="0.6" z="0" />
+    </animation>
+  </animations>
+  <launch>
+    <preset name_en="Davis default (ground)" altitude="0" velocity_rel="0" angle="0" sal="0" rel_to_player="1" rel_front="21" rel_right="0" />
+  </launch>
+</CRRCSim_airplane>

@@ -1,0 +1,323 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+<CRRCSim_airplane version="2">
+  <name>
+    <en>Angel S30 E</en>
+  </name>
+  <categories>
+    <category>Sports</category>
+  </categories>
+  <description>
+    <en>
+Sebart Angel S30 E, pattern setup.
+(http://www.sebart.com/)
+
+CRRCsim model created by Luca Gasparini.
+    </en>
+  </description>
+  <changelog>
+    <change>
+      <date>2014-12-06</date>
+      <author>Luca Gasparini</author>
+      <en>
+3D model with AC3d, aero/inertia with XFLR5+AVL.
+      </en>
+    </change>
+  </changelog>
+  <aero version="1" units="1">
+    <!-- 
+      The model is setup with:
+        CG at 0.147m from wing root LE
+        root wing angle is +0.5° relative to model x-axis
+        stabilizer angle is +0.0° relative to model x-axis
+        trimmed Cl = 0.20, corresponding to 20m/s flying speed
+      This trimm is achieved with a bit of up elevator
+      
+      Note: Cm_a=-1.942 from AVL, but feeling is the real value should be
+      much smaller (airplane is less stable and more sensitive), thus only
+      50% this value is specified.
+      
+      Control derivatives for CRRCSIM are computed as:
+      CRCSIM_der = AVL_der * control_travel_deg / 0.5
+      Assumed control travel are: 
+        de=+/-10deg
+        dr=+/-25deg 
+        da=+/-10deg
+                  
+      AVL control derivatives in standard orientation stability axis
+      (for 1deg of control deflection):
+        CL_de= 0.01516
+        Cm_de=-0.04000
+        CY_dr=-0.005087
+        CY_da= 0.000988
+        Cl_dr=-0.000194
+        Cl_da=-0.008385 
+        Cn_dr= 0.003049
+        Cn_da=-0.000634
+
+      Note: CY_b and Cn_r are much underestimated due to the missing 
+      large (in side view) fuselage, in AVL model.
+      Therefore the original values have been corrected (guess & tune) by factors
+        CY_b=-0.3218 x 3.0 =-0.9654
+        Cn_r=-0.2431 x 1.5 =-0.3646
+      
+      CD_prof, Uexp_Cd, CD_CLsq just guesstimated.
+    -->
+    <ref chord="0.265" span="1.28" area="0.306" speed="15" />
+    <misc Alpha_0="0.070" eta_loc="0.3" CG_arm="0.25" span_eff="0.75" />
+    <m Cm_0="0.0" Cm_a="-0.971" Cm_q=" -15.54" Cm_de="-0.800" />
+    <lift CL_0="0.200" CL_CD0="0" CL_max="1.4" CL_min="-1.4" CL_drop="0.5" 
+      CL_a="3.993" CL_q="8.364" CL_de="0.3032" />
+    <drag CD_prof="0.05" Uexp_CD="-0.35" CD_stall="0.15"
+      CD_CLsq="0.025" CD_AIsq="0.01" CD_ELsq="0" />
+    <Y CY_b="-0.9654" CY_p="0.07472" CY_r="0.4267" CY_dr="0.2544" CY_da="-0.01976" />
+    <l Cl_b="-0.02895" Cl_p="-0.4131" Cl_r="0.05858" Cl_dr="0.009700" Cl_da="0.1677" />
+    <n Cn_b="0.1798" Cn_p="-0.03070" Cn_r="-0.3646" Cn_dr="-0.1525" Cn_da="0.01268" />
+    
+    <prop torquefactor="0.3"/>
+  </aero>
+  <config version="1">
+    <descr_long>
+      <en>Prop 14x7, LiPo 3s 3300Ah</en>
+    </descr_long>
+    <descr_short>
+      <en>Prop 14x7, LiPo 3s 3300Ah</en>
+    </descr_short>
+    <mass_inertia version="1" units="1" Mass="1.54" I_xx="0.038"
+       I_yy="0.161" I_zz="0.197" I_xz="-0.003" />
+    <sound version="1">
+      <sample filename="electric.wav" type="0" pitchfactor="0.002" maxvolume="1" />
+    </sound>
+    <power units="1">
+      <!-- 
+        motor Hacker A30 14L, battery lipo 3s
+        prop APC E 14x7 (D="0.3556" H="0.1778")
+        NB: sufficient motor and prop inertias are required to get a stable rpm
+      -->
+      <battery filename="lipo3s_3300" throttle_min="0.0">
+        <shaft J="0" brake="0">
+          <engine filename="Hacker_A30_14L"/>
+          <propeller D="0.3556" H="0.1778" J="10.0E-6" n_fold="-1" log="0" >
+            <!-- position of prop center relative to CG in body axis -->
+            <pos x="0.23" z="-0.030" downthrust="0" rightthrust="3" />
+            <!-- tune static thrust, top speed, absorbed power, P-factor -->
+            <!-- tune F_V0_scale="1.2" V_F0_scale="1" P_scale="1" Pfactor_scale="1" /-->
+          </propeller>
+        </shaft>
+      </battery>
+    </power>
+  </config>
+  <config version="1">
+    <descr_long>
+      <en>Prop 14x7, LiPo 3s 2200Ah</en>
+    </descr_long>
+    <descr_short>
+      <en>Prop 14x7, LiPo 3s 2200Ah</en>
+    </descr_short>
+    <mass_inertia version="1" units="1" Mass="1.46" I_xx="0.038"
+       I_yy="0.161" I_zz="0.197" I_xz="-0.003" />
+    <sound version="1">
+      <sample filename="electric.wav" type="0" pitchfactor="0.002" maxvolume="1" />
+    </sound>
+    <power units="1">
+      <!-- 
+        motor Hacker A30 14L, battery lipo 3s
+        prop APC E 14x7 (D="0.3556" H="0.1778")
+        NB: sufficient motor and prop inertias are required to get a stable rpm
+      -->
+      <battery filename="lipo3s_2200" throttle_min="0.0">
+        <shaft J="0" brake="0">
+          <engine filename="Hacker_A30_14L" />
+          <propeller D="0.3556" H="0.1778" J="10.0E-6" n_fold="-1" log="0" >
+            <!-- position of prop center relative to CG in body axis -->
+            <pos x="0.23" z="-0.030" downthrust="0" rightthrust="3" />
+            <!-- tune static thrust, top speed, absorbed power, P-factor -->
+            <!-- tune F_V0_scale="1.2" V_F0_scale="1" P_scale="1" Pfactor_scale="1" /-->
+          </propeller>
+        </shaft>
+      </battery>
+    </power>
+  </config>
+  <config version="1">
+    <descr_long>
+      <en>Prop 14x8.5, LiPo 3s 3300Ah</en>
+    </descr_long>
+    <descr_short>
+      <en>Prop 14x8.5, LiPo 3s 3300Ah</en>
+    </descr_short>
+    <mass_inertia version="1" units="1" Mass="1.54" I_xx="0.038"
+       I_yy="0.161" I_zz="0.197" I_xz="-0.003" />
+    <sound version="1">
+      <sample filename="electric.wav" type="0" pitchfactor="0.002" maxvolume="1" />
+    </sound>
+    <power units="1">
+      <!-- 
+        motor Hacker A30 14L, battery lipo 3s
+        prop APC E 14x8.5 (D="0.3556" H="0.2159")
+        NB: sufficient motor and prop inertias are required to get a stable rpm
+      -->
+      <battery filename="lipo3s_3300" throttle_min="0.0">
+        <shaft J="0" brake="0">
+          <engine filename="Hacker_A30_14L" />
+          <propeller D="0.3556" H="0.2159" J="10.0E-6" n_fold="-1" log="0" >
+            <!-- position of prop center relative to CG in body axis -->
+            <pos x="0.23" z="-0.030" downthrust="0" rightthrust="3" />
+            <!-- tune static thrust, top speed, absorbed power, P-factor -->
+            <!-- tune F_V0_scale="1.2" V_F0_scale="1" P_scale="1" Pfactor_scale="1" /-->
+          </propeller>
+        </shaft>
+      </battery>
+    </power>
+  </config>
+  <config version="1">
+    <descr_long>
+      <en>Prop 12x6, LiPo 4s 2200Ah</en>
+    </descr_long>
+    <descr_short>
+      <en>Prop 12x6, LiPo 4s 2200Ah</en>
+    </descr_short>
+    <mass_inertia version="1" units="1" Mass="1.54" I_xx="0.038"
+       I_yy="0.161" I_zz="0.197" I_xz="-0.003" />
+    <sound version="1">
+      <sample filename="electric.wav" type="0" pitchfactor="0.002" maxvolume="1" />
+    </sound>
+    <power units="1">
+      <!-- 
+        motor Hacker A30 14L, battery lipo 4s
+        prop APC E 12x6 (D="0.3048" H="0.3048")
+        NB: sufficient motor and prop inertias are required to get a stable rpm
+      -->
+      <battery filename="lipo4s_2200" throttle_min="0.0">
+        <shaft J="0" brake="0">
+          <engine filename="Hacker_A30_14L" />
+          <propeller D="0.3048" H="0.3048" J="10.0E-6" n_fold="-1" log="0" >
+            <!-- position of prop center relative to CG in body axis -->
+            <pos x="0.23" z="-0.030" downthrust="0" rightthrust="3" />
+            <!-- tune static thrust, top speed, absorbed power, P-factor -->
+            <!-- tune F_V0_scale="1.2" V_F0_scale="1" P_scale="1" Pfactor_scale="1" /-->
+          </propeller>
+        </shaft>
+      </battery>
+    </power>
+  </config>
+  <graphics version="1" model="Angel_S30E.ac">
+    <descr_long>
+      <en>Angel S30E yellow/red</en>
+    </descr_long>
+    <descr_short>
+      <en>Angel S30E yellow/red</en>
+    </descr_short>
+  </graphics>
+  <CG units="1" x="-0.48" y="0" z="-0.01" />
+  <wheels version="1" units="0">
+    <!-- 
+      order of magnitude of spring values:
+        max_force: 5-20 times model's weight (the faster the higher), 
+                   at least > then damping times a typical landing speed
+        constant: 500 lbf/ft (hard point), 100 lbf/ft (rubber wheel)
+        damping: 1 lbf*s/ft (hard point), 0.5 lbf*s/ft (rubber wheel)
+    -->
+    <!-- right wheel -->
+    <wheel percent_brake="0.2" caster_angle_rad="0">
+      <pos x="-0.11" y="0.43" z="0.65" />
+      <spring constant="100" damping="0.5" max_force="50.0" />
+    </wheel>
+    <!-- left wheel -->
+    <wheel percent_brake="0.2" caster_angle_rad="0">
+      <pos x="-0.11" y="-0.43" z="0.65" />
+      <spring constant="100" damping="0.5" max_force="50.0" />
+    </wheel>
+    <!-- tail wheel: steering 20 deg. (= 0.349 rad), mapped to rudder  -->
+    <wheel percent_brake="0.3" caster_angle_rad="0">
+            <pos x="-3.23" y="0" z="0.36" />
+      <spring constant="100" damping="0.5" max_force="50.0" />
+      <steering mapping="RUDDER" max_angle="0.349" />
+    </wheel>
+    <!-- right wingtip -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.38" y="2.11" z="0.0" />
+      <spring constant="100" damping="1" max_force="5" />
+    </wheel>
+    <!-- left wingtip -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.38" y="-2.11" z="0.0" />
+      <spring constant="100" damping="1" max_force="5" />
+    </wheel>
+    <!-- nose -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="0.80" y="0.00" z="-0.07" />
+      <spring constant="100" damping="1" max_force="5" />
+    </wheel>
+    <!-- fuselage top -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.24" y="0.00" z="-0.43" />
+      <spring constant="100" damping="1" max_force="5" />
+    </wheel>
+    <!-- rudder -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-3.04" y="0.00" z="-0.59" />
+      <spring constant="100" damping="1" max_force="5" />
+    </wheel>
+    <!-- right elevator -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-2.94" y="0.94" z="0.0" />
+      <spring constant="100" damping="1" max_force="5" />
+    </wheel>
+    <!-- left elevator -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-2.94" y="-0.94" z="0.0" />
+      <spring constant="100" damping="1" max_force="5" />
+    </wheel>
+  </wheels>
+  <animations>
+    <animation type="ControlSurface">
+      <!-- right aileron -->
+      <object name="aileron_rh" max_angle="0.175" />
+      <control mapping="AILERON" gain="-1.0" />
+      <hinge x="-0.79" y="0.33" z="0.0" />
+      <hinge x="-0.77" y="2.05" z="0.0" />
+    </animation>
+    <animation type="ControlSurface">
+      <!-- left aileron -->
+      <object name="aileron_lh" max_angle="0.175" />
+      <control mapping="AILERON" gain="-1.0" />
+      <hinge x="-0.79" y="-0.33" z="0.0" />
+      <hinge x="-0.77" y="-2.05" z="0.0" />
+    </animation>
+    <animation type="ControlSurface">
+      <!-- elevator -->
+      <object name="elevator" max_angle="0.175" />
+      <control mapping="ELEVATOR" gain="1.0" />
+      <hinge x="-3.05" y="-0.75" z="0.0" />
+      <hinge x="-3.05" y="0.75" z="0.0" />
+    </animation>
+    <animation type="ControlSurface">
+      <!-- rudder -->
+      <object name="rudder" max_angle="0.349" />
+      <control mapping="RUDDER" gain="-1.0" />
+      <hinge x="-3.15" y="0.00" z="0.23" />
+      <hinge x="-3.15" y="0.00" z="-0.59" />
+    </animation>
+  </animations>
+  <launch>
+    <preset name_en="Angel S30E default (ground)" 
+    altitude="0" velocity_rel="0" angle="0.22" sal="0" 
+    rel_to_player="1" rel_front="21" rel_right="0" />
+  </launch>
+  <mixer>
+    <mixer name_en="Angel S30E default" enabled="1" dr_enabled="1">
+      <aileron trim="0" nrate="1" srate="0.8" exp="0.5" />
+      <elevator trim="0" nrate="1" srate="1" exp="0.25" />
+      <rudder trim="0" nrate="1" srate="1" exp="0.5" />
+      <throttle trim="0" />
+      <flap trim="0" mtravel="0" ptravel="0" />
+      <spoiler trim="0" />
+      <mixer1 enabled="0" src="0" dst="0" val="0" />
+      <mixer2 enabled="0" src="0" dst="0" val="0" />
+      <mixer3 enabled="0" src="0" dst="0" val="0" />
+      <mixer4 enabled="0" src="0" dst="0" val="0" />
+    </mixer>
+  </mixer>
+</CRRCSim_airplane>
+
+
+

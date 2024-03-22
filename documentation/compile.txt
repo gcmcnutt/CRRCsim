@@ -1,0 +1,340 @@
+
+
+              ---------------------------------------------
+
+                         How to compile CRRCSim
+                         
+              ---------------------------------------------
+
+
+General hints
+=============
+
+CRRCsim is built using the standard set of GNU Autotools
+(autoheader, autoconf, automake, ...). Therefore there shouldn't
+be much more to do than run the standard commands
+
+  ./autogen.sh
+  ./configure
+  make
+  make install
+
+To enable debugging symbols (if you want to work on the CRRCsim
+code or track down bugs with GDB) you should ./configure CRRCsim
+without optimization and with debugging enabled:
+
+   ./configure CXXFLAGS="-g3 -O0"
+   make
+   make install
+
+But beware: this is only tested on GNU/Linux and Windows (98/2k/XP).
+On MacOSX this approach will most likely fail because the
+configure.ac and Makefile.am have not been tested on this platform yet.
+Please ask for help on the crrcsim-devel mailing list if you want
+to compile CRRCsim on MacOSX.
+
+If you want to use the audio interface (easiest way to plug your transmitter
+to your PC), read audio_interface/readme.txt. To enable the audio interface,
+the PortAudio library and development headers have to be installed
+on your system. ./configure will automatically detect the PortAudio
+version (18/19) and use the correct routines to access the library
+or disable audio interface support if PortAudio was not found.
+
+
+Below you'll find some platform-specific information for GNU/Linux and
+Windows.
+
+------------------------------------------------------------------------------
+
+GNU/Linux
+=========
+
+First, make sure that you have installed the following packages including
+all development packages (usually marked with a -dev or -devel suffix):
+
+* SDL 1.2.x           (http://www.libsdl.org)
+* PortAudio 18.1      (http://www.portaudio.org)
+* PLIB 1.8.4 or later (http://plib.sourceforge.net/)
+* libjpeg 6b          (http://www.ijg.org/)
+* BOOST               (http://www.boost.org) : necessary for the installation of CGAL
+* CGAL                (http://www.cgal.org) : necessary for Windfield import 
+                                              in model-based Scnery(like Brie Scenery))
+----------------
+
+
+Usually your distribution will provide ready-made packages for those
+libraries. If not, please look for further instructions on the
+libraries' project home pages.
+
+After you followed 'General hints' there usually is nothing more to do than
+to issue 
+
+   ./configure && make && make install
+
+to get a working crrcsim.
+
+
+------------------------------------------------------------------------------
+
+Win32 - General
+===============
+
+The instructions for Windows are a bit lengthy, but they might
+provide some valuable information which keeps you from encountering
+the same problems that I had when I first tried to build the
+project.
+
+The first CRRCsim built for the Win32 platform (not counting the
+crrcsim-f3f branch) was done using the Dev-C++ IDE (http://www.bloodshed.net)
+which uses the MinGW32 compiler and binutils. If you'd like to compile 
+CRRCsim yourself without using the command line, I recommend that you
+download and install Dev-C++. The instructions in the "Win32 - Dev-C++"
+section cover the rest of the compilation process. But be warned:
+although you're using an IDE, it's a sometimes tedious and
+annoying task to compile and/or install all the needed libraries.
+
+That's one of the reasons why I moved on to using MSYS, the "Minimal SYStem"
+(http://www.mingw.org). This package provides a Bourne-compatible
+shell for Win32 systems and the necessary utilities to build
+software "the Unix way" (./configure && make && make install).
+It's relatively easy to set up and the compilation of all library
+dependencies works like a charm. See the instructions in the
+"Win32 - MSYS" section below if you want to do it this way.
+
+
+Some general advice on using the GNU compiler gcc on Windows:
+
+If you get a lot of linker errors after a successful compiler run
+although you specified all needed libraries there might be something
+wrong with the order in which you specified the libs. mingw32-g++ requires
+that a library libFoo.a which has references to symbols from libBar.a
+must be specified on the command line BEFORE libBar.a! So the correct
+order for those two libs will be -lFoo -lBar. For CRRCsim, you need
+to specify 
+-lgle before -lglut and -lopengl32
+ and
+ -lplibpu before -lplibfnt and -lplibul.
+Don't forget to link with -lmingw32 or you'll get an undefined
+reference to WinMain()!
+
+
+------------------------------------------------------------------------------
+
+Win32 - Dev-C++
+===============
+
+From now on I assume that you've installed a copy of Dev-C++ and
+are familiar with the basic concepts of this IDE.
+
+1. Install the SDL development package for Dev-C++
+---------------------------------------------------
+Dev-C++ provides an intelligent package management system which
+allows easy installation and maintenance of additional libraries.
+The easiest way to install SDL is to point the package manager
+to the devpaks.org community server and download a ready-made
+SDL package. This will automatically be installed to the correct
+subdirectories of Dev-C++. The available SDL package might
+not contain the very latest SDL release but even a slightly
+older version should work (I used 1.2.4 while 1.2.7 was the
+latest version from libsdl.org).
+
+The less convenient way would be to download the MinGW32-port of
+SDL directly from http://www.libsdl.org and copy the files
+to the include and lib subdirs by hand.
+
+In both cases you'll also need the SDL runtime (SDL.DLL) which
+is available from http://www.libsdl.org. To run CRRCsim this
+DLL must be in the same directory as CRRCsim-Win32.exe or
+somewhere in your system path (e.g. c:\windows\system for Win98).
+
+2. Install plib
+----------------
+You'll have to download the PLIB source package from http://plib.sf.net
+and compile it yourself. Create a new Dev-C++ project, add
+all files from one sub-library directory (e.g. src/ssg) and compile
+this component into a static library (.a). Repeat this for all
+needed library components.
+
+Then you can copy the contents of the include and lib directories 
+to your MinGW32 directories. Make sure that the headers reside in
+"include\plib" and not directly in "include".
+
+Since plib will be linked statically there is no need for a DLL.
+
+3. Install PortAudio
+--------------------
+You can get the sources for the PortAudio SDK from http://www.portaudio.com/.
+There are different implementations for the Windows platform: using
+WMME (aka WAVE), using DirectSound or using ASIO drivers. Each
+implementation has its pros and cons which are described on the
+PortAudio web page. For the precompiled binary I chose the WMME
+implementation, which might not be the best in terms of signal
+latency, but which is the most compatible without the need to
+install special drivers or libraries. Compile common\pa_lib.c and
+pa_win_wmme\pa_win_wmme.c and roll them into a static library
+called libportaudio.a.
+
+If you don't want to compile it yourself, just download the
+PortAudio 18.1 DevPak and you're done:
+
+http://www.reucker-online.de/files/portaudio_wmme-18.1-1rej.DevPak
+
+4. Check the include path
+-------------------------
+The path to the SDL include files has to be set manually in the
+IDE since there is no replacement for `sdl-config --cflags` on
+Win32. Open the CRRCsim-Win32.dev project file with Dev-C++ and go to
+the project options dialog. Take a look at the additional include
+directory. It should point to <your-Dev-C++-dir>/include/SDL.
+Change it if you installed Dev-C++ to a non-standard directory.
+
+5. Build CRRCsim
+----------------
+The rest should be easy, at least for Dev-C++-users:  hit the compile
+button and wait for the build process to finish. You will be rewarded
+with a "CRRCsim-Win32.exe".
+
+6. Install CRRCsim
+------------------
+The easiest way is to run the make_package.bat in the main directory.
+This should create a subdirectory called "crrcsim-win32" with copies
+of all necessary files from the source package, not including the
+extra DLL (SDL.dll). You can simply copy this directory
+to a location of your choice and add an entry to your start menu.
+
+To create a professional-looking installer, simply get NSIS from
+http://nsis.sourceforge.net, install it and run the NSIS compiler
+on the included crrcsim.nsi script. You will end up with a 
+"CRRCsim-Win32-x.y.z.exe" that contains everything necessary to run
+CRRCsim and will install it by a simple double-click.
+
+
+------------------------------------------------------------------------------
+
+Win32 - MSYS
+============
+
+These instructions will be less verbose, focussing on the steps
+necessary to install MinGW, MSYS and all library dependencies.
+
+1. Install MinGW
+----------------
+The MinGW package provides the GNU compiler (gcc) and some
+additional utilities.
+The easiest way is to install the MinGW compiler suite is to
+grab the net-based installer from
+
+http://sourceforge.net/project/showfiles.php?group_id=2435
+
+Look in the "Current" section of the download file list. At the
+time of writing this document, "MinGW-5.1.3.exe" was the
+current stable version.
+
+This installer will prompt you to select which subcomponents
+you'd like to install. Make sure that the "mingw-make" is NOT
+selected, it will only cause trouble and MSYS will install a
+working "make" later on! You need the g++ package, so set
+the check mark in front of it.
+
+2. Install MSYS
+---------------
+From http://www.mingw.org/download.shtml, get the "current"
+MSYS and msysDTK binary ("bin") packages (at the time of writing:
+MSYS-1.0.10.exe and msysDTK-1.0.1.exe.
+
+Install MSYS first. It should autodetect your MinGW installation
+and configure it properly. Then install the msysDTK.
+
+If you actually want to work on CRRCsim and help with development
+you'll want to install GDB for debugging. Get the GDB package
+(a.t.t.o.w.: gdb-5.2.1-1.exe) and install it into the MinGW
+directory (the installer should auto-detect this directory
+and recommend it for installation).
+
+3. Install SDL
+--------------
+Download the source package from http://www.libsdl.org to your
+MSYS home directory, start MSYS, untar the file 
+("tar xvzf file.tar.gz"), cd to the newly created SDL directory
+and type "./configure && make && make install".
+
+4. Install PLIB
+---------------
+Download the source package from http://plib.sf.net to your
+MSYS home directory, start MSYS, untar the file 
+("tar xvzf file.tar.gz"), cd to the newly created plib directory
+and type "./configure && make && make install".
+
+5. Install Portaudio 18
+-----------------------
+Download the source package from http://www.portaudio.com to your
+MSYS home directory, start MSYS, untar the file 
+("tar xvzf file.tar.gz"), cd to the newly created portaudio directory
+and type "./configure --prefix=/usr && make && make install".
+
+6. Install libjpeg 6b
+---------------------
+Download the source package from http://www.ijg.org/files/jpegsrc.v6b.tar.gz
+to your MSYS home directory, start MSYS, untar the file
+("tar xvzf jpegsrc.v6b.tar.gz"), cd to the newly created jpeg-6b
+directory and type "./configure --prefix=/usr && make && make install-lib && make install-headers".
+
+7. Install BOOST (necessary for the installation of CGAL)
+----------------
+http://www.boost.org.
+The version 1.32 is sufficient and lighter than recent version. Direct link:
+"http://sourceforge.net/projects/boost/files/boost/1.32.0/boost_1_32_0.tar.gz/download"
+Download the source package to your MSYS home directory, start MSYS, untar the file
+("tar xvzf boost_1_32_0.tar.gz").
+No compilation needed, only headers are useful. To copy the directory boost in the directory include of Mingw.
+("cp -R boost_1_32_0/boost/  ../../MinGW/include")
+
+
+8. Install CGAL (necessary for Windfield import in model-based Scnery (like Brie Scenery))
+----------------
+
+Download the source package cgal-3.3.1 to your MSYS home directory, from http://www.cgal.org.
+(direct link :"ftp://ftp.mpi-sb.mpg.de/pub/outgoing/CGAL/CGAL-3.3.1.tar.gz"),
+start MSYS, untar the file ("tar xvzf CGAL-3.3.1.tar.gz").
+cd to the newly created CGAL-3.3.1 directory and type
+"./install_cgal --prefix /usr"
+
+
+9. Build CRRCsim
+----------------
+In the crrcsim directory, type 
+"./configure"
+
+Then type "make" to build CRRCsim.
+
+10. Build an installer
+---------------------
+Install NSIS from http://nsis.sourceforge.net and add it to your
+MSYS path (export PATH=$PATH:/path/to/makensis.exe). You can
+make this setting permanent by creating a file called ".profile"
+in your home directory that looks like this (adjust the to match
+your system!):
+
+#!/bin/sh
+export PATH=$PATH:/c/Programme/NSIS
+
+Not to forget of dll in installer :
+ Make all
+ bash
+ export PATH=""
+ ./crrcsim.exe
+ < If a dll is missing, It is necessary to copy it in the crrcsim directory >
+ exit
+ 
+Now type "make win32package" in the crrcsim directory
+to create the installer.
+
+NB: following dll are needed
+- SDL.dll
+- libintl-8.dll
+- libgcc_s_dw2-1.dll
+- libiconv-2.dll
+- libjpeg-8.dll
+- libportaudio-2.dll
+- libstdc++-6.dll
+

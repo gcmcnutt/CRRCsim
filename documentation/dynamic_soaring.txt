@@ -1,0 +1,8 @@
+Fly at CAPE_COD with
+      wind.direction=90
+      wind.velocity=13
+(you can load a preset for this)
+and start your plane from the ground.
+Use throttle to get it into the air.
+
+

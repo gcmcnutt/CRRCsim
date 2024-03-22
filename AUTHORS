@@ -1,0 +1,37 @@
+The original author and SF.net project (1) manager is
+  
+  Jan Edward Kansky <kansky@ll.mit.edu>
+
+The initial aerodynamics (formulas/code) were done by
+  
+  Mark Drela (2) and Bruce Jackson (3)
+
+Developers (people who show up in the CVS/mercurial ChangeLog, in
+alphabetical order), (4):
+
+  Ahmet Inan
+  Bob Parks
+  Chris Bailey
+  Jan Edward Kansky
+  Jan Reucker
+  Jens Wilhelm Wulf
+  Joel Lienard
+  Kees Lemmens
+  Lionel Cailler
+  Martin Herrmann
+  Olivier Bordes
+  Todd Templeton
+
+Credits go to all the people who contributed patches, artwork,
+documentation, binary packages, models ... and keep the project alive
+by actually *using* CRRCsim, reporting bugs, helping others in the
+discussion forum, requesting new features, ...
+
+-------
+
+(1) The project on sourceforge is not active anymore.
+(2) Mark Drela's ideas where coded by someone else, so he doesn't appear in
+    any source code history and we don't exactly know which parts of CRRCSim
+    came out of his mind.   
+(3) He worked on a project called LaRCSIM, from which files have been taken.
+(4) As of january, 2009.

@@ -1,0 +1,350 @@
+\documentclass[a4paper, 11pt, pdftex]{article}
+\usepackage[pdftex]{graphicx}
+\usepackage{ae}
+\usepackage{latexsym}
+\usepackage{rotating}
+\usepackage[intlimits, sumlimits]{amsmath}
+\usepackage[pdftex, bookmarks]{hyperref}
+\pdfcompresslevel=9
+
+\newcommand{\unit}[1]{\textrm{#1}}
+\newcommand{\vi}[1]{_{\textrm{#1}}}
+\newcommand{\EtaProp}{\eta_{\textrm{prop}}}
+\newcommand{\EtaSteller}{\eta_{\textrm{steller}}}
+
+\def\jwwTitle{How to adjust multicopter parameters, multicopter model version 1}
+\def\jwwSubject{}
+\def\jwwKeywords{multicopter, quadrocopte, CRRCSim}
+\def\jwwAuthor{Jens Wilhelm Wulf}
+
+\hypersetup{pdftitle={\jwwTitle},%
+    pdfsubject={\jwwSubject},%
+    pdfkeywords={\jwwKeywords},%
+    pdfauthor={\jwwAuthor}}
+
+\author{\jwwAuthor}
+\title{\jwwTitle}
+\date{06.12.2009}
+
+\begin{document}
+
+  \numberwithin{equation}{section}
+  \maketitle
+  \tableofcontents
+  \clearpage
+
+  \setlength{\parindent}{0pt}
+  \setlength{\parskip}{5pt plus 2pt minus 1pt}
+  
+  \section{General file format}
+
+    Take a look at {\tt qc01.xml} as an example.
+
+    Hard points/wheels, mass, inertia are just like with fixed wing models
+    (see \cite{l:C_FILE}),
+    the only difference is about aerodynamic data and controllers.  
+
+    You need to define where propellers are mounted. Describe x- and
+    y-offsets to center of gravity and whether props are spinning
+    counter-clockwise ({\tt dir="-1"}).
+
+    All motors/propellers are assumed to be of the same type (except for
+    direction of rotation) and defined in the power-section as it is done
+    for fixed-wing models. Note that the simulation uses one battery for
+    every motor, so its capacity defined in the file is smaller than you
+    might think. {\tt qc01.xml} does not use the automagic type of description in
+    order to allow a more detailed fit to the real model.
+
+    Coordinate system: x positive forward, y positive right, z positive
+    down. Rotation rates around these axes are $p$, $q$, $r$.
+
+    In order to adjust the CRRCSim model to my real one, I used the
+    following steps. Beware: this is NOT easy, and some parts even plain
+    dangerous. I guess that people who are able to do this are able to
+    do the math themselves and much more.
+
+  \section{Statics}
+  
+    Hover data measured on the real copter and used for some of the calculations here:
+    
+    \begin{tabular}{r|r|r|r|r}
+      PWM-ratio &  battery voltage &      rpm & mass  &  $M$ (calculated, see below)\\
+      \hline
+      80/255    &  11,2 V          & 2768 rpm & 405 g &  0.02 N\\
+      96/255    &  10,8 V          & 3100 rpm & 505 g &  0.02494 N\\
+      110/255   &  10,6 V          & 3397 rpm & 612 g &  0.03022 N\\
+    \end{tabular}
+
+    First of all, prop positions, mass and inertia should be quite accurate.
+    All this can simply be measured and calculated.
+    
+    Describe your power plant.
+    
+    Set {\tt yaw.dist} and {\tt roll.dist} to zero.
+    
+    \subsection{Propeller}
+    
+    Weight is 400\,g, so every motor/prop needs to create
+    $F = 0.1\,\unit{kg} \cdot 9.81\,\unit{m}/\unit{s}^2=0.981\,\unit{N}$.
+    
+    Take a look at the source code to see how propeller force is calculated:
+    {\tt src/mod\_fdm/power/propeller.cpp}. When hovering, this is
+    \begin{subequations}
+    \begin{eqnarray}
+      \EtaProp &=& 0.65\\
+      \varrho &=& 1.225\,\unit{kg}/\unit{m}^3\\
+      F &=& \pi \cdot 0.25 \cdot D^2 \varrho \left(H n\right)^2 \cdot 1/2\, \EtaProp \label{f:PROP_F}
+    \end{eqnarray}
+    \end{subequations}
+    I know that my setup needs around 2800\,rpm to hover, $D$=0.235\,m.
+    Using these values and equation~\eqref{f:PROP_F} results in $H$=0.162\,m.
+    
+    I recalculated using all the numbers from the table above, the mean
+    value is $H$=0.1644\,m.
+    
+    You may ask about why I didn't just use the propeller's $H$ as defined by
+    the manufacturer. First, my prop is a modified standard one, so usual
+    rules don't apply. Secondly, I often read that manufacturers $H$ is not
+    accurate.
+    
+    Set {\tt engine.log} to 1 and hover at fixed altitude using an attitude
+    controlled setup. CRRCSim will write lots of data to stdout: one line
+    per timestep and motor. Redirect this output to a file (is automatically
+    done on windows) in order to not slow your PC down.
+    
+    Testing shows that the copter hovers at 2800\,rpm now. Fine.
+    
+    Motor parameters need to be adjusted. Also see \cite{l:C_POWER}. However,
+    in this case I have some data at three operating points, but it does not
+    include motor current. Going back to the propeller code, lets calculate
+    the torque needed. Equations found in the code are:
+
+    \begin{subequations}
+    \begin{eqnarray}  
+      P &=& F_X \, V_p / (2 \, \EtaProp) \\
+      P &=& F_X \, H \, n / (2 \, \EtaProp) \\
+      M &=& P / \omega \\
+      M &=& P / (2 \, \pi \, n) \\
+      M &=& F_X \, H \, n / (2 \, \EtaProp \, 2 \, \pi \, n)\\
+      M &=& F_X \, H / (4 \, \pi \, \EtaProp)
+    \end{eqnarray}
+    \end{subequations}
+      
+    With $F_X = m/4 \cdot 9.81\,\unit{m}/\unit{s}^2$ this results in $M$ as
+    written into the table above.
+    
+    \subsection{Engine}
+    
+    So let's take a look at the engine's equations.
+    
+    {\tt src/mod\_fdm/power/engine\_dcm.cpp} reveals
+    \begin{subequations}
+    \begin{eqnarray}  \label{f:MOTOR}
+      \EtaSteller &=& 0.95 \\
+      U\vi{K} &=& \textrm{throttle} \cdot U \cdot \EtaSteller \\
+      U\vi{Gen} &=& \omega \cdot k\vi{M} \\
+      I\vi{M} &=& (U\vi{K} - U\vi{Gen}) / R\vi{I} \\
+      M\vi{M} &=& k\vi{M} \cdot I\vi{M} - k\vi{r} \cdot \omega - M\vi{r} \\
+      M\vi{r} &=& k\vi{M} \cdot I_0 \\
+      k\vi{r} &=& 0 \\
+    \end{eqnarray}
+    \end{subequations}
+    Which boils down to
+    \begin{equation}
+      M\vi{M} = k\vi{M} \cdot (\textrm{throttle} \cdot U \cdot 0.95 - \omega \cdot k\vi{M}) / R\vi{I} - I_0 \cdot k\vi{M}
+    \end{equation}
+    for us. There are three unknown parameters here and luckily I have three sets of data, 
+    which solves to $k_M=0.0131$ Vs, $R_I=0.1839\,\Omega$, $I_0=-4.013$\,A. Of course a negative 
+    $I_0$ is bullshit. Something wrong with the simulation equations? However, 
+    I continue and force $I_0$ to be zero and solve again. Due to three data sets, I get 
+    three solutions:
+    
+    $k\vi{M}$ = 0.0081483226538728\,Vs, $R\vi{I}$ = 0.39817956295345\,$\Omega$ \\
+    $k\vi{M}$ = 0.0085130006948808\,Vs, $R\vi{I}$ = 0.37102864543948\,$\Omega$ \\    
+    $k\vi{M}$ = 0.0089455381882278\,Vs, $R\vi{I}$ = 0.34435633250623\,$\Omega$ \\
+    
+    Now motor current and voltage used are right. Don't be surprised because current 
+    is high according to log output: this is the current flowing through the motor, 
+    not the one which has to be delivered by the battery. The latter is lower 
+    (we use PWM here).
+
+  \section{Dynamics}
+  
+    I measured the real one's behaviour using step responses. This is
+    dangerous and you might need special firmware! However, I did it and
+    will use the results to tweak simulation parameters.
+
+    I used a firmware which records raw sensor data of every control cycle.
+    In this case motor voltage (as commanded to the controller) and rate
+    gyro output is important. After turning a switch, it turns of the
+    controller of the axis to be examined for a defined time (about 500\,ms in
+    my case). Afterwards, commands a predefined voltage to this axis for a
+    defined time (some hundred milliseconds). By turning the switch back,
+    the process can be interrupted at any time.
+
+    Of course you can only do this on a calm day. If you're out of luck, the
+    copter already leaves its attitude while the commanded voltage is zero.
+    However, it will do this once the predefined voltage is applied. React
+    quickly, it will go down and crash otherwise.
+
+    I tried getting the parameters from data gathered while the control loop
+    was closed. This is not dangerous at all, but only gave sane parameters
+    for rotation about the z-axis.
+
+    For x-axis, my controller commands voltage like this:
+    \begin{subequations}  \label{f:U}
+    \begin{eqnarray}
+      u\vi{MotLeft}  &=& u_0 + u\vi{ControllerX}\\
+      u\vi{MotRight} &=& u_0 - u\vi{ControllerX}
+    \end{eqnarray}
+    \end{subequations}
+    y-axis is the same.
+
+    So the controller is turned of for some time, $u\vi{ControllerX}$=0.
+    Afterwards $u\vi{ControllerX}$=const for some time. Rotation rate around
+    x-axis is recorded, let's call it $p$. For shortness, $u\vi{ControllerX}$=$u$.
+
+    I searched for parameters to make the following equation fit measurements (in laplace domain):
+    \begin{equation}    
+      s \, p = a \, u/(\tau\,s+1)^2 - b \, p
+    \end{equation}    
+    For x and y I found $a$=20\,rad/s$^2$/V, $b$=0, $\tau$=15\,ms.
+    
+    For z I found $a$=5.3\,rad/s$^2$/V, $b$=0.5/s, $\tau$=5\,ms. $\tau$ is not that important and may be wrong here.
+
+  \subsection{Motor}
+
+    There is something undefined up to now: inertia of motor and propeller.
+    I approximate that from the x axis transfer function. The motors
+    acceleration is $M\vi{M} / J\vi{M}$; using equations~\eqref{f:MOTOR}:
+    \begin{equation}    
+      \frac{d\,\omega}{dt} = k\vi{M}\,\left( U - \omega \, k\vi{M} \right) / (R\vi{I}\,J\vi{M})
+    \end{equation}
+    
+    Bringing that from time domain to laplace and solving for $\omega/U$ gives
+    
+    \begin{equation}    
+      \omega/U = 1/k\vi{M}^2 \, \frac{1}{(R\vi{I} \, J\vi{M} / k\vi{M}^2) \, s + 1}
+    \end{equation}    
+    
+    So there is a PT1 (I guess its called first order time lag in 
+    english) with $\tau=R\vi{I} \, J\vi{M} / k\vi{M}^2$.
+
+    I assume the motor speed as proportional to the copter's rotational
+    acceleration. But the motor's transfer function contains a PT1 while my
+    copter's rotation transfer function (see above) contains a PT2. Well, I
+    just say that a PT2 with $\tau\vi{pt2}$ is similar to a PT1 with
+    $\tau\vi{pt1}=\tau\vi{pt2} \cdot 1.7$. Therefore, 
+    $15\,\unit{ms} \cdot 1.7=\tau \cdot 1.7=R\vi{I} \, J\vi{M}/k\vi{M}^2$.
+    Solving this for $J\vi{M}$ gives $J\vi{M}=5\cdot 10^{-6} \, \unit{kg} \, \unit{m}^2$.
+
+    Of course, all this assumed that only the motor's inertia is active
+    here, but there is the propeller's inertia, too. However, for the
+    simulation, only their sum is important, therefore I set {\tt
+    propeller.J=0}
+    and {\tt engine.J\_M=5E-6}.
+
+    The sum of both inertias could of course also be measured by applying a
+    fixed voltage to the motor and recording its rotational speed. However,
+    when getting to much details from the real system very accurately, keep
+    in mind that CRRCSim doesn't model everything that accurately -- so
+    using 'wrong' values might result in a more realistic simulation. In the
+    case of a multicopter this is very important, because for example the
+    time lag from measuring a rotation rate, calculating the controller,
+    transferring a new setpoint to the motor's speed controller, until this
+    speed controller applies the new voltage to the motor does depend on
+    software heavily. And it depends on software of at least two different
+    embedded electronics usually (main flight control and brushless
+    controller). Furthermore, different copter firmwares use different
+    filters here and there and so on...
+  
+    So in this regard CRRCSim's multicopter model can't realistically model
+    every real one. It would be possible to do, but I guess noone would be
+    willing to find all those parameters...
+
+  \subsection{Aerodynamics}
+  
+    For yaw I found $b$=0.5/s.
+    
+    The simulator uses
+    \begin{subequations} 
+    \begin{eqnarray}
+      \frac{d\,r}{dt} &=& M\vi{z} \, \frac{I\vi{xx}}{I\vi{xx}\,I\vi{zz} - I\vi{xz}^2}\\
+      M\vi{z}         &=& - \texttt{yaw.damp1} \cdot r - \texttt{yaw.damp2} \cdot |r| \, r
+    \end{eqnarray}
+    \end{subequations}
+    as can be seen in {\tt EOM01::ls\_accel()} and 
+    {\tt CRRC\_AirplaneSim\_MCopter01::aero()}.
+    
+    Therefore,
+    \begin{equation}    
+      \texttt{yaw.damp1} = b \, \frac{I\vi{xx}\,I\vi{zz} - I\vi{xz}^2}{I\vi{xx}}
+    \end{equation}            
+    which results in {\tt yaw.damp1=0.00341, yaw.damp2=0}.
+    
+    Although I found $b$=0 for nick and roll, {\tt roll.damp1=0.0009}, {\tt roll.damp2=0}
+    because the simulation likes at least some damping.        
+    
+    I have not thought about something to measure {\tt speed.damp}, so this
+    is done by try and error.
+
+  \section{Controllers}
+  
+    Well, we're not through yet. Physics are defined now, but the control
+    loop of the copter is not\dots
+    
+    Looking at the source, any controllers output means how much voltage is
+    applied in the sense of equation~\eqref{f:U} with 
+    \begin{equation}
+      u\vi{ControllerX} = \textrm{URel} \cdot U\vi{Rel} = \textrm{URel} \cdot U\vi{Battery0} \cdot 0.7
+    \end{equation}
+    So if the controller output is one, the voltage $u\vi{ControllerX}$ that
+    will be applied is 0.7 times the voltage of the fully charged battery.
+    The controllers action will be independent of battery voltage as
+    long as it is at least 0.7 times the full charge voltage and the
+    controller output is smaller than one.
+
+    \subsection{Controller type "Omega"}
+
+    It gives rate controlled behaviour. Because it does not know about the
+    scaling with $U\vi{Battery0} \cdot 0.7$, its parameters depend on this
+    value. Using variable names for roll axis, with $p\vi{sp}$ being the
+    setpoint and $p\vi{pv}$ being the process value, its output is
+    \begin{subequations}
+    \begin{eqnarray}
+      p\vi{d}           &=& p\vi{sp} - p\vi{pv}\\
+      u\vi{ControllerX} &=& U\vi{Battery0} \cdot 0.7 \left( K\vi{P} \, p\vi{d} + K\vi{D} \, \frac{d\,p\vi{pv}}{dt} + K\vi{I} \, \int p\vi{d} \right)
+    \end{eqnarray}
+    \end{subequations}
+    
+    Compared to the settings of my real copter I had to halve $K\vi{D}$,
+    otherwise the simulation got unstable.
+    
+    To the controller, maximum stick input is 0.5 (just like every other
+    signed stick input in CRRCSim) and $p\vi{sp} = {\tt stick} \cdot ${\tt
+    scale}. If {\tt scale\_roll\_pitch.exp} $>$ 1, a special scaling is used for
+    roll and nick to allow flips and loopings:    
+    \begin{equation}
+      p\vi{sp} = \texttt{scale} \left( \texttt{a} \cdot \texttt{stick}
+                 + \texttt{b} \cdot \texttt{stick}^\texttt{exp}
+                 \right)
+    \end{equation}
+    Here {\tt a}, {\tt b} and {\tt exp} are from the {\tt
+    scale\_roll\_pitch} section of the input file.
+        
+              
+  \clearpage
+    
+  \begin{thebibliography}{99}
+  
+    \bibitem{l:C_FILE}
+      CRRCSim fixed wing file format description,
+      CRRCSim installation: {\tt documentation/file\_format/index.html}
+      
+    \bibitem{l:C_POWER}
+      CRRCSim power and propulsion system description,
+      CRRCSim installation: {\tt documentation/power\_propulsion/power\_propulsion.html}
+    
+  \end{thebibliography}
+
+\end{document}

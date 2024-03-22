@@ -1,0 +1,57 @@
+== Connections
+
+The idle loop (in SimStateHandler) calls update on FDM and GameHandler.
+
+=== Recording
+
+On reset, a new recording should be started. Who knows about reset? It's the
+SimStateHandler. The GameHandler has to be able to insert XML data.
+
+The GameHandler has to be able to insert markers (or maybe more) and stop
+the recording.
+
+While the recording is active, the user can select a filename (and maybe enter
+some description?). The description is inserted at once, whereas the
+filename is set via a "mv" after the file has been closed.
+
+
+=== Playback
+
+When a file is selected for playback (shadow mode or not), it has to be
+started at reset. 
+
+In case of shadow mode, the GameHandler has to be called
+when special records are read so that it can evaluate these records and
+stop/continue playback.
+
+In case of a start with velocity=0 and shadow mode, playback should be
+synced according to throttle.
+
+
+== File format
+
+Binary file, starts with ascii-XML which may contain anything (scenery, airplane,
+wind and thermal settings, game mode). After this first XML record, every
+record starts with a single byte:
+
+0x00: time, position, and attitude data; fixed format
+
+0x01: control inputs, only needed for animated flaps, gears, ...
+
+0x02: Marker. The following int32 gives more detail. Should it be fixed or
+      should the meaning be defined in the initial XML record? 
+      Example usage:
+      The record starts with launch in F3F mode. The shadow plane moves on
+      until it passes the first pylon (race starts), which is marked by a
+      marker like this. It will wait there until the real player has passed
+      its first pylon -- in case the real player already did, the shadow
+      plane will not wait.
+  
+0x03: variable length XML record for future use.
+
+== todo
+
+endianess
+
+dialog to remove a selected robot
+

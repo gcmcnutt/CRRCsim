@@ -1,0 +1,41 @@
+Installing CRRCSim on Microsoft Windows 98/2000/XP
+--------------------------------------------------
+
+For this platform we provide a Nullsoft installer containing
+nearly everything you need to setup CRRCSim.
+
+1. Download the installer from the CRRCSim homepage.
+
+2. Install it the usual way (double-click and follow
+   the instructions provided by the installer).
+
+3. If you want to use the PARALLEL port interface, you
+   need an additional DLL called dlportio.dll. If you're
+   not planning to use the PARALLEL interface, you may
+   safely skip this step.
+
+   Due to licensing issues we are not allowed to provide the
+   required dlportio.dll with CRRCSim. This means that you
+   have to install it from a separate package. Download it
+   from
+   
+   http://www.driverlinx.com/DownLoad/DlPortIO.htm
+   
+   and install it as described on this page.
+
+4. Now you should be able to start CRRCsim by double-clicking
+   the CRRCSim desktop icon or the Start Menu entry.
+
+
+Uninstalling
+------------
+
+The installer automatically creates an entry in the control panel's
+software dialog. Just select this entry and click remove, or
+select "Uninstall" from CRRCSim's Start Menu folder.
+
+This will remove all files which were copied to your computer
+during installation. However, it will leave you configuration
+file (crrcsim.xml) and any file created while running CRRCSim
+(stdout.txt, stderr.txt). This allows you to keep your configuration
+when installing a new version.

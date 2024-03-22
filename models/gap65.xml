@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+<CRRCSim_airplane version="2">
+  <name>
+    <en>Gap65</en>
+  </name>
+  <categories>
+    <category>Sports</category>
+  </categories>
+  <description>
+    <en>
+Design by Pierpaolo Garofalo: http://pier.unirc.eu
+Graphic support by Jan Reucker: http://www.reucker-online.de
+Texture inspired by http://jr-foliendesign.de
+    </en>
+  </description>
+  <changelog>
+    <change>
+      <date>2006-06-11</date>
+      <author>Pierpaolo Garofalo for CRRCSim 0.9.8</author>
+      <en> </en>
+    </change>
+    <change>
+      <date>2006-06-11</date>
+      <author>Pierpaolo Garofalo pier@unirc.eu</author>
+      <en>No change.</en>
+    </change>
+    <change>
+      <date>2006-04-01</date>
+      <author>Jan Reucker (slowhand_47@gmx.de)</author>
+      <en>Adapted animations to file format changes. Set CL_max to 1.8
+          for more realistic loop behaviour, and set CL_min to -1.8 as
+          this should be a strictly symmetric airplane.</en>
+    </change>
+    <change>
+      <date>2009-02-25</date>
+      <author>Jens W. Wulf</author>
+      <en>Extended launch default settings to what has been default on 'Davis'</en>
+    </change>
+    <change>
+      <date>2010-05-13</date>
+      <author>J. Reucker</author>
+      <en>Added max_force to springs</en>
+    </change>
+  </changelog>
+  <aero version="1" units="1">
+    <ref chord="0.346" span="1.8" area="0.606" speed="17" />
+    <misc Alpha_0="0.0" eta_loc="0.244" CG_arm="0.25" span_eff="0.85" />
+    <m Cm_0="0.0" Cm_a="-1.354138" Cm_q=" -11.736075" Cm_de="-1.090073" />
+    <lift CL_0="0.101" CL_max="1.8" CL_min="-1.8" CL_a="4.788372" CL_q="9.713893"
+    CL_de="0.510200" CL_drop="0.5" CL_CD0="0" />
+    <drag CD_prof="0.05" Uexp_CD="-0.5" CD_stall="0.15" CD_CLsq="0.015" CD_AIsq="0.01"
+       CD_ELsq="0" />
+    <Y CY_b="-0.8344286" CY_p="0.122231" CY_r="0.333345" CY_dr="0.137171"
+       CY_da=" -0.019946" />
+    <l Cl_b="-0.047816" Cl_p="-0.397493" Cl_r="0.087269" Cl_dr="0.004970"
+       Cl_da="0.257501" />
+    <n Cn_b="0.148270" Cn_p="-0.042860" Cn_r="-0.152794" Cn_dr="-0.064772"
+       Cn_da="0.016803" />
+  </aero>
+  <config version="1">
+    <descr_long>
+      <en>Default configuration.</en>
+    </descr_long>
+    <descr_short>
+      <en>default</en>
+    </descr_short>
+    <mass_inertia version="1" units="1" Mass="4.5" I_xx="0.16"
+       I_yy="0.6" I_zz="0.66" I_xz="0.01" />
+    <sound version="1">
+      <sample filename="fan.wav" type="0" pitchfactor="0.002" maxvolume="1" />
+    </sound>
+    <power units="1">
+      <automagic F="40" V="17">
+        <battery throttle_min="0.1">
+          <automagic T="420" />
+          <shaft J="0" brake="0">
+            <propeller D="0.4064" H="0.2032" J="0" n_fold="-1"   />
+            <engine>
+              <automagic omega_p="1050" eta_opt="0.78" eta="0.7" />
+            </engine>
+          </shaft>
+        </battery>
+      </automagic>
+    </power>
+  </config>
+  <graphics version="1" model="gap65.ac">
+    <descr_long>
+      <en></en>
+    </descr_long>
+    <descr_short>
+      <en>FX180</en>
+    </descr_short>
+  </graphics>
+  <graphics version="1" model="gap65_raven.ac">
+    <descr_long>
+      <en></en>
+    </descr_long>
+    <descr_short>
+      <en>Raven</en>
+    </descr_short>
+  </graphics>
+  <wheels version="1" units="0">
+    <wheel percent_brake="0.5" caster_angle_rad="0">  <!-- Wheel -->
+      <pos x="0.38251" y="0.720398" z="0.84638" />
+      <spring constant="65" damping="0.25" max_force="50.0" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">  <!-- Wheel -->
+      <pos x="0.38251" y="-0.720398" z="0.84638" />
+      <spring constant="65" damping="0.25" max_force="50.0" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <pos x="1.46" y="0" z="0" />
+      <spring constant="65" damping="0.25" max_force="30.0"/>
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <pos x="-0.6" y="0" z="-0.49" />
+      <spring constant="65" damping="0.25" max_force="30.0"/>
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <pos x="-2.4" y="0" z="-0.98" />
+      <spring constant="65" damping="0.25" max_force="30.0"/>
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <pos x="-3.02" y="0" z="0.1" />
+      <spring constant="65" damping="0.25" max_force="30.0"/>
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <pos x="-0.26" y="2.64" z="0" />
+      <spring constant="65" damping="0.25" max_force="30.0"/>
+    </wheel>
+    <wheel percent_brake="0.25" caster_angle_rad="0">
+      <pos x="-0.26" y="-2.64" z="0" />
+      <spring constant="65" damping="0.25" max_force="30.0"/>
+    </wheel>
+    <wheel percent_brake="0.25" caster_angle_rad="0">
+      <pos x="-2.44" y="1.28" z="0" />
+      <spring constant="65" damping="0.25" max_force="30.0"/>
+    </wheel>
+    <wheel percent_brake="0.25" caster_angle_rad="0">
+      <pos x="-2.44" y="-1.28" z="0" />
+      <spring constant="65" damping="0.25" max_force="30.0"/>
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <pos x="1.27" y="0" z="-0.5" />
+      <spring constant="65" damping="0.25" max_force="30.0"/>
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <pos x="1.27" y="0" z="0.5" />
+      <spring constant="65" damping="0.25" max_force="30.0"/>
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <pos x="-2.6499" y="0" z="0.247584" />
+      <spring constant="65" damping="0.25" max_force="30.0"/>
+    </wheel>
+    <!-- Tail wheel: steering 20 deg. (= 0.349 rad), mapped to rudder  -->
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+            <pos x="-2.6499" y="0" z="0.247584" />
+      <spring constant="65" damping="0.25" max_force="35.0" />
+      <steering mapping="RUDDER" max_angle="0.349" />
+    </wheel>
+  </wheels>
+  <animations>
+    <animation type="ControlSurface">
+      <!-- right aileron -->
+      <object name="alettone_dx" max_angle="0.349" />
+      <control mapping="AILERON" gain="-1.0" />
+      <hinge x="-0.63" y="0.56" z="-0.03" />
+      <hinge x="-0.40" y="2.64" z="-0.02" />
+    </animation>
+    <animation type="ControlSurface">
+      <!-- left aileron -->
+      <object name="alettone_sx" max_angle="0.349" />
+      <control mapping="AILERON" gain="-1.0" />
+      <hinge x="-0.63" y="-0.56" z="-0.03" />
+      <hinge x="-0.40" y="-2.64" z="-0.02" />
+    </animation>
+    <animation type="ControlSurface">
+      <!-- right elevator -->
+      <object name="Stb_mob_dx" max_angle="0.349" />
+      <control mapping="ELEVATOR" gain="1.0" />
+      <hinge x="-2.51" y="0.08" z="-0.04" />
+      <hinge x="-2.51" y="1.28" z="-0.02" />
+    </animation>
+    <animation type="ControlSurface">
+      <!-- left elevator -->
+      <object name="Stb_mob_sx" max_angle="0.349" />
+      <control mapping="ELEVATOR" gain="-1.0" />
+      <hinge x="-2.51" y="-0.08" z="-0.04" />
+      <hinge x="-2.51" y="-1.28" z="-0.02" />
+    </animation>
+    <animation type="ControlSurface">
+      <!-- rudder -->
+      <object name="direzionale" max_angle="0.500" />
+      <control mapping="RUDDER" gain="-1.0" />
+      <hinge x="-2.53" y="0.00" z="0.13" />
+      <hinge x="-2.51" y="0.00" z="-0.83" />
+    </animation>
+  </animations>
+  <launch>
+    <preset name_en="Gap65 default (ground)" altitude="0" velocity_rel="0" angle="0.22" sal="0" rel_to_player="1" rel_front="21" rel_right="0" />
+  </launch>
+</CRRCSim_airplane>
+
+
+

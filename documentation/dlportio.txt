@@ -1,0 +1,16 @@
+Information on DLPORTIO.DLL
+---------------------------
+
+If you want to use the PARALLEL port interface, you
+need an additional DLL called dlportio.dll. If you're
+not planning to use the PARALLEL interface, you don't need
+this DLL.
+
+Due to licensing issues we are not allowed to provide the
+required DLPORTIO.DLL with CRRCSim. This means that you
+have to install it from a separate package. Download it
+from
+   
+http://www.driverlinx.com/DownLoad/DlPortIO.htm
+   
+and install it as described on this page.

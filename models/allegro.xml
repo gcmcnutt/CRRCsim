@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+<CRRCSim_airplane version="2">
+  <name>
+    <en>Allegro</en>
+  </name>
+  <categories>
+    <category>Gliders</category>
+    <category>Powered gliders</category>
+    <category>Electric</category>
+  </categories>
+  <description>
+    <en>
+Allegro (including electric version) by Mark Drela.
+      
+This plane has been automatically converted from allegro.air. 
+Please update this text if you know more about it.
+    </en>
+  </description>
+  <changelog>
+    <change>
+      <date>Unknown</date>
+      <author>CRRCSim 0.9.5</author>
+      <en>Automatically converted from .air file.</en>
+    </change>
+    <change>
+      <date>26.02.2006</date>
+      <author>Jens W. Wulf</author>
+      <en>
+        Filled in data found in allegro plans from the web, added Allegro-E-Lite,
+        and Allegro with ballast.
+      </en>
+    </change>
+    <change>
+      <date>2006-12-21</date>
+      <author>Jan Reucker</author>
+      <en>Added moving control surfaces.</en>
+    </change>
+    <change>
+      <date>2006-04-01</date>
+      <author>Jan Reucker (slowhand_47@gmx.de)</author>
+      <en>Adapted animations to file format changes.</en>
+    </change>
+    <change>
+      <date>2009-02-25</date>
+      <author>Jens W. Wulf</author>
+      <en>Added launch default</en>
+    </change>
+    <change>
+      <date>2010-05-13</date>
+      <author>J. Reucker</author>
+      <en>Added max_force to springs</en>
+    </change>
+  </changelog>
+  <aero version="1" units="0">
+    <ref chord="0.551667" span="6.55" area="3.61111" speed="19.685" />
+    <misc Alpha_0="0.0349066" eta_loc="0.15" CG_arm="0.25" span_eff="0.95" />
+    <lift CL_0="0.563172" CL_max="1.1" CL_min="-0.6" CL_a="5.5036" CL_q="7.50999"  
+          CL_de="0.162" CL_drop="0.5" CL_CD0="0" />
+    <drag CD_prof="0.02" Uexp_CD="-0.5" CD_stall="0" CD_CLsq="0.01" CD_AIsq="0" CD_ELsq="0" />
+    <Y CY_b="-0.41561"   CY_p="-0.42382"   CY_r= "0.29754"   CY_dr="0" CY_da="-0.13589" />
+    <l Cl_b="-0.250926"  Cl_p="-0.611798"  Cl_r= "0.139581"  Cl_dr="0" Cl_da="-0.00307921" />
+    <m Cm_0="-0.0112663" Cm_a="-0.575335" Cm_q="-11.4975" Cm_de="-0.597537" />
+    <n Cn_b= "0.0567069" Cn_p="-0.0740898" Cn_r="-0.0687755" Cn_dr="0" Cn_da= "0.0527143" />
+  </aero>
+  <config version="1">
+    <descr_long>
+      <en>
+        Automatically converted from allegro.air.
+        
+        Mark Drela's Allegro drawing says: 22oz, 34oz ballasted.
+          Items:
+            350mAh:   57g  2oz
+            3 servos: 27g  3*0.3oz
+            rec:      23g  0.8oz
+            ballast:  max 16oz
+            
+        So this is a sligthly ballasted or heavy build Allegro.
+      </en>
+    </descr_long>
+    <descr_short>
+      <en>Allegro</en>
+    </descr_short>
+    <mass_inertia version="1" units="0" Mass="0.0450782" I_xx="0.0664259"
+       I_yy="0.0162819" I_zz="0.081474" I_xz="0.000771958" />
+    <sound version="1">
+      <sample filename="" type="0" pitchfactor="0" maxvolume="1" />
+    </sound>
+  </config>
+  <config version="1">
+    <descr_long>
+      <en>
+        See description of default config.
+      </en>
+    </descr_long>
+    <descr_short>
+      <en>Allegro with ballast</en>
+    </descr_short>
+    <mass_inertia version="1" units="0" Mass="0.066" I_xx="0.0664259"
+       I_yy="0.0162819" I_zz="0.081474" I_xz="0.000771958" />
+    <sound version="1">
+      <sample filename="" type="0" pitchfactor="0" maxvolume="1" />
+    </sound>
+  </config>
+  <config version="1">
+    <descr_long>
+      <en>      
+          Data of Allegro-E-Lite from fuse plan:
+            Graupner CAM 6x3 0.3oz
+            Seven cells 600AE (4.7oz)
+            Speed 400 with stator ring 2.8oz
+            Servos+...: 2*0.3oz+0.8oz+0.8oz
+            No brake, only two servos!
+          So its weight is: 22oz - 0.3oz - 2oz + 0.3oz + 4.7oz + 2.8oz + 0.8oz = 28.3oz = 0.802kg = 0.055 slug
+          
+          Yes, using a 6"x3" prop for an airplane with 0.8kg and 2m wingspan is not very good.
+      </en>
+    </descr_long>
+    <descr_short>
+      <en>Allegro E-Lite</en>
+    </descr_short>
+    <mass_inertia version="1" units="0" Mass="0.055" I_xx="0.0664259"
+       I_yy="0.0162819" I_zz="0.081474" I_xz="0.000771958" />
+    <sound version="1">
+      <sample filename="electric.wav" type="1" pitchfactor="0.004" maxvolume="1" />
+    </sound>
+    <power>
+      <battery C="0.6" U_0="8.4" U_off="6.5" R_I="11E-3" throttle_min="0">
+        <U_0rel>
+          1.00;
+          0.93;
+          0.91;
+          0.90;
+          0.89;
+          0.88;
+          0.87;
+          0.86;
+          0.85;
+          0.85;
+          0.84;
+          0.83;
+          0.82;
+          0.80;
+          0.78;
+          0.75;
+          0.67;
+        </U_0rel>
+        <shaft J="0" brake="1">
+          <propeller D="0.15" H="0.076" J="0" n_fold="5" downthrust="1"/>
+        <engine filename="Mabuchi_380_FR" />
+        </shaft>
+      </battery>
+    </power>
+  </config>
+  <graphics version="1" model="allegro.ac">
+    <descr_long>
+      <en>Automatically converted from allegro.air.</en>
+    </descr_long>
+    <descr_short>
+      <en>default</en>
+    </descr_short>
+  </graphics>
+  <wheels version="1" units="0">
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.083300002" y="3.2750001" z="-0.5625" />
+      <spring constant="10" damping="0.2" max_force="5.000" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.37490001" y="3.2750001" z="-0.5625" />
+      <spring constant="10" damping="0.2" max_force="5.000" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.083300002" y="-3.2750001" z="-0.5625" />
+      <spring constant="10" damping="0.2" max_force="5.000" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.37490001" y="-3.2750001" z="-0.5625" />
+      <spring constant="10" damping="0.2" max_force="5.000" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="0" y="2.5799999" z="-0.1955" />
+      <spring constant="60" damping="0.1" max_force="5.000" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="0" y="-2.5799999" z="-0.1955" />
+      <spring constant="60" damping="0.1" max_force="5.000" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="0" y="1.25" z="0.15000001" />
+      <spring constant="10" damping="0.2" max_force="5.000" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="0" y="-1.25" z="0.15000001" />
+      <spring constant="10" damping="0.2" max_force="5.000" />
+    </wheel>
+    <wheel percent_brake="0.69999999" caster_angle_rad="0">
+      <pos x="0.852" y="0" z="0.1875" />
+      <spring constant="30" damping="0.2" max_force="5.000" />
+    </wheel>
+    <wheel percent_brake="0.69999999" caster_angle_rad="0">
+      <pos x="-2.75" y="0" z="-0.60399997" />
+      <spring constant="10" damping="0.2" max_force="5.000" />
+    </wheel>
+    <wheel percent_brake="0.69999999" caster_angle_rad="0">
+      <pos x="-2.75" y="0" z="0.27079999" />
+      <spring constant="10" damping="0.2" max_force="5.000" />
+    </wheel>
+    <wheel percent_brake="0.69999999" caster_angle_rad="0">
+      <pos x="0" y="0" z="0.1875" />
+      <spring constant="10" damping="0.2" max_force="5.000" />
+    </wheel>
+  </wheels>
+  <animations>
+    <animation type="ControlSurface">
+      <!-- elevator -->
+      <object name="tail" max_angle="0.2" />
+      <control mapping="ELEVATOR" gain="1.0" />
+      <hinge x="-2.18" y="0.00" z="0.0" />
+      <hinge x="-2.18" y="1.00" z="0.0" />
+    </animation>
+    <animation type="ControlSurface">
+      <!-- rudder (controlled by AILERON) -->
+      <object name="fin" max_angle="0.500" />
+      <control mapping="AILERON" gain="1.0" />
+      <hinge x="-2.51" y="0.00" z="0.23" />
+      <hinge x="-2.51" y="0.00" z="-0.65" />
+    </animation>
+  </animations>
+  
+  <launch>
+    <preset name_en="glider default (hand)" altitude="6" velocity_rel="1" angle="0" sal="0" rel_to_player="1" rel_front="0" rel_right="2" />
+  </launch>  
+</CRRCSim_airplane>

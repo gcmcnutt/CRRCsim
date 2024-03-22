@@ -1,0 +1,173 @@
+How to configure crrcsim
+------------------------
+
+Currently there are five means of adapting crrcsim to your needs:
+
+1. Hit escape to show the graphical user interface and change settings there.
+   As of today, the important (but not all) settings can be adjusted there.
+2. Editing the file crrcsim.xml. This is the new config file for crrcsim. It
+   does not look that easy, but it provides structure, which has several
+   advantages. Once you understood that structure (just try), you'll know how 
+   to handle most things. Not every option in this file is effective yet. Some are 
+   written down so a developer knows what to implement in the future and
+   how to configure it.
+   Take a look at this file!
+3. Using command-line options. call
+     crrcsim --help
+   to see what's available. Anything specified on the command line should
+   override what's given in one of the files.
+   The airplane to be used can only be configured using command-line options!
+4. Modifying crrc_config.h before compiling the program. Currently you can
+   change some keybindings there.
+5. Editing the source code. This is just for developers, of course ;-)
+
+
+
+
+Graphics setup
+--------------
+
+See options provided by graphical user interface, except the following ones:
+    video.color_depth             How many bits per pixel? Usually 8, 16, 24
+    video.shading.option          'SMOOTH' interpolation of colors, or 'FLAT'
+    video.textures.fUse_textures  '1' to use textures (requires 3D acclerator)
+    video.textures.fUse_mipmaps   '1' or '0'. The use of mipmaps smoothes out distant textures.
+
+
+Joystick setup
+--------------
+
+The binding of buttons and axes can be configured via the GUI.
+See input scaling below.
+
+
+Input scaling (and mixers)
+--------------------------
+
+For joystick and mouse input you can make use of input scaling.
+Here we added lots of work to make the joystick and mouse inputs at least
+evenly capable to a microcontroler transmitter control. This means you can
+now mix exp, set output rate, correct input offset and input scaling. 
+Note that input scaling/mixer functionality are also useful for those 
+transmitters (e.g. Multiplex Cockpit SX) which "forget" all their settings
+when connected to the simulator (e.g. through an Audio interface, see below).
+
+A complete description would get too long here, so just try to figure out
+this simplified formula: 
+
+output = rate * expmix(input * scale, exp) + trim
+
+to help getting the best settings, you should always start with 1.0 for the
+factors (or -1.0 to invert it) and 0.0 for the addends, then call crrcsim
+with '-v' and watch the values. The values should be around from -0.5 to +0.5
+for all axis except for throttle, spoiler and retract which should be
+within 0.0 to 1.0. For the latters this is achieved adding an offset of +0.5.
+
+Additionally the following functionalities are implemented:
+- dual-rate setting for aileron, elevator & rudder
+- independently adjustable + and - travel for flap
+- 4 freely configurable mixers, to be used e.g. for gliders as:
+    - elevator-to-flap (snap-flap)
+    - spolier-to-flap (for landing)
+    - flap-(or spoiler-)to-elevator (flap or spoiler compensation)
+    - aileron-to-rudder (to improve coordination in turn)
+Dual-rate and mixers can also be toggled on/off during flight using keyboard
+short-cut (to be implemented yet..)
+
+
+Using a transmitter interface
+-----------------------------
+
+Several methods of plugging your transmitter to the computer are available.
+Most things can be configured using the graphical user interface.
+  * Parallel port interface by Jan Kansky (linux, win32)
+    inputMethod.method = PARALLEL
+    Setup the LPT to use in crrcsim.xml    
+  * Sound card interface (linux, win32, mac)
+    Should work with any transmitter with available output PPM signal. A
+    simple adapter (a wire) is connected between rc transmitter and input audio
+    port of the PC/mac.   
+    inputMethod.method = AUDIO
+  * RCTRAN2 (linux, kernel version 2.4 and 2.6)
+    The PPM signal is connected to the parallel port. You need to compile
+    the kernel module rctran2, which is included. See
+    interface_rctran2/kernel_module/README.txt
+    inputMethod.method = RCTRAN2    
+  * RCTRAN (linux, kernel version ?, does it work at all?)
+    Same hardware as RCTRAN2, but uses another kernel module.
+    inputMethod.method = RCTRAN    
+  * SERIAL2 (currently linux only)
+    A very special interface, only useful if you want to send control signals
+    via RS232.
+    inputMethod.method = SERIAL2
+    
+Most interfaces are PPM-based. You can setup the inputMethod.radio_type in crrcsim.xml,
+for example JR or FUTABA (all available options are listed there).
+
+Call crrcsim with the commandline option '-v' to test your transmitter
+interface setup.
+
+
+Zoom control
+------------
+
+zoom.control can be set to one of: MOUSE, KEYBOARD
+
+
+Configuring how the airplane should be started
+----------------------------------------------
+
+You can adjust the initial altitude (relative to ground), velocity (factor
+to the airplane's natural speed) and angle of an airplane.
+
+Those values used to be set in the .air-file describing the airplane itself,
+but that is not true anymore. If there is something about it in the
+.air-file, it is ignored.
+
+Now you can set those initial conditions using the GUI.
+
+The direction your planes faces is always into the wind, so if you change
+the direction of the wind, your plane will start into that direction, too.
+
+
+Configuring wind and thermals
+-----------------------------
+
+Wind and thermals can be configured in the GUI. Settings are saved only for
+the current location, to have good presets for every location. 
+Velocity is in ft/s here!
+
+Built-in scenery have an hard-coded wind field description, while model-based
+scenery can currently use one of the following:
+1) simple geometry-based wind calculation from terrain profile
+2) simple CFD-based (2D potential flow) wind calculation from terrain profile
+3) precomputed wind field (requires CGAL library, see "compile.txt")
+Mode 2) is the suggested and default mode if no precomputed wind field exists,
+also better than built-in wind. The choice between mode 1) and 2) can be done
+from the "Inspect wind" dialog selected from "View" menu.
+The Cape Cod built-in scenery, however, should be used for DS, since mode 2)
+cannot predict DS-condition.
+
+A wind turbulence model is also present, which is activated if the turbulence
+(relative) intensity is set to anything > 0. A value of 1 gives the level of
+turbulence prescribed by MIL-HDBK-1797, which is implemented in the form of
+the Dryden digital filter model. A value lower/higher than 1 means less/more
+turbulence than this.
+Wind turbulence is proportional to wind speed, so the effect is higher with
+strong winds. The intensity level can be adjusted to tune turbulence (e.g. 
+less turbulence on a slope facing the sea, more on a slope in the Alps).
+NB: only fdm_larcsim (airplane models) presently make use of the turbulence
+    model. To be implemented into fdm_heli01 & fdm_mcopter01.
+    
+
+Setting up sound output
+-----------------------
+Currently two things are implemented: 
+  * A simple variometer, which does not use the soundcard but
+    the beeper. Currently linux only. Can be enabled via GUI,
+    some settings might only be available through crrcsim.xml.
+  * A simple noise representing the current throttle setting.
+    This one uses the soundcard. The sound is not perfect yet,
+    every time you change the throttle setting, the sound
+    is interrupted for some time.
+    Can be enabled via GUI.

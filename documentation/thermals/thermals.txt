@@ -1,0 +1,116 @@
+Thread about realism of thermals in crrcsim
+-------------------------------------------
+
+
+From: "Stephen D. Cohen" <sdcohen@...>
+Date: Fri Feb 8, 2002  4:11 am
+Subject: Reality?
+
+[...]
+
+The question is: How realistic is the performance and thermal signaling of
+the Apogee in crrcsim? If I can expect this kind of "Hello, there is a
+thermal here" signaling I am gonna get me one and thermal soar it on
+Saturday and Sunday afternoons on the golf course behind my house (I can
+launch between foursomes and glide above them if I catch a thermal, right?).
+
+So what is the deal? How realistic *is* the thermalling model in crrcsim
+and the Apogee implementation? I am using the default thermal parameters:
+
+thermal_strength_mean 5 5 foot per sec average strength
+thermal_strength_sigma 1 1 foot per sec 1 sigma variation
+thermal_radius_mean 50 50 foot average radius
+thermal_radius_sigma 10 10 foot 1 sigma variation
+thermal_density 0.5E-5 Thermals/sq ft
+thermal_lifetime_mean 240 4 minute average lifetime
+thermal_lifetime_sigma 60 1 minute 1 sigma variation
+
+I've been flying with a 7.33 fps breeze (5 MPH).
+
+[...]
+
+----------------------------------------------------------------
+
+From: Jan Kansky <kansky@...>
+Date: Fri Feb 8, 2002  6:15 am
+Subject: Re: [crrcsim] Reality? 	
+
+Steve,
+Let me put it this way... It is certainly true that being able
+to find and center thermals in crrcsim (with indicators off) is a
+prerequisite for being able to find and center thermals in the
+real world.
+
+I programmed in the true vacuum cleaner effect of the thermals
+superimposed on the steady wind. This means that the wind shifts
+and airplane yawing should all be useful indicators in the sim.
+The vertical components of the wind are obviously included as
+well. Being able to get a visual sense of the energy of the
+aircraft is important, and that is all represented well in the
+sim, in my opinion.
+
+The part that is missing is the fact that in the real world
+there is a lot of turbulence. Right now, there is no turbulence
+in CRRCsim. Becoming an expert HLG pilot requires the ability to
+distinguish between the effects of turbulence on the aircraft
+from thermals.
+
+Overall, I think that you will find that if you can thermal in
+the sim with the thermal indicators off, you will have no
+problems in the real world after a bit. I do recommend you try
+to get a rc transmitter interface of some sort for better stick
+feel.
+
+-Jan
+
+----------------------------------------------------------------
+
+From: "Stephen D. Cohen" <sdcohen@...>
+Date: Sat Feb 9, 2002  4:16 am
+Subject: RE: [crrcsim] Reality?
+
+[...]
+
+Glad to hear it. Are the default thermal parameters I posted yesterday
+typical of a 1) gentle lift day, 2) moderate lift day 3) heavy lift day or
+4) strap down the Volkswagens guys, this air will lift *anything* day?
+
+> The part that is missing is the fact that in the real world
+> there is a lot of turbulence. Right now, there is no turbulence
+> in CRRCsim. Becoming an expert HLG pilot requires the ability to
+> distinguish between the effects of turbulence on the aircraft
+> from thermals.
+
+I suspect my success rate might be a little lower with the turbulence -
+like maybe closer to 1 in 100 times... You had to mention this, didn't you?
+I guess I asked...
+
+While I have your attention, one feature that would be really really useful
+in crrcsim would be the ability to hit a key and have the simulator point my
+head towards the horizon so I can see which way I am facing. Once I leave a
+thermal, I am never quite sure which way is up wind. In real life I would
+have many visual cues that I do not have in the simulator (little things
+like peripheral vision, for example). A way to hit the N key for "nod" or
+some such that just showed me what I would see looking horizontally would be
+a big help.
+
+[...]
+
+----------------------------------------------------------------
+
+From: Jan Kansky <kansky@...>
+Date: Tue Feb 12, 2002  10:59 pm
+Subject: RE: [crrcsim] Reality? 	
+
+
+Steve,
+
+> Glad to hear it. Are the default thermal parameters I posted yesterday
+> typical of a 1) gentle lift day, 2) moderate lift day 3) heavy lift day or
+> 4) strap down the Volkswagens guys, this air will lift *anything* day?
+
+The default parameters are a pretty strong lift day, with very
+localized tight thermals.
+
+[...]
+

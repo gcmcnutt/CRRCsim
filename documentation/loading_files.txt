@@ -1,0 +1,125 @@
+Currently this file serves as a reminder and notebook on how to handle
+configuration and data files in the future.
+
+
+-------------------------------------------------------------
+
+Changelog:
+  2005-10-14: first version
+
+
+-------------------------------------------------------------
+
+
+
+
+Current state (2005-10-14)
+--------------------------
+
+There is a hierarchy of directories searched for files. Let's assume a file
+"textures/grass.rgb" is to be loaded. Its real location is retrieved using
+   std::string T_Config::getDataPath(std::string item)
+with the parameter item="textures/grass.rgb". This function searches for the
+file in the current directory first, then tries a more global directory until 
+it has been found or there is no other directory to look into. 
+The directories to search depend on the operating system in use.
+
+Why change it?
+--------------
+
+A complete airplane description consists of several files: aerodynamic
+description, 3D-model, description files for the power and propulsion
+system.
+
+We want users to create and share airplanes, but sharing is difficult if one
+airplane consists of several files which have to be copied to different
+directories.
+
+Although it is possible to merge some of those files contents into
+one file, this approach has disadvantages.
+
+Examples:
+  -There are several airplanes using the same engine or battery. Why should
+   that description for a engine or battery be copied into a large number of
+   files? Airplanes should only reference the engine/battery they use for the
+   sake of disk space. Maybe the initial description of a engine has not been
+   perfect. To update all airplanes using that engine, you only have to
+   update a single file.
+  -There a several slightly different models of a Piper Cup. They differ in
+   engine, battery, aerodynamic parameters.
+   But all those models include the reference to a single 3D model. There is
+   no need to duplicate this 3D model.
+   The advantages are the same as above: disk space, no need to change a lot
+   of files for bug fixes/enhancements.
+
+To provide for easy sharing of models we put all neccessary files into a zip
+archive. This is a technology that even Windows XP is able to handle out of
+the box today.
+The normal directory structure should be found inside of this archive.
+
+So you have the possibility of sharing files by putting them into the usual
+directory structure, but is also possible to provide a single zip file
+which contains everything that is needed for an airplane.
+
+The easy way
+------------
+
+When loading an airplane, Joe User selects an airplane file or a zip (which
+does contain an airplane file and maybe additional files).
+
+When loading files, we don't use 
+   std::string T_Config::getDataPath(std::string item)
+anymore, but a similar function which does return a reference to a
+std::istream instead. This function does not only look into directories to
+find files, but at first tries the zip archive currently in use. 
+
+There is one thing we cannot do when using this simple approach, I'll try to
+decribe an example:
+You love the Piper Cup. You have created some models which are more or less
+different. Lets say that there is a bunch of them sharing the same 3D model.
+So they look the same, but behave differently. If you wanted to share them,
+you'd have to create a big number of zip files, and every one contains the
+same 3D model. What a waste!
+
+
+A better approach
+-----------------
+
+We allow a zip file to contain more than on airplane description.
+Only drawback: the file selector becomes more difficult. There are two
+possibilities:
+  1. Display files in the file selector. If a zip is selected, another
+     selector pops up in which the user can choose one of the airplanes
+     contained in the zip.
+  2. Do not display files in the selector, but airplane models. In this case
+     we need to look into every zip file to know which airplanes are
+     included and have to be offered.
+     
+When loading additional files, there is no difference to the easy method.
+
+
+Conclusion
+----------
+
+We can use a function
+   std::istream& T_Config::getDataStream(std::string item)
+in any case.
+We can even implement it now (provided every piece of code which loads data
+from a file is able to read from a std::istream) to have a clean interface
+and do the archive thing later, without touching lots of code.
+
+
+How to read a zip archive?
+--------------------------
+
+Some things I found on the net:
+ 1. "SAWZip Control"
+ 2. "Zipios++"
+    http://zipios.sourceforge.net
+    maybe no windows port yet
+ 3. "ZZipLib"
+    Guido Draheim
+    no istream interface
+    windows port
+    
+    

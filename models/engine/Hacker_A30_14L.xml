@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+  <!--
+     Hacker A30 14L, data from DriveCalc http://www.drivecalc.de/
+     Parameters are automatically calculated from measured data.
+     
+     J_M is just guessed.
+   -->
+   
+  <engine_dcm  J_M="2.0E-6" calc="1" log="0">
+    <data>
+      <data U_K="11.12" I_M="9.39" n="140.6" />
+      <data U_K="9.89" I_M="28.64" n="109.0" />
+      <data U_K="10.25" I_M="30.68" n="112.2" />
+    </data>  
+    <data_idle>
+      <data U_K="11.58" I_M="1.61" />
+      <data U_K="11.9" I_M="1.65" />
+    </data_idle>
+  </engine_dcm>

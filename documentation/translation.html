@@ -1,0 +1,69 @@
+<html>
+  <head>
+    <style type="text/css">
+    .fragment {
+       font-family: monospace
+}
+PRE.fragment {
+	border: 1px solid #CCCCCC;
+	background-color: #f5f5f5;
+	margin-top: 4px;
+	margin-bottom: 4px;
+	margin-left: 2px;
+	margin-right: 8px;
+	padding-left: 6px;
+	padding-right: 6px;
+	padding-top: 4px;
+	padding-bottom: 4px;
+}
+    </style>
+  </head>
+  
+  <body>
+  <div style="max-width:42em">
+  
+  <h1>How to translate CRRCSim in a new language</h1>
+  <h2>Selection of the used language</h2>
+  <p>It is the environment system in the launch of CRRCSim that defines the used language. It not thus normally nothing to make.<p>
+  <p>For a test it is enough (under Linux) to set the variable of environment LANG before the call of crrcsim. He can be also necessary to delete the contents of the variabe LANGUAGE. Attention: the language must be installed on the host system !</p>
+  <p><tt>export LANG=fr_FR.utf8; export LANGUAGE= ;crrcsim</tt></p>
+  
+<p>If the dictionary does not exist by for the wanted language or if it is incomplete, it is English which is used</p>
+  
+  <h2> Library used for translation</h2>
+  <p>GNU `gettext'.(http://www.gnu.org/software/gettext/)</p>
+
+  <p>In the source code, every text to translate is so marked :<br>
+<tt>str = "string to translate";</tt> ==> <tt>str = _("string to translate");</tt></p>
+
+<p>"<tt>i18n.h</tt>" is to include in every file containing string to translate.<p>
+
+  <h2>Where are dictionaries files?</h2>
+  <p>The directory <tt> locale </tt> contains, for a language <tt>**</tt> (<tt>**</tt> = <tt>fr</tt> for French, <tt>de</tt> for German...), 2 files:</p>
+ <p> <tt>**/LC_MESSAGES/crrcsim.mo</tt> : The compiled dictionary. It is the one which is used in the execution of CrrcSim</p>
+  <p><tt>**/LC_MESSAGES/crrcsim.po</tt> : Source of the dictionary. For update.</p>
+
+  <h2>How to update a dictionary</h2>
+  <p>It is advised to use <tt>poedit</tt>.</p>
+  <p>- Open the file <tt>crrcsim.po</tt>.
+  If need, use the command "update from sources".</p>
+  <p>- Modify the translation.</p>
+  <p>- Save result (verify that the option "Compile automatically" is active.)</p>
+  <h2>How to create a new language</h2>
+  <p>- Duplicate '<tt>locale/xx/</tt>' and its content in '<tt>locale/**/</tt>' (<tt>**</tt> = codes of new language)</p>
+  <p>- Add the new .po and .mo files to <tt>locale/Makefile.am</tt> </p>
+  <p>- Open '<tt>locale/**/LC_MESSAGES/crrcsim.po</tt>' with <tt>poedit</tt> </p>
+  <p>- Edit the information of the cataloque (catalogue parameters)<p>
+  <p>- Edit the translation as above.</p>
+  <h2>Limitations</h2>
+  <p> The internal characters coding being made on 8 bit, all the translations are not possible.</p>
+  <h3>Crrcsim 0.9.12</h3>
+  <p>Only the languages which can be written with the coding ISO-8859-15 (Latin 1, Western European) can be translated.</p>
+  <h3>Later versions</h3>
+  <p>Most of the languages which can be written with a coding 8 bits and the writing of which is made of left to right must be able to be translated.
+  <p>For that purpose, it is necessary :</p>
+  - In the .po file, "translate" <tt>iso8859-15</tt> by appropriate coding. For example <tt> iso8859-2 </tt> for the Czech, <tt> iso8859-5 </tt > for the Russian.</p>
+  - To install in the directory <tt>textures</tt> the font file corresponding. By example <tt> Sans_iso8859-2.txf </tt>. A utility of transcoding is available in the directory <tt>fonts_utility</tt>
+  
+  </body>
+  </html>

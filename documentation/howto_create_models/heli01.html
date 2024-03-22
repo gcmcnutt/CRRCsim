@@ -1,0 +1,180 @@
+<html>
+  <head>
+    <style type="text/css">
+    .fragment {
+       font-family: monospace
+}
+PRE.fragment {
+	border: 1px solid #CCCCCC;
+	background-color: #f5f5f5;
+	margin-top: 4px;
+	margin-bottom: 4px;
+	margin-left: 2px;
+	margin-right: 8px;
+	padding-left: 6px;
+	padding-right: 6px;
+	padding-top: 4px;
+	padding-bottom: 4px;
+}
+    </style>
+  </head>
+  
+  <body>
+  <div style="max-width:42em">
+
+  <h1>How to adjust helicopter parameters, helicopter model version 1</h1>
+
+  <h2>0 General information</h2>
+  
+    <p>
+      Please read <a href="../file_format/heli01.html">this file</a> for a
+      description of helicopter parameters.
+    </p>
+  
+    <p>
+      Please pay attention to <a href="interface_settings.html">these notes</a>.
+    </p>
+  
+  <h2>1 Suggested steps</h2>
+
+    It is assumed that values for mass and inertia already are correct.
+    
+    <ol>
+      <li>
+        Before you edit the file, create a backup so you can lookup its
+        original parameters.
+      </li>
+      
+      <li>
+        Set <tt>adjust</tt> to <tt>1</tt> in the opening line of the
+        <tt>config</tt> of the model file you want to
+        tweak:
+        <pre>
+  &lt;config version="1" adjust="1"&gt;
+        </pre>
+      </li>
+      
+      <li>
+        Start CRRCSim, set wind speed and thermals to zero (there may be
+        presets you can load).<br>
+        Load the model you want to adjust. Save settings.
+      </li>
+      
+      <li>
+        Hint: easiest way to edit/try parameters is
+        to just 'ESC' (to stop the sim), edit and save parameter file, hit 'c' to reload
+        parameters, 'ESC' (to start the sim).
+      </li>
+      
+      <li>
+        If <tt>power.fixed_pitch</tt> is set (fixed pitch heli), adjust
+        <tt>power.automagic.F</tt> to set maximum climb rate.<br>
+      </li>
+      
+      <li>
+        For a collective pitch heli, adjust <tt>aero.cp.ctrl</tt> 
+        and <tt>power.automagic.F</tt> to set maximum climb rate.
+      </li>
+                  
+      <li>
+        If <tt>aero.cp.auto_off</tt> is not defined or set to <tt>1</tt>,
+        you don't need to care about <tt>aero.cp.off</tt>. If you don't like
+        climb rate at neutral stick as it is automatically adjusted, set 
+        <tt>aero.cp.auto_off</tt> to <tt>0</tt> and adjust <tt>aero.cp.off</tt>.
+      </li>
+                  
+      <li>
+        Set <tt>adjust</tt> to <tt>2</tt>, which enables tail rotor
+        simulation.
+      </li>
+      
+      <li>
+        If the model has a heading lock gyro, set
+        <tt>aero.yaw.HeadingHold</tt> to something greater than zero (maybe
+        start with 5).
+      </li>
+      
+      <li>
+        The automatically adjusted mixer 'throttle or pitch to tail rotor' doesn't take into account dynamics
+        (changes). You may calm down the tail on changes by setting
+        <tt>aero.yaw.moment_mul</tt> to a value smaller than one (which is
+        the default value).
+      </li>
+      
+      <li>
+        If you are done with the previous steps, enable training mode (hit
+        't' to enable/disable) to fix the heli at a certain altitude.
+        Set <tt>adjust</tt> to <tt>3</tt>.
+      </li>
+      
+      <li>
+        Unless you know the model and its behaviour very good (in this case
+        there's no need to read this help),
+        remove <tt>aero.pitch.damp</tt> and <tt>aero.pitch.dist</tt> if they
+        exist. They
+        are taken from <tt>aero.roll.damp</tt> and <tt>aero.roll.dist</tt>
+        if they don't exist.
+      </li>
+
+      <li>
+        Adjust <tt>aero.yaw.ctrl</tt>, <tt>aero.pitch.ctrl</tt>, and
+        <tt>aero.roll.ctrl</tt> for full stick rotation rates in
+        rad/second.<br>        
+      </li>
+      
+      <li>
+        Adjust roll damping: <tt>aero.roll.damp</tt>.
+      </li>
+      
+      <li>
+        Adjust yaw damping: <tt>aero.yaw.damp</tt>.
+      </li>
+      
+      <li>
+        Do you think pitch damping (<tt>aero.pitch.damp</tt>)
+        should differ from 
+        <tt>aero.roll.damp</tt>? If this is the case:
+        define and adjust it.
+      </li>
+
+      <li>
+        Does the heli rotate around the correct point? Adjust its center of
+        gravity. I'm sorry, but this setting won't get reloaded by hitting
+        'c'. You have to save all settings, exit CRRCSim and restart.
+      </li>
+      
+      <li>
+        If you are done with the previous steps, 
+        set <tt>adjust</tt> to <tt>4</tt>.
+      </li>
+      
+      <li>
+        Adjust disturbances: <tt>aero.roll.dist</tt> and <tt>aero.yaw.dist</tt>.
+        You may want to tweak <tt>Disturbance.tau_filter</tt> and
+        <tt>Disturbance.time</tt>, too.
+      </li>
+      
+      <li>
+        If you are done with the previous steps, disable training mode (hit
+        't') and finally set <tt>adjust</tt> to <tt>0</tt>.
+      </li>
+      
+      <li>
+        Fly around and adjust <tt>aero.yaw.vane</tt>,
+        <tt>aero.pitch.vane</tt>, and <tt>aero.speed.damp</tt>.
+      </li>
+      
+      <li>
+        Adjust increase of disturbances in ground effect:
+        <tt>GroundEffect.dist.mul</tt>.
+      </li>
+      
+      <li>
+        Finally, you may want to tweak <tt>aero.roll.ForwardToRoll</tt>.
+      </li>
+      
+    </ol>
+      
+  </div>
+  </body>
+</html>

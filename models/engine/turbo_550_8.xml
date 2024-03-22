@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<!--
+  Turbo 550 at 8 V
+  
+  Data taken from
+  Retzbach, Ludwig: Ratgeber Elektroflug, Neckar Verlag, 1991.
+
+  M_r = 0.57E-2; // Nm
+  I_0 = M_r/k_M = 1.43A
+  
+  J_M is just guessed.
+  
+  n_0 = 18605/min = 310/s
+
+
+
+-->
+
+<engine_dcm R_I="0.145" k_M="0.40E-2" I_0="1.43" J_M="1.0E-6">
+</engine_dcm>

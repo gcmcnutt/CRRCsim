@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<!--
+  This is just a sample.
+  Note that C is given in Ah, not As. Everything else is SI.
+  The table of relative no-load-voltage roughly represents a GP330SCHR.
+-->
+
+<battery C="2.4" R_I="10E-3" U_0="12" U_off="8.0">
+  <U_0rel>
+    1.04;
+    0.94;
+    0.935;
+    0.93;
+    0.92;
+    0.9;
+    0.87;
+    0.8;
+  </U_0rel>
+</battery>

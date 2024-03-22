@@ -1,0 +1,65 @@
+
+
+              ---------------------------------------------
+
+                         How to install CRRCSim
+                         
+              ---------------------------------------------
+
+
+General hints
+=============
+
+If you already have an executable file, continue. If you (only) have got the
+sources of CRRCSim, please follow the instructions in compile.txt first.
+
+------------------------------------------------------------------------------
+
+GNU/Linux
+=========
+
+You should have an executable file (crrcsim) and the subdirectories
+   documentation
+   models
+   scenery
+   sounds 
+   textures
+with each one of them containing one or more files. There can be a file
+crrcsim.xml, too.
+
+They are several possibilities to install and run CRRCSim on linux, as it
+tries to find the files it needs in some locations.
+
+For a quick test you may change into the directory which contains the files
+and directories mentioned above and call './crrcsim' there. But this is not
+how you should really install it.
+
+When CRRCSim needs a file, it will check directories in the
+following order:
+
+  1. The current directory ('./')
+  2. ~/.crrcsim/
+  3. /usr/local/share/games/crrcsim/
+  4. /usr/share/games/crrcsim/
+  
+If you have root privileges on your system and want to install CRRCSim for
+more than one user, you should copy the above subdirectories to
+/usr/local/share/games/crrcsim/.
+Calling 'make install_local' will do this for you, but you have to call it
+as root. It will also copy the executable file 'crrcsim' to /usr/local/games/.
+You have to make sure that /usr/local/games/ is in your path to be able to 
+call 'crrcsim' from anywhere. Otherwise you need to call
+'/usr/local/games/crrcsim'.
+
+If you don't have root privileges, you can use 'make install_user', which
+will copy directories to ~/.crrcsim/. It will not copy the executable
+anywhere. You have to decide where you want it to be and copy it.
+
+Configuration file 'crrcsim.xml':
+CRRCSim can be run without this file. On startup, it tries to load this file
+from the current directory. If that fails, ~/.crrcsim/crrcsim.xml is tried.
+
+Kernel modules for certain transmitter interfaces:
+The transmitter interfaces RCTran und RCTran2 use the same simple connection
+of the PPM signal to the parallel port.
+See interface_rctran2/kernel_module/README.txt

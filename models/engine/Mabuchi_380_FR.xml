@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+  <!--
+     Mabuchi 380 (aka Speed 400) with additional flux ring.
+     Parameters are automatically calculated from measured
+     data.
+     
+     J_M is just guessed.
+   -->
+   
+  <engine_dcm  J_M="1.0E-6" calc="1">
+    <data>
+      <data U_K="7.96" I_M="0.94" n="371.5" />
+      <data U_K="7.37" I_M="7.47" n="229.0" />
+    </data>  
+    <data_idle>
+      <data I_M="0.94" />
+    </data_idle>
+  </engine_dcm>

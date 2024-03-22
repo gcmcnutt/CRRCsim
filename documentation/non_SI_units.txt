@@ -1,0 +1,30 @@
+Throughout CRRCSim lots of non-SI units are used.
+I clearly state that I did brake this scheme for the new power system, which
+is SI. It has a clean interface to the rest, therefore it is easy to
+understand where there is SI. I'll try to convert lots of things to SI if I
+can.
+Exceptions are for example a batteries capacity (Ah instead of As).
+
+It seems to me that one of the misfeatures of this 'other system' is that you
+have several units for one thing, for example ounce (oz) and slug. The
+latter seems to be needed to be able to write
+  F = m * a
+  1 pound-force = 1 slug * 1 ft/s^2
+Something like this makes clear how easy and comfortable SI is.  
+
+1 foot             = 0.3048 m
+1 slug             = 14.5939041995 kg
+1 oz               = 0.02834952312 kg
+1 pound, lb        = 16 oz = 0.453592 kg
+1 pound-force, lbf = 4.44822 N
+
+force: F = m * a = m * s / t^2
+       1 slug * 1 ft / s^2 = 14.5939041995 kg * 0.3048 m / s^2 = 4.448222 N
+
+Velocities:   ft/s
+Acceleration: ft/s^2
+Forces:       pound-force, lbf
+Moments, inertia:
+  1 slug ft^2 = 14.5939041995 kg * (0.3048 m)^2
+  M = J * alpha
+So moments must be in 1 lbf * 1 ft = 1.355818 Nm

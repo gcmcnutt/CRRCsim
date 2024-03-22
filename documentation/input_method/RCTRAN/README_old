@@ -1,0 +1,127 @@
+
+!!!! This file describes a very old version   !!!!
+!!!! of CRRCSim, not the current one. But it  !!!!
+!!!! provides some information about the      !!!!
+!!!! rctran transmitter interface.            !!!! 
+
+Here is the info I have written so far on how to get CRRCSim up and
+running on your computer!
+
+1:  I have only tested this using a 2.2 series Linux kernel.  I don't
+think the rc transmitter interface will work using a 2.0 series kernel.
+You can always use the mouse input to test fly the simulator before
+worrying about the RC Transmitter interface.  This should work on any
+kernel.
+If you need too, download and install the latest 2.2 series kernel from
+ftp.kernel.org.  This can be tricky, so if you haven't compiled a new
+kernel for a linux machine before, make sure you read all the "howto"
+files out there on the web, and make sure you select the right options. 
+The rc transmitter interface will only work on intel based processors.
+
+2:  Get OpenGL hardware acceleration working on the Linux box.  You
+can run in software OpenGL mode, but it is slow and you will have to
+turn off the nice textures and smooth shading.
+
+3:  Install the GLUT package.  I used version 3.7 beta.  Search
+www.freshmeat.net for GLUT, and you will find a link to the this tar.gz
+file.
+
+4: Install the gle package.  This handles drawing extruded OpenGL
+objects.  http://linas.org/gle/
+
+5. Install SDL, it handles joystick, mouse, keyboard and video.
+version 1.2 works great.
+http://www.libsdl.org/
+
+
+5:  Download and install the "mbuff" package.  Only if you need the
+RCtransmitter interface.  If you are using a mouse for initial
+testing, you can skip this step and go to step 9.
+
+http://crds.chemie.unibas.ch/PCI-MIO-E/mbuff-0.7.1.tar.gz
+
+This provides the shared memory between the rc transmitter kernel module
+and the flight simulator.
+
+Install as described in the documents that come with the mbuff package.
+Don't forget to do the step where you change the makefile after initial
+testing so that the mbuff is no longer implementing the "demo mode"
+
+Make sure you have the permissions on the /dev/mbuff file set correctly
+for the user that will be running the simulation, or create a group to
+handle all mbuff users.
+
+6.  Build a cable that connects the ground of the transmitter trainer port
+5 pin din to the ground of the parallel port, and connects the trainer
+cord output on the 5 pin DIN to the ACK, or interrupt input of the
+parallel port.  Be sure you don't have an interrupt conflict of the
+parallel port with some other hardware in your machine.  Make sure that
+the parallel port is enabled in the bios.  Some brands of transmitter,
+like the Hitec also allow you to wire together two pins on the DIN
+connector to disable the RF output on the transmitter.  Make sure you check
+this with a scope first so that you don't fry your parallel port.
+Some types of transmitters output more than 5 Volts!  Other parallel
+ports require a buffer to prevent from trying to draw more current
+than the transmitter can source.  Use a curcuit with two TTL inverters
+in series powered off the parallel port to prevent this type of problem.
+
+7.  Edit the crrcsim/rctran.c file and change the value of TWO_MS to
+accurately represent the number of processor cycles that elapse during a
+three millisecond interval.  It is currently set to the value I used
+for a 458MHz machihe.  (In fact, I recently found that it is better to
+set this value to the number of ticks that elapse during a three
+millisecond interval, so that's why the variable name doesn't make sense)
+
+8.  Edit the crrcsim.cfg file. You will see commands like:
+cpu_speed       456.507890      CPU speed in MHz needed by RCTRAN on Linux
+Note: this value can now be found in crrcsim.xml, it is 
+inputMethod.rctran.cpu_speed
+
+ Change the 456.507890  to whatever your processor speed is, as reported
+by more /proc/cpuinfo.
+
+9.  Edit crrcsim.xml, change inputMethod.method to MOUSE if you aren't
+planning on using the RC Transmitter interface otherwise leave it as
+RCTRAN.
+
+10.  Compile crrcsim, the simulator executable, and rctran, the transmitter
+interface kernel module, by issuing a make command in the crrcsim
+directory.  Make sure that the mbuff.h file in the crrcsim directory is of
+the same vintage as the particular mbuff package that you installed.
+Hopefully it will compile successfully.  You can ignore any
+rctran/mbuff issues if you are using the mouse as input.
+
+11. Become root, if using RCTRAN interface, otherwise skip to step 16.
+
+12.  from the mbuff package directory /sbin/insmod mbuff
+
+more /proc/modules  and see if mbuff is loaded (should be unused at this
+point)  You should check the /var/log/messages file to see if it
+loaded properly. Use the command "tail -20 /var/log/messages"
+
+13.  from the crrcsim directory  /sbin/insmod rctran  Again, use the
+     "tail -20 /var/log/messages" command to see if the rctran module
+     loaded properly.
+
+more /proc/modules and see if rctran is loaded (mbuff should show as being
+used by rctran)
+
+more /proc/interrupts should show the parallel port interrupt as being
+used by rctran
+
+14.  logout from root
+
+15.  turn on your transmitter with the cable connected.
+
+16. start the simulator by typing ./crrcsim
+
+17.  You may need to do some servo reversing to have the plane behave
+     properly.
+
+I'm sure I forgot some details, so email me with any questions/problems.
+
+-Jan
+
+
+
+

@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+<CRRCSim_airplane version="2">
+  <name>
+    <en>Fireworks IIId</en>
+  </name>
+  <categories>
+    <category>Gliders</category>
+    <category>F3K</category>
+  </categories>
+  <description>
+    <en>
+A fully carbon SAL glider.
+Revised by Bob Parks and Mark Drela to better match handling of 
+FWIII.
+
+Note that this was matched to Mark's personal FW3 which has more
+dihedral than normal.
+    </en>
+  </description>
+  <changelog>
+    <change>
+      <date>2005</date>
+      <author>Arthur Frenslich (thuromail@thuro.at)</author>
+      <en>Created .air file, 3D model and texture.</en>
+    </change>
+    <change>
+      <date>Unknown</date>
+      <author>CRRCSim 0.9.6beta3</author>
+      <en>Automatically converted from .air file.</en>
+    </change>
+    <change>
+      <date>2006-11-04</date>
+      <author>Jan Reucker</author>
+      <en>Added categories and description.</en>
+    </change>
+    <change>
+      <date>2007-03-14</date>
+      <author>Bob Parks and Mark Drela</author>
+      <en>Lots of tweaks to the aero parameters to make the handling more realistic.
+      corrected size, mass and inertia, stall proprerties, lateral derivatives
+      </en>
+    </change>
+    <change>
+      <date>2009-02-17</date>
+      <author>Jan Reucker</author>
+      <en>Moved file from crrcsim-addon-models to the base package. Removed
+      one graphics variant to keep the repository small.
+      </en>
+    </change>
+    <change>
+      <date>2009-02-25</date>
+      <author>Jens W. Wulf</author>
+      <en>Added launch default</en>
+    </change>
+    <change>
+      <date>2010-05-13</date>
+      <author>J. Reucker</author>
+      <en>Added max_force to springs</en>
+    </change>
+  </changelog>
+  <aero version="1" units="0">
+    <ref chord="0.48" span="5.00" area="2.33" speed="19.685" />
+    <misc Alpha_0="0.0349066" eta_loc="0.25" CG_arm="0.02" span_eff="0.95" />
+    <m Cm_0="-0.0112663" Cm_a="-0.874696" Cm_q="-18.877068" Cm_de="-0.59611" />
+    <lift CL_0="0.563172" CL_max="1.0" CL_min="-0.6" CL_a="8.326127" CL_q="7.910203"
+       CL_de="0.18452" CL_drop="0.0" CL_CD0="0" />
+    <drag CD_prof="0.02" Uexp_CD="-.4" CD_stall=".02" CD_CLsq="0.01" CD_AIsq=".01"
+       CD_ELsq="0" />
+    <Y CY_b="-0.250926" CY_p="-0.081904" CY_r="0.29754" CY_dr="0" CY_da="-0.13589" />
+    <l Cl_b="-0.109197" Cl_p="-0.554844" Cl_r="0.146372" Cl_dr="0" Cl_da="0.207921" />
+    <n Cn_b="0.0567069" Cn_p="-0.0740898" Cn_r="-0.147903" Cn_dr="-0.082082"
+       Cn_da="-0.000466" />
+  </aero>
+  <config version="1">
+    <descr_long>
+      <en>Automatically converted from fireworks3_C.air.</en>
+    </descr_long>
+    <descr_short>
+      <en>default</en>
+    </descr_short>
+    <mass_inertia version="1" units="0" Mass="0.0176" I_xx="0.0123"
+       I_yy="0.0084" I_zz="0.0207" I_xz="0.000" />
+    <sound version="1">
+      <sample filename="glider.wav" type="2" pitchfactor="1" maxvolume="1.0" />
+    </sound>
+  </config>
+  <graphics version="1" model="Fireworks_C.ac">
+    <descr_long>
+      <en>The updated carbon look.</en>
+    </descr_long>
+    <descr_short>
+      <en>Carbon</en>
+    </descr_short>
+  </graphics>
+  <wheels version="1" units="0">
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.083300002" y="3.2750001" z="-0.5625" />
+      <spring constant="10" damping="0.2" max_force="3.5" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.37490001" y="3.2750001" z="-0.5625" />
+      <spring constant="10" damping="0.2" max_force="3.5" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.083300002" y="-3.2750001" z="-0.5625" />
+      <spring constant="10" damping="0.2" max_force="3.5" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.37490001" y="-3.2750001" z="-0.5625" />
+      <spring constant="10" damping="0.2" max_force="3.5" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="0" y="2.5799999" z="-0.1955" />
+      <spring constant="60" damping="0.1" max_force="3.5" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="0" y="2.5799999" z="-0.1955" />
+      <spring constant="60" damping="0.1" max_force="3.5" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="0" y="1.25" z="0.15000001" />
+      <spring constant="10" damping="0.2" max_force="3.5" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="0" y="-1.25" z="0.15000001" />
+      <spring constant="10" damping="0.2" max_force="3.5" />
+    </wheel>
+    <wheel percent_brake="0.69999999" caster_angle_rad="0">
+      <pos x="0.852" y="0" z="0.1875" />
+      <spring constant="30" damping="0.2" max_force="3.5" />
+    </wheel>
+    <wheel percent_brake="0.69999999" caster_angle_rad="0">
+      <pos x="-2.75" y="0" z="-0.60399997" />
+      <spring constant="10" damping="0.2" max_force="3.5" />
+    </wheel>
+    <wheel percent_brake="0.69999999" caster_angle_rad="0">
+      <pos x="-3" y="0" z="0.27079999" />
+      <spring constant="10" damping="0.2" max_force="3.5" />
+    </wheel>
+    <wheel percent_brake="0.69999999" caster_angle_rad="0">
+      <pos x="0" y="0" z="0.1875" />
+      <spring constant="10" damping="0.2" max_force="3.5" />
+    </wheel>
+  </wheels>
+  <launch>
+    <preset name_en="SAL default" altitude="5" velocity_rel="7" angle="0.2" sal="1" rel_to_player="1" rel_front="0" rel_right="2" />
+  </launch>  
+</CRRCSim_airplane>

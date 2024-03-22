@@ -1,0 +1,343 @@
+<html>
+
+<h1>Simulation of thermals</h1>
+
+<h2>1. Revisions of this document</h2>
+  <table cellpadding="3" border="1">
+    <tr>
+      <td>January 2005</td>
+      <td>Jens Wilhelm Wulf</td>
+      <td>Wrote first version</td>
+    </tr>
+    <tr>
+      <td>02.02.2006</td>
+      <td>Jens Wilhelm Wulf</td>
+      <td>Added revision history and section about how to set up the sim to
+          test certain things. Minor updates.</td>
+    </tr>
+    <tr>
+      <td>26.02.2006</td>
+      <td>Jens Wilhelm Wulf</td>
+      <td>Description of thermal simulation version 3</td>
+    </tr>
+  </table>
+    
+<h2>2. Implementation of thermals</h2>
+
+  <p>             
+    CRRCSim provides several methods of how thermals are simulated.
+    The one to use must be selected using <tt>THERMAL_CODE</tt> in <tt>crrc_config.h</tt> before compilation.
+    Newer methods may be selected without recompilation.
+  </p>
+
+<h3>2.1 The original CRRCSim method</h3>
+
+  See the following picture showing the vertical velocity
+  of the airmass due to thermals in a fixed altitude:
+
+  <img src="thermals_old.png"/><br>
+  
+  In my opinion there are some important issues about this:
+  <ul>
+    <li>
+      Very high gradient between 'outside of thermal' and 'inside thermal'.
+    </li>
+    <li>
+      Inside the thermal air is rising with constant speed. No need to
+      center inside, just stay anywhere inside.      
+    </li>
+    <li>
+      Somewhere around a thermal air has to drop. The old implementation
+      distributes this volume on full parts of the grid -- you can see those
+      ugly steps where you'd assume something like zero velocity.
+      Again, these are gradients of the wind field.
+    </li>
+  </ul>
+  <p>
+    So it's all about the gradient. If the simulation of the plane is done
+    well, you'd expect it to show those gradients. If the left wing is in an
+    area where the vertical velocity of the air is different from what the
+    right wing sees, the plane should roll to one side or the other.
+  </p>
+  <p>
+    The old implementation let's your plane roll when you come near a
+    thermal, but it will also do so at those steps on the floor!
+  </p>
+
+
+<h3>2.2 The second method</h3>
+
+  <p>
+    In my opinion the old implementation is not that realistic. Obviously,
+    there won't be such high gradients in moving air.
+    Furthermore air moves down near a thermal -- but surely not in a
+    rectangular grid. 
+  </p>
+  
+  <p>
+    Except for the area near ground, both the old and the new method describe
+    thermals which are mostly independent of altitude.
+  </p>
+  <p>
+    I began with creating a mathematical description of the profile of a
+    thermal -- the function of vertical velocity along the way from its core
+    to the outside. Some important points:
+    <ul>
+      <li>
+        Integrated over the whole area of a thermal, the volume of raising air
+        has to be equal to the volume of falling air.
+      </li>
+      <li>
+        Vertical velocity is zero on the edges of the thermal. 
+        Its first derivation should be steady.
+      </li>
+    </ul>
+    Doing some math resulted in the program <tt>table.cpp</tt> which can be
+    used to create such profiles.
+    Some possible results are in <tt>thermalprofile.h</tt> and can be
+    selected using preprocessor definitions. By exchanging this
+    file, other profiles can easily be used.
+  </p>
+  
+  <p>
+    Similar to the old method, the vertical velocity is zero near the ground
+    and rises linearly until it reaches its full strength at a certain
+    altitude.
+  </p>
+
+  <p>
+    A new feature of this method is that a thermals strength slowly
+    decreases to zero instead of just disappearing when the thermal dies.
+  </p>
+
+  <p>
+    <b>There is one aspect of thermals which isn't modeled by the new method
+    yet:</b> horizontal wind, which exists at least in the lower part of the
+    thermal (vacuum cleaner effect). There is some code modeling this in the old method, but I
+    didn't understand why it is done just like this.
+  </p>
+  
+  <img src="thermals_new.png"/><br>
+  
+  <h4>2.2.1 Thermal profiles selectable at compile time</h4>
+  There is <tt>THERMPROF</tt> in <tt>thermalprofile.h</tt>. It can be defined as:
+  <p>
+  <tt>#define THERMPROF 0</tt><br>
+  <img src="thermprof0.png"/><br>
+  </p>
+  <p>
+  <tt>#define THERMPROF 2</tt><br>
+  <img src="thermprof2.png"/><br>
+  </p>
+  <p>
+  <tt>#define THERMPROF 3</tt><br>
+  <img src="thermprof3.png"/><br>
+  </p>
+  All those profiles have a velocity distribution which is not nearly as
+  sharp as the one of the old thermal simulation. To make the feeling inside 
+  of the thermal as easy, its diameter and/or strength has to be enlarged.
+
+<h3>2.3 Comparison</h3>
+  <img src="comparison.png"/><br>
+  <p>
+    X axis is relative radius, Y axis is relative upward velocity of
+    airmass. If you don't touch thermal parameters in CRRCSim and only
+    change the type, thermals will relate to each other as shown above.
+  </p>
+  <p>
+    It is easy to see that thermalling with <tt>THERMPROF=0</tt> is hard if
+    parameters are left unchanged.
+  </p>
+  <p>
+    The same holds for <tt>THERMPROF=1</tt>, which is a proposal by Ulf
+    Gerber (see below). <br>
+    
+    Let's compare diameters: traditionally, radius is 50ft in CRRCSim. We
+    assume that this relates to x=1 in the diagram.<br>
+        
+    The whole radius of this thermal is at 2.6 in the diagram, which means
+    2.6*50ft=130ft=39.6m.<br>
+        
+    However, Ulf Gerber states that a typical thermal has a radius of 50m (in a
+    height of 50m above ground), including downwind. 
+    
+    To get this 'Ulf Gerber Standard Thermal' in CRRCSim, you have to set the radius to
+    50ft*50m/39.6m=63ft. But this will still be less powerful than the
+    traditional CRRCSim thermal.
+  </p>
+  <p>
+    <tt>THERMPROF=2</tt> and <tt>THERMPROF=3</tt> are only different
+    regarding the area of downwind. Both have an effect similar to the old
+    method if you enlarge the thermal's diameter using a factor in the range of 
+    1.2 to 1.3.
+  </p>
+  
+<h3>2.4 The third method</h3>
+
+  <p>
+    The new thermal does not only take into account that 'what goes up must come
+    down', but that it has to find its way from this inside to the outside
+    (upper end of the thermal) and back again (lower end of thermal, vacuum
+    cleaner effect).
+  </p>    
+  <p>
+    <img src="thermalv3_schalen1.png"/><br>
+    The picture above shows some curves which, when rotated around the
+    y-axis (center of thermal), create some shells inside of which air
+    circulates. Basically a thermal is characterized by the shape of those
+    curves and the vertical velocity at y=0.5 (bold black line).
+  </p>
+  <p>    
+    The distribution of velocity along this line can be varied.
+  </p>
+  <p>
+    One curve consists of two parts. One describes the inner 
+    part where air moves upwards, the other one describes the outer part 
+    where air moves downwards.
+    <br>
+    Every part consists of a straight line in the middle part (its length can 
+    be zero as well), an ellipsis at the upper end and an ellipsis at the lower end.
+    <br>
+    The shape of those curves can be varied to some extend, as shown by the next picture.
+    Here not only one half of a thermal is shown.
+    <img src="thermalv3_schema.png"/><br>
+  </p>  
+  <p>
+    To use the new version you have to insert some lines into your <tt>crrcsim.xml</tt>.
+    Find the lines where thermal characteristics for davis are described:
+    <pre>    
+  &lt;locations&gt;
+    &lt;location name="DAVIS"&gt;
+      ...    
+      &lt;thermal strength_mean="5" strength_sigma="1" radius_mean="70"
+         radius_sigma="10" density="3.0000001e-06" lifetime_mean="240" lifetime_sigma="60" /&gt;        
+    </pre>
+  </p>
+  <p>
+    Now, as a starting point, change that to
+    <pre>
+  &lt;locations&gt;
+    &lt;location name="DAVIS"&gt;
+      ...    
+      &lt;thermal strength_mean="5" strength_sigma="1" 
+               radius_mean="70" radius_sigma="10" 
+               density="3.0000001e-06" lifetime_mean="240" lifetime_sigma="60"&gt;
+        &lt;v3 vRefExp="2" dz_m="50" height_m="600" 
+            fileA="schalen.dat" fileB="feld.dat" fileC="vel.dat"&gt;
+          &lt;inside&gt;
+            &lt;upper r_m="30" sl_r="0.8" sl_dz_r="0.2" /&gt;
+            &lt;lower r_m="20" sl_r="0.8" sl_dz_r="0.2" /&gt;
+          &lt;/inside&gt;
+          &lt;outside&gt;
+            &lt;upper r_m="65" sl_r="0" sl_dz_r="0.7" /&gt;
+            &lt;lower r_m="65" sl_r="0" sl_dz_r="0.7" /&gt;
+          &lt;/outside&gt;
+        &lt;/v3&gt;
+      &lt;/thermal&gt;
+    </pre>
+    Here you can adjust the shape of a thermal.<br>
+    Only an average thermal is described here. In CRRCSim, thermals do vary to some degree.
+  </p>
+  <p>
+    The values ending in <tt>_m</tt> are absolute values in meters, those ending in <tt>_r</tt>
+    are relative values in the range 0 to 1.
+  </p>
+  <p>
+    <tt>vRefExp</tt> describes upwards velocity profile at average height.
+     1 lets velocity rise linearily; a value of 2 makes sense. 
+     Bigger numbers result in a more 'blocky' profile.   
+  </p>
+  <p>
+    <tt>fileA</tt>, <tt>fileB</tt> and <tt>fileC</tt> instruct CRRCSim to write out some data 
+    files which show thermal characteristics. You can use GNUPlot to view those files; it is available for 
+    Windows, too.
+  </p>
+  <p>
+    I do use a file <tt>schalen.gnuplot</tt> to view <tt>schalen.dat</tt>.
+    The picture above (red lines showing the curves) has been created using it.
+    Just execute <tt>gnuplot schalen.gnuplot</tt> to view. You can
+    zoom using the right mouse button, hitting <tt>a</tt> shows everything again.
+    <tt>schalen.gnuplot</tt> looks like this:
+    <pre>
+      set grid x
+      set grid y
+      set size ratio -1
+      set key off      
+      plot 'schalen.dat' with lines      
+      pause -1 "plb"
+    </pre>
+  </p>
+  <p>
+    I do use a file <tt>vel.gnuplot</tt> to view <tt>vel.dat</tt>. 
+    Just execute <tt>gnuplot vel.gnuplot</tt> to view. You can
+    zoom using the right mouse button, hitting <tt>a</tt> shows everything again.
+    <tt>vel.gnuplot</tt> looks like this:
+    <pre>
+      set grid x
+      set grid y
+      set key off      
+      plot 'vel.dat' with lines      
+      pause -1 "plb"
+    </pre>
+  </p>
+
+<h2>3. Effect on aircraft</h2>
+  <pre>
+    W_atmo_X shows strong effect -- OK
+    
+    Why are there two transformations in crrc_aero.cpp?
+    
+    G_32     shows strong effect
+    W_body_Y shows strong effect -- OK
+    
+    That does not affect CL_left and CL_right, although this vertical flow
+    should clearly change the effective alpha.
+    
+    Even changing CL_left and CL_right does not let the aircraft roll. They
+    only change stalling behaviour.
+    
+    Conclusion: having a more realistic windfield is not of much use, the
+    current model does not respond to it. Is it wrong or just not implemented?
+    I think CL_left and CL_right should be affected (which is not the case)
+    and they in turn should let the aircraft roll (which is not the case).
+      
+  </pre>
+
+<h2>4. How to test</h2>
+  <h3>4.1 Fixed enviroment</h3>
+  <p>
+  There is a switch <tt>THERMAL_TEST</tt> in <tt>windfield.cpp</tt>. To
+  get a thermal at a fixed position, set this to <tt>1</tt> (heading towards
+  the thermals edge) or <tt>2</tt>
+  (flying straight into thermal).
+  </p>
+  
+  <p>
+    Fly at Davis and set: 
+    <table>
+      <tr><td>wind direction</td><td>180°</td></tr>
+      <tr><td>wind velocity</td> <td>0 ft/s</td></tr>
+      
+      <tr><td>launch altitude</td>         <td>50 ft</td></tr>
+      <tr><td>launch relative velocity</td><td>1</td></tr>
+      <tr><td>launch angle</td>            <td>0 rad</td></tr>
+    </table>
+  </p>
+  
+  <h3>4.2 Thermal Screenshot</h3>
+  <p>
+    Use <tt>DEBUG_THERMAL_SCRSHOT</tt> in <tt>crrc_config.h</tt>.
+    Take a look at the notes in that file. There is another define <tt>DEBUG_THERMAL_SCRSHOT_FORMAT</tt>
+    which can be used to adjust the format of the output file to various
+    plotting programs. See <tt>windfield.cpp</tt>.
+  </p>
+    
+<hr width="100%"/>
+
+  <h3>Links</h3>
+  <p>
+    <em>Das Thermikbuch für Modellflieger</em> written by Markus Lisken and
+    Ulf Gerber, Verlag für Technik und Handwerk, Baden-Baden.
+  </p>
+
+</html>

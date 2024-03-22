@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<!--
+  Astro Cobalt 05 at 10 V
+  
+  Data taken from
+  Retzbach, Ludwig: Ratgeber Elektroflug, Neckar Verlag, 1991.
+  
+  M_r = 1.15E-2; // Nm
+  I_0 = M_r/k_M = 2.74A
+  
+  J_M is just guessed.
+  
+  n_0 = 22238/min = 371/s
+-->
+
+<engine_dcm R_I="0.08" k_M="0.42E-2" I_0="2.74" J_M="1.6E-6">
+</engine_dcm>

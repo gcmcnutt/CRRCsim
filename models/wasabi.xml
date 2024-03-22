@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+<CRRCSim_airplane version="2">
+  <name>
+    <en>Wasabi</en>
+  </name>
+  <categories>
+    <category>Gliders</category>
+    <category>Aerobatic</category>
+  </categories>
+  <description>
+    <en>
+Wasabi, extreme aerobatic slope glider.
+(http://www.flybiwo.com/ and http://www.baudismodel.com/)
+
+To fully enjoy flying with Wasabi please select "load 
+mixer default" to automatically setup the preset mixers
+(flap & spoiler compensation and snap-flap settings).
+For more info see suggestions in model/wasabi.xml and
+in documentation/models/Readmefirst_Wasabi.txt.
+CRRCsim model created by Luca Gasparini.
+    </en>
+  </description>
+  <changelog>
+    <change>
+      <date>25-Nov-2011</date>
+      <author>Luca Gasparini</author>
+      <en>
+3D model with Blender, aero/inertia with XFLR5+AVL.
+      </en>
+    </change>
+    <change>
+      <date>26-Feb-2012</date>
+      <author>Luca Gasparini</author>
+      <en>
+Added mixer default setting and modified control setup
+to allow use of landing flap activated by spoiler axis.
+      </en>
+    </change>
+    <change>
+      <date>29-Dec-2012</date>
+      <author>Luca Gasparini</author>
+      <en>
+Increased CD_prof (higher parasite drag) and flap drag.
+Improved estimate of inertias.
+Should be a more realistic modelling.
+      </en>
+    </change>
+  </changelog>
+  <aero version="1" units="1">
+    <!-- 
+      Control derivatives for CRRCSIM are computed as:
+      CRCSIM_der = AVL_der * control_travel_deg / 0.5
+      Assumed control travel are: 
+        de=+/-8deg 
+        dr=+/-20deg 
+        da=+/-15deg 
+        flaps=+/-30deg.
+      Note that actual flap range should be limited to +/-8deg as camber 
+      changing flap (e.g. as snap flap), while 30deg down deflection is 
+      to be used for landing.
+      Best flown with snap-flap, using following mixer settings:
+        elevator: rate=0.6 (i.e. +/-4.8deg)
+        flap:     -travel=0.133, +travel=0.133
+        mixer1:   elevator-to-flap mixing rate=0.533
+                  (flap +/-8deg with ele +/-4deg)
+        mixer2:   flap-to-elevator mixing rate=-0.467 
+                  (elevator compensation 1deg down for 8deg flap down, to trim a DCL=0.8)
+        mixer3:   spoiler-to-flap mixing rate=-0.5 
+                  (flap down 30deg with full spoiler)
+        mixer4:   spoiler-to-elevator mixing rate=0.234 
+                  (elevator 6deg down for 30deg flap down)
+                  
+      AVL control derivatives in standard orientation stability axis
+      (for 1deg of control deflection):
+        CL_de= 0.0134
+        Cm_de=-0.0375
+        CY_dr=-0.00384
+        CY_da= 0.00115
+        Cl_dr=-0.000128
+        Cl_da=-0.0105
+        Cn_dr= 0.00146
+        Cn_da=-0.000414
+        CL_flaps=-0.0553
+        Cm_flaps=-0.0084
+
+      Note: CY_b and Cn_b are likely respectively under and overestimate
+      due to the missing large (in side view) fuselage, in AVL model.
+      Therefore the original values
+        CY_b=-0.226
+        Cn_b= 0.0887
+      have been corrected (just guessing) by factors 2.0 and 1/1.5 respectively.
+      
+      CD_prof, Uexp_Cd, CD_CLsq and CD_flaps data from TP42 & TP29-9% polars fit,
+      plus estimated fuse & tail drag (from surface area).
+      Reference Re=200000.
+    -->
+    <ref chord="0.177" span="1.5" area="0.262" speed="16.5" />
+    <misc Alpha_0="0.0189" eta_loc="0.3" CG_arm="0.25" span_eff="0.93" />
+    <m Cm_0="0.0" Cm_a="-0.592" Cm_q="-14.4" 
+      Cm_de="-0.600" />
+    <lift CL_0="0.1" CL_CD0="0.0" CL_max="0.8" CL_min="-0.8"  CL_drop="0.2"
+      CL_a="5.29" CL_q="8.31" CL_de="0.214"/>
+    <drag CD_prof="0.0140" Uexp_CD="-0.35" CD_CLsq="0.0315" CD_stall="0.05"
+      CD_AIsq="0.01" CD_ELsq="0.0" />
+    <Y CY_b="-0.452" CY_p="0.0131" CY_r="0.202"
+      CY_dr="0.154" CY_da="-0.0345" />
+    <l Cl_b="-0.00787" Cl_p="-0.521" Cl_r="0.00656"
+      Cl_dr="0.00512" Cl_da="0.315" />
+    <n Cn_b="0.0591" Cn_p="-0.00484" Cn_r="-0.0745"
+      Cn_dr="-0.0584" Cn_da="0.0124" />
+    <flap drag="0.327" lift="-3.318" moment="-0.504" eff_ratio="0.25" />
+  </aero>
+  <config version="1">
+    <descr_long>
+      <en>Estimated mass and inertias, by LG</en>
+    </descr_long>
+    <descr_short>
+      <en>default</en>
+    </descr_short>
+    <mass_inertia version="1" units="1" Mass="1.095"
+      I_xx="0.070" I_yy="0.066" I_zz="0.135" I_xz="-0.00078" />
+    <sound version="1">
+      <sample filename="glider.wav" type="2" pitchfactor="1" maxvolume="1.0" />
+    </sound>
+  </config>
+  <graphics version="1" model="wasabi_wr.ac">
+    <descr_long>
+      <en>White and red model, by LG.</en>
+    </descr_long>
+    <descr_short>
+      <en>White and red</en>
+    </descr_short>
+  </graphics>
+  <graphics version="1" model="wasabi_yr.ac">
+    <descr_long>
+      <en>Yellow and red model, by LG.</en>
+    </descr_long>
+    <descr_short>
+      <en>Yellow and red</en>
+    </descr_short>
+  </graphics>
+  <wheels version="1" units="0">
+    <!-- 
+      order of magnitude of spring values:
+        max_force: 5-20 times model's weight (the faster the higher), 
+                   at least > then damping times a typical landing speed
+        constant: 500 lbf/ft (hard point), 100 lbf/ft (rubber wheel)
+        damping: 1 lbf*s/ft (hard point), 0.5 lbf*s/ft (rubber wheel)
+    -->
+    <!-- right wingtip -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.13" y="2.46" z="0.0" />
+      <spring constant="500" damping="1" max_force="50" />
+    </wheel>
+    <!-- left wingtip -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.13" y="-2.46" z="0.0" />
+      <spring constant="500" damping="1" max_force="50" />
+    </wheel>
+    <!-- right wing -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.07" y="1.25" z="0.0" />
+      <spring constant="500" damping="1" max_force="50" />
+    </wheel>
+    <!-- left wing -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.07" y="-1.25" z="0.0" />
+      <spring constant="500" damping="1" max_force="50" />
+    </wheel>
+    <!-- nose -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="0.71" y="0.00" z="0.03" />
+      <spring constant="500" damping="1" max_force="50" />
+    </wheel>
+    <!-- fuselage top -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.13" y="0.00" z="-0.28" />
+      <spring constant="500" damping="1" max_force="50" />
+    </wheel>
+    <!-- fuselage bottom -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.13" y="0.00" z="0.21" />
+      <spring constant="500" damping="1" max_force="50" />
+    </wheel>
+    <!-- fuselage bottom rear -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-2.17" y="0.00" z="0.21" />
+      <spring constant="500" damping="1" max_force="50" />
+    </wheel>
+    <!-- rudder -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-2.52" y="0.00" z="0.13" />
+      <spring constant="500" damping="1" max_force="50" />
+    </wheel>
+    <!-- fin -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-2.03" y="0.00" z="-0.57" />
+      <spring constant="500" damping="1" max_force="50" />
+    </wheel>
+    <!-- right elevator -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-1.92" y="0.76" z="0.0" />
+      <spring constant="500" damping="1" max_force="50" />
+    </wheel>
+    <!-- left elevator -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-1.92" y="-0.76" z="0.0" />
+      <spring constant="500" damping="1" max_force="50" />
+    </wheel>
+  </wheels>
+  <CG units="1" x="-0.088" y="0" z="0" />
+  <animations>
+    <animation type="ControlSurface">
+      <object name="rudder" max_angle="0.350" />
+      <control mapping="RUDDER" gain="1.0" />
+      <hinge x="-2.17" y="0.0" z="-0.57" />
+      <hinge x="-2.17" y="0.0" z="0.22" />
+    </animation>
+    <animation type="ControlSurface">
+      <object name="ele_lh" max_angle="0.140" />
+      <control mapping="ELEVATOR" gain="1.0" />
+      <hinge x="-2.0" y="-0.75" z="-0.02" />
+      <hinge x="-2.0" y="0.75" z="-0.02" />
+    </animation>
+    <animation type="ControlSurface">
+      <object name="ele_rh" max_angle="0.140" />
+      <control mapping="ELEVATOR" gain="1.0" />
+      <hinge x="-2.0" y="-0.75" z="-0.02" />
+      <hinge x="-2.0" y="0.75" z="-0.02" />
+    </animation>
+    <animation type="ControlSurface">
+      <object name="ail_lh" max_angle="0.525" />
+      <control mapping="AILERON" gain="0.5" />
+      <control mapping="FLAP" gain="-1.0" />
+      <hinge x="-0.45" y="-2.47" z="0.0" />
+      <hinge x="-0.49" y="0.0" z="0.0" />
+    </animation>
+    <animation type="ControlSurface">
+      <object name="ail_rh" max_angle="0.525" />
+      <control mapping="AILERON" gain="0.5" />
+      <control mapping="FLAP" gain="1.0" />
+      <hinge x="-0.45" y="2.47" z="0.0" />
+      <hinge x="-0.49" y="0.0" z="0.0" />
+    </animation>
+  </animations>
+  <launch>
+    <preset name_en="glider default (hand)" altitude="6" velocity_rel="1" angle="0" sal="0" rel_to_player="1" rel_front="0" rel_right="2" />
+  </launch>
+  <mixer>
+    <mixer name_en="Wasabi default" enabled="1" dr_enabled="1">
+      <aileron trim="0" nrate="1" srate="1" exp="0.5" />
+      <elevator trim="0" nrate="1" srate="0.60000002" exp="0.25" />
+      <rudder trim="0" nrate="1" srate="1" exp="0.5" />
+      <throttle trim="0" />
+      <flap trim="0" mtravel="-0.133" ptravel="0.133" />
+      <spoiler trim="0" />
+      <mixer1 enabled="1" src="2" dst="5" val="0.53299999" />
+      <mixer2 enabled="1" src="5" dst="2" val="-0.46700001" />
+      <mixer3 enabled="1" src="6" dst="5" val="-0.5" />
+      <mixer4 enabled="1" src="6" dst="2" val="0.234" />
+    </mixer>
+  </mixer>
+</CRRCSim_airplane>

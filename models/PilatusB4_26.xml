@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+<CRRCSim_airplane version="2">
+  <name>
+    <en>Pilatus B4 2.6m</en>
+  </name>
+  <categories>
+    <category>Gliders</category>
+  </categories>
+  <description>
+    <en>
+Pilatus B4 from Tangent (2.6m span).
+(http://www.tangent-modelltechnik.com)
+
+This model uses the same (scaled) 3D object as the 
+original Pilatus B4, but aerodynamics and masses have 
+been redefined to match as accurately as possible those 
+of the Tangent-built RC glider.
+CRRCsim model updated by Luca Gasparini.
+    </en>
+  </description>
+  <changelog>
+    <change>
+      <date>2012-12-27</date>
+      <author>L. Gasparini</author>
+      <en>New definitions matching Tangent model aero & masses</en>
+    </change>
+  </changelog>
+  <aero version="1" units="1">
+    <!-- 
+      The model is setup with:
+        CG at 0.085m from wing root LE
+        root wing angle is +7.5° relative to model x-axis
+        stabilizer angle is +6.0° relative to model x-axis
+      These result in a trimmed Cl=0.57, which is close to max Eff,
+      with x-axis at -3.6° (i.e. wing approx +4° incidence)
+      
+      Control derivatives for CRRCSIM are computed as:
+      CRCSIM_der = AVL_der * control_travel_deg / 0.5
+      Assumed control travel are: 
+        de=+/-10deg
+        dr=+/-25deg 
+        da=+/-13deg (actually 1:1.5 diff ratio in AVL).
+                  
+      AVL control derivatives in standard orientation stability axis
+      (for 1deg of control deflection):
+        CL_de= 0.00635
+        Cm_de=-0.0234
+        CY_dr= 0.00245
+        CY_da=-0.00001
+        Cl_dr= 0.000061
+        Cl_da= 0.00880 
+        Cn_dr=-0.000632
+        Cn_da=-0.000877
+
+      Note: CY_b is likely underestimated due to the missing 
+      large (in side view) fuselage, in AVL model.
+      Therefore the original value
+        CY_b=-0.198
+      has been corrected (just guessing) by a factor 1.5.
+      
+      CD_prof, Uexp_Cd, CD_CLsq data from RG14 polars fit
+      plus estimated fuse & tail drag (from surface area).
+      Reference Re=200000.
+      
+      Effect of spoiler is just guessed.
+    -->
+    <ref chord="0.173" span="2.576" area="0.426" speed="17.3" />
+    <misc Alpha_0="-0.063" eta_loc="0.3" CG_arm="0.25" span_eff="0.95" />
+    <m Cm_0="0" Cm_a="-0.852" Cm_q="-15.9" Cm_de="-0.468" />
+    <lift CL_0="0.57" CL_max="1.05" CL_min="-0.55" CL_a="5.899" CL_q="7.521"
+       CL_de="0.127" CL_drop="0.2" CL_CD0="0.26" />
+    <drag CD_prof="0.0145" Uexp_CD="-0.35" CD_stall="0.05" 
+       CD_CLsq="0.0230" CD_AIsq="0.01" CD_ELsq="0.0" />
+    <Y CY_b="-0.297" CY_p="0.000229" CY_r="0.115" CY_dr="0.123" CY_da="0.00026" />
+    <l Cl_b="-0.0258" Cl_p="-0.638" Cl_r="0.143" Cl_dr="0.0031" Cl_da="0.228" />
+    <n Cn_b="0.0439" Cn_p="-0.0457" Cn_r="-0.0282" Cn_dr="-0.0316" Cn_da="-0.0228" />
+    <spoiler drag="0.04" lift="-0.4" />
+  </aero>
+  <config version="1">
+    <descr_long>
+      <en>Estimated mass and inertias, by LG.</en>
+    </descr_long>
+    <descr_short>
+      <en>default</en>
+    </descr_short>
+    <mass_inertia version="1" units="1" Mass="2.425" 
+       I_xx="0.613" I_yy="0.159" I_zz="0.754" I_xz="-0.010" />
+    <sound version="1">
+      <sample filename="glider.wav" type="2" pitchfactor="1" maxvolume="1.0" />
+    </sound>
+  </config>
+  <graphics version="1" model="PilatusB4_26.ac">
+    <descr_long>
+      <en>Rescaled from PilatusB4.ac.</en>
+    </descr_long>
+    <descr_short>
+      <en>default</en>
+    </descr_short>
+  </graphics>
+  <wheels version="1" units="0">
+    <!-- 
+      order of magnitude of spring values:
+        max_force: 5-20 times model's weight (the faster the higher), 
+                   at least > then damping times a typical landing speed
+        constant: 500 lbf/ft (hard point), 100 lbf/ft (rubber wheel)
+        damping: 1 lbf*s/ft (hard point), 0.5 lbf*s/ft (rubber wheel)
+    -->
+    <!-- right wingtip -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.13" y="4.23" z="-0.50" />
+      <spring constant="500" damping="1" max_force="50" />
+    </wheel>
+    <!-- left wingtip -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.13" y="-4.23" z="-0.50" />
+      <spring constant="500" damping="1" max_force="50" />
+    </wheel>
+    <!-- right wing -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="0.00" y="2.48" z="-0.45" />
+      <spring constant="500" damping="1" max_force="50" />
+    </wheel>
+    <!-- left wing -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="0.00" y="-2.48" z="-0.45" />
+      <spring constant="500" damping="1" max_force="50" />
+    </wheel>
+    <!-- nose -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="1.15" y="0.00" z="-0.19" />
+      <spring constant="500" damping="1" max_force="50" />
+    </wheel>
+    <!-- fuselage canopy -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="0.19" y="0.00" z="-0.52" />
+      <spring constant="500" damping="1" max_force="50" />
+    </wheel>
+    <!-- main wheel -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.1" y="0.00" z="0.11" />
+      <spring constant="100" damping="0.5" max_force="50" />
+    </wheel>
+    <!-- rear wheel -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-2.09" y="0.00" z="0.02" />
+      <spring constant="100" damping="0.5" max_force="50" />
+    </wheel>
+    <!-- rudder -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-2.49" y="0.00" z="-0.03" />
+      <spring constant="500" damping="1" max_force="50" />
+    </wheel>
+    <!-- fin -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-2.38" y="0.00" z="-0.85" />
+      <spring constant="500" damping="1" max_force="50" />
+    </wheel>
+    <!-- right elevator -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-2.37" y="0.88" z="-0.85" />
+      <spring constant="500" damping="1" max_force="50" />
+    </wheel>
+    <!-- left elevator -->
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-2.37" y="-0.88" z="-0.85" />
+      <spring constant="500" damping="1" max_force="50" />
+    </wheel>
+  </wheels>
+  <CG units="1" x="-0.085" y="0" z="-0.076" />
+  <animations>
+    <animation type="ControlSurface">
+      <object name="rudder" max_angle="0.436" />
+      <control mapping="RUDDER" gain="1.0" />
+      <hinge x="-2.63" y="0.0" z="-0.83" />
+      <hinge x="-2.23" y="0.0" z="0.0" />
+    </animation>
+    <animation type="ControlSurface">
+      <object name="elevator" max_angle="0.175" />
+      <control mapping="ELEVATOR" gain="1.0" />
+      <hinge x="-2.59" y="-0.87" z="-0.84" />
+      <hinge x="-2.59" y="0.87" z="-0.84" />
+    </animation>
+    <animation type="ControlSurface">
+      <object name="aileron_lh" max_angle="0.297" />
+      <control mapping="AILERON" gain="1.0" />
+      <hinge x="-0.33" y="-4.11" z="-0.50" />
+      <hinge x="-0.50" y="-2.53" z="-0.48" />
+    </animation>
+    <animation type="ControlSurface">
+      <object name="aileron_lh_lo" max_angle="0.297" />
+      <control mapping="AILERON" gain="1.0" />
+      <hinge x="-0.33" y="-4.11" z="-0.50" />
+      <hinge x="-0.50" y="-2.53" z="-0.48" />
+    </animation>
+    <animation type="ControlSurface">
+      <object name="aileron_rh" max_angle="0.297" />
+      <control mapping="AILERON" gain="-1.0" />
+      <hinge x="-0.50" y="2.53" z="-0.48" />
+      <hinge x="-0.33" y="4.11" z="-0.50" />
+    </animation>
+    <animation type="ControlSurface">
+      <object name="aileron_rh_lo" max_angle="0.297" />
+      <control mapping="AILERON" gain="-1.0" />
+      <hinge x="-0.50" y="2.53" z="-0.48" />
+      <hinge x="-0.33" y="4.11" z="-0.50" />
+    </animation>
+    <animation type="ControlSurface">
+      <object name="spoiler_lh" max_angle="0.025" />
+      <control mapping="SPOILER" gain="1.0" />
+      <hinge x="2.5" y="-1.0" z="0.42" />
+      <hinge x="2.5" y="-2.0" z="0.42" />
+    </animation>
+    <animation type="ControlSurface">
+      <object name="spoiler_rh" max_angle="0.025" />
+      <control mapping="SPOILER" gain="1.0" />
+      <hinge x="2.5" y="2.0" z="0.42" />
+      <hinge x="2.5" y="1.0" z="0.42" />
+    </animation>
+  </animations>
+  <launch>
+    <preset name_en="glider default (hand)" altitude="6" velocity_rel="1" angle="0" sal="0" rel_to_player="1" rel_front="0" rel_right="2" />
+  </launch>  
+  <mixer>
+      <mixer name_en="Pilatus B4 2,6m Default" enabled="1" dr_enabled="0">
+        <aileron trim="0" nrate="1" srate="0.80000001" exp="0.5" />
+        <elevator trim="0" nrate="1" srate="0.80000001" exp="0.5" />
+        <rudder trim="0" nrate="1" srate="1" exp="0" />
+        <throttle trim="0" />
+        <flap trim="0" mtravel="-0.5" ptravel="0.5" />
+        <spoiler trim="0" />
+        <mixer1 enabled="1" src="5" dst="2" val="0.30000001" />
+        <mixer2 enabled="1" src="1" dst="3" val="-0.5" />
+        <mixer3 enabled="0" src="0" dst="0" val="0" />
+        <mixer4 enabled="0" src="0" dst="0" val="0" />
+      </mixer>
+  </mixer>
+</CRRCSim_airplane>

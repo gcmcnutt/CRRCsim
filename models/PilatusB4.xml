@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+<CRRCSim_airplane version="2">
+  <name>
+    <en>Pilatus B4 4.6m</en>
+  </name>
+  <categories>
+    <category>Gliders</category>
+  </categories>
+  <description>
+    <en>
+A large scale glider (4.6m) of the famous Pilatus B4 
+aerobatics sailplane.
+
+CRRCsim model updated by Luca Gasparini to provide a 
+more realistic flight simulation.
+    </en>
+  </description>
+  <changelog>
+    <change>
+      <date>2005</date>
+      <author>Alex Kopecny</author>
+      <en>Created .air file, 3D model and texture.</en>
+    </change>
+    <change>
+      <date>Unknown</date>
+      <author>CRRCSim 0.9.5</author>
+      <en>Automatically converted from .air file.</en>
+    </change>
+    <change>
+      <date>2006-11-04</date>
+      <author>Jan Reucker</author>
+      <en>Added categories and description.</en>
+    </change>
+    <change>
+      <date>2009-02-25</date>
+      <author>Jens W. Wulf</author>
+      <en>Added launch default</en>
+    </change>
+    <change>
+      <date>2010-05-14</date>
+      <author>J. Reucker</author>
+      <en>Added max_force to springs</en>
+    </change>
+    <change>
+      <date>2012-01-26</date>
+      <author>L. Gasparini</author>
+      <en>Increased |CL_min| from -0.4 to -0.6</en>
+    </change>
+    <change>
+      <date>2013-01-08</date>
+      <author>L. Gasparini</author>
+      <en>New definition of aero & mass scaling the 2.6m model</en>
+    </change>
+  </changelog>
+  <aero version="1" units="1">
+    <!-- 
+      The model is setup with:
+        CG at 0.152m from wing root LE
+        root wing angle is +2.5° relative to model x-axis
+        stabilizer angle is +1.0° relative to model x-axis
+      These result in a trimmed Cl=0.57, which is close to max Eff,
+      with x-axis at 1.4° (i.e. wing approx +4° incidence)
+      
+      Control derivatives for CRRCSIM are computed as:
+      CRCSIM_der = AVL_der * control_travel_deg / 0.5
+      Assumed control travel are: 
+        de=+/-10deg
+        dr=+/-25deg 
+        da=+/-13deg (actually 1:1.5 diff ratio in AVL).
+                  
+      AVL control derivatives in standard orientation stability axis
+      (for 1deg of control deflection):
+        CL_de= 0.00635
+        Cm_de=-0.0234
+        CY_dr= 0.00245
+        CY_da=-0.00001
+        Cl_dr= 0.000061
+        Cl_da= 0.00880 
+        Cn_dr=-0.000632
+        Cn_da=-0.000877
+
+      Note: CY_b is likely underestimated due to the missing 
+      large (in side view) fuselage, in AVL model.
+      Therefore the original value
+        CY_b=-0.198
+      has been corrected (just guessing) by a factor 1.5.
+      
+      CD_prof, Uexp_Cd, CD_CLsq data from RG14 polars fit
+      plus estimated fuse & tail drag (from surface area).
+      Reference Re=200000.
+      
+      Effect of spoiler is just guessed.
+    -->
+    <ref chord="0.310" span="4.610" area="1.364" speed="9.7" />
+    <misc Alpha_0="0.024" eta_loc="0.3" CG_arm="0.25" span_eff="0.95" />
+    <m Cm_0="0" Cm_a="-0.852" Cm_q="-15.9" Cm_de="-0.468" />
+    <lift CL_0="0.57" CL_max="1.05" CL_min="-0.55" CL_a="5.899" CL_q="7.521"
+       CL_de="0.127" CL_drop="0.2" CL_CD0="0.26" />
+    <drag CD_prof="0.0145" Uexp_CD="-0.35" CD_stall="0.05" 
+       CD_CLsq="0.0230" CD_AIsq="0.01" CD_ELsq="0.0" />
+    <Y CY_b="-0.297" CY_p="0.000229" CY_r="0.115" CY_dr="0.123" CY_da="0.00026" />
+    <l Cl_b="-0.0258" Cl_p="-0.638" Cl_r="0.143" Cl_dr="0.0031" Cl_da="0.228" />
+    <n Cn_b="0.0439" Cn_p="-0.0457" Cn_r="-0.0282" Cn_dr="-0.0316" Cn_da="-0.0228" />
+    <spoiler drag="0.04" lift="-0.4" />
+  </aero>
+  <config version="1">
+    <descr_long>
+      <en>Estimated mass and inertias, by LG.</en>
+    </descr_long>
+    <descr_short>
+      <en>default</en>
+    </descr_short>
+    <mass_inertia version="1" units="1" Mass="10.000" 
+       I_xx="8.174" I_yy="2.120" I_zz="10.054" I_xz="-0.133" />
+    <sound version="1">
+      <sample filename="glider.wav" type="2" pitchfactor="1" maxvolume="1.0" />
+    </sound>
+  </config>
+  <graphics version="1" model="PilatusB4.ac">
+    <descr_long>
+      <en>Automatically converted from PilatusB4.air.</en>
+    </descr_long>
+    <descr_short>
+      <en>default</en>
+    </descr_short>
+  </graphics>
+  <wheels version="1" units="0">
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.3714" y="5.1666002" z="-0.45249999" />
+      <spring constant="60" damping="0.2" max_force="40.0" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.57969999" y="5.1666002" z="-0.45249999" />
+      <spring constant="60" damping="0.2" max_force="40.0" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.3714" y="-5.1666002" z="-0.45249999" />
+      <spring constant="60" damping="0.2" max_force="40.0" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.57969999" y="-5.1666002" z="-0.45249999" />
+      <spring constant="60" damping="0.2" max_force="40.0" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="0.2744" y="2" z="-0.1041" />
+      <spring constant="60" damping="0.2" max_force="40.0" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="0.2744" y="-2" z="-0.1041" />
+      <spring constant="60" damping="0.2" max_force="40.0" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="1.0829999" y="0" z="0.125" />
+      <spring constant="60" damping="0.2" max_force="40.0" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-3.5" y="0.75" z="-0.87300003" />
+      <spring constant="60" damping="0.2" max_force="40.0" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-3.5" y="-0.75" z="-0.87300003" />
+      <spring constant="60" damping="0.2" max_force="40.0" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="0.29519999" y="0" z="0.20829999" />
+      <spring constant="60" damping="0.2" max_force="40.0" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.49630001" y="0" z="0.19329999" />
+      <spring constant="60" damping="0.2" max_force="40.0" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="0.57969999" y="0" z="0.1875" />
+      <spring constant="60" damping="0.2" max_force="40.0" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-3.5" y="0" z="0.15317" />
+      <spring constant="60" damping="0.2" max_force="40.0" />
+    </wheel>
+  </wheels>
+  <launch>
+    <preset name_en="glider default (hand)" altitude="6" velocity_rel="1" angle="0" sal="0" rel_to_player="1" rel_front="0" rel_right="2" />
+  </launch>  
+</CRRCSim_airplane>

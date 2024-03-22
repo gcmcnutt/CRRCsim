@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+<CRRCSim_airplane version="2">
+  <name>
+    <en>Flexifly XLM</en>
+  </name>
+  <categories>
+    <category>Powered gliders</category>
+    <category>Electric</category>
+    <category>Foamies</category>
+  </categories>
+  <description>
+    <en>
+The Pemotec FlexiflyXLM (http://www.pemotec.com). A 1 m glider 
+made of EPP.
+    </en>
+  </description>
+  <changelog>
+    <change>
+      <date>2006-01-01</date>
+      <author>Jan Reucker (slowhand_47@gmx.de)</author>
+      <en>Calculated FDM parameters using AVL</en>
+    </change>
+    <change>
+      <date>2006-01-08</date>
+      <author>CRRCSim 0.9.5</author>
+      <en>Automatically converted from .air file.</en>
+    </change>
+    <change>
+      <date>2006-02-18</date>
+      <author>Jan Reucker (slowhand_47@gmx.de)</author>
+      <en>Corrected location of the hardpoints.</en>
+    </change>
+    <change>
+      <date>2006-12-31</date>
+      <author>Jan Reucker (slowhand_47@gmx.de)</author>
+      <en>Added brushless configuration and animations.</en>
+    </change>
+    <change>
+      <date>2006-01-28</date>
+      <author>Jan Reucker (slowhand_47@gmx.de)</author>
+      <en>New aero and mass parameters calculated by Jens W. Wulf.
+      Removed brushless configuration (does not work with the new
+      set of parameters). Reduced spring damping of the hardpoints
+      to avoid the black screen phenomenon when landing inverted.</en>
+    </change>
+    <change>
+      <date>2006-04-01</date>
+      <author>Jan Reucker (slowhand_47@gmx.de)</author>
+      <en>Adapted animations to file format changes.</en>
+    </change>
+    <change>
+      <date>2009-02-25</date>
+      <author>Jens W. Wulf</author>
+      <en>Added launch default</en>
+    </change>
+    <change>
+      <date>2010-05-13</date>
+      <author>J. Reucker</author>
+      <en>Added max_force to springs</en>
+    </change>
+  </changelog>
+  <aero version="1" units="1">
+    <ref chord="0.14960092" span="1.00076" area="0.14814809" speed="19" />
+    <l Cl_b="-0.135825" Cl_p="-0.484121" Cl_r="0.166927" Cl_da="-0.009558" Cl_dr="0" />
+    <m Cm_a="-0.587625" Cm_q="-9.86444" Cm_0="0" Cm_de="-0.554186" />
+    <n Cn_b="0.073321" Cn_p="-0.043168" Cn_r="-0.076957" Cn_da="0.041483" Cn_dr="0" />
+    <Y CY_b="-0.25642" CY_p="-0.084046" CY_r="0.231354" CY_da="-0.101438" CY_dr="0" />
+    <lift CL_a="4.927615" CL_q="6.933846" CL_0="0.6" CL_de="0.23446" CL_max="1.1"
+       CL_min="-0.6" CL_drop="0.5" CL_CD0="0.2" />
+    <misc Alpha_0="0.055962412" span_eff="0.95" eta_loc="0.15" CG_arm="0.25" />
+    <drag CD_prof="0.02" Uexp_CD="-0.5" CD_stall="0" CD_CLsq="0.013" CD_AIsq="0"
+       CD_ELsq="0" />
+  </aero>
+
+  <config version="1">
+    <descr_long>
+      <en>Default configuration with a Speed 400 brushed motor on 7 NiMH cells.</en>
+    </descr_long>
+    <descr_short>
+      <en>Speed 400</en>
+    </descr_short>
+    <mass_inertia version="1" units="1" Mass="0.4305" I_xx="0.0046434488"
+       I_yy="0.0057315134" I_zz="0.0097620834" I_xz="0.00012791619" />
+    <sound version="1">
+      <sample filename="electric.wav" type="1" pitchfactor="0.004" maxvolume="1.0" />
+    </sound>
+    
+    <power units="1">
+        <battery filename="nimh7_kan1050" throttle_min="0">
+          <shaft J="0" brake="1">
+            <propeller D="0.15" H="0.075" J="0" n_fold="5" >
+              <pos x="0.09" downthrust="6" />
+            </propeller>
+            <engine filename="Mabuchi_380_FR" />
+          </shaft>
+        </battery>
+    </power>
+  </config>
+  <graphics version="1" model="flexifly_xlm.ac">
+    <descr_long>
+      <en>Automatically converted from FlexiflyXLM.air.</en>
+    </descr_long>
+    <descr_short>
+      <en>default</en>
+    </descr_short>
+  </graphics>
+  <wheels version="1" units="0">
+  
+    <wheel percent_brake="1.0" caster_angle_rad="0.0"> <!-- right wingtip -->
+      <pos x="0.14" y="1.65" z="-0.21" />
+      <spring constant="10.0" damping="0.05" max_force="4.5" />
+    </wheel>
+    <wheel percent_brake="1.0" caster_angle_rad="0.0"> <!-- right wingtip -->
+      <pos x="-0.28" y="1.65" z="-0.21" />
+      <spring constant="10.0" damping="0.05" max_force="4.5" />
+    </wheel>
+    <wheel percent_brake="1.0" caster_angle_rad="0.0"> <!-- left wingtip -->
+      <pos x="0.14" y="-1.65" z="-0.21" />
+      <spring constant="10.0" damping="0.05" max_force="4.5" />
+    </wheel>
+    <wheel percent_brake="1.0" caster_angle_rad="0.0"> <!-- left wingtip -->
+      <pos x="-0.28" y="-1.65" z="-0.21" />
+      <spring constant="10.0" damping="0.05" max_force="4.5" />
+    </wheel>
+    <wheel percent_brake="1.0" caster_angle_rad="0.0"> <!-- right inner wing -->
+      <pos x="0.14" y="0.8" z="-0.05" />
+      <spring constant="10.0" damping="0.05" max_force="4.5" />
+    </wheel>
+    <wheel percent_brake="1.0" caster_angle_rad="0.0"> <!-- left inner wing -->
+      <pos x="0.14" y="-0.8" z="-0.05" />
+      <spring constant="10.0" damping="0.05" max_force="4.5" />
+    </wheel>
+    <wheel percent_brake="1.0" caster_angle_rad="0.0"> <!-- right horiz stab -->
+      <pos x="-1.32" y="0.57" z="0.0" />
+      <spring constant="10.0" damping="0.05" max_force="4.5" />
+    </wheel>
+    <wheel percent_brake="1.0" caster_angle_rad="0.0"> <!-- right horiz stab -->
+      <pos x="-1.53" y="0.57" z="0.0" />
+      <spring constant="10.0" damping="0.05" max_force="4.5" />
+    </wheel>
+    <wheel percent_brake="1.0" caster_angle_rad="0.0"> <!-- left horiz stab -->
+      <pos x="-1.32" y="-0.57" z="0.0" />
+      <spring constant="10.0" damping="0.05" max_force="4.5" />
+    </wheel>
+    <wheel percent_brake="1.0" caster_angle_rad="0.0"> <!-- left horiz stab -->
+      <pos x="-1.53" y="-0.57" z="0.0" />
+      <spring constant="10.0" damping="0.05" max_force="4.5" />
+    </wheel>
+    <wheel percent_brake="1.0" caster_angle_rad="0.0"> <!-- vert stab -->
+      <pos x="-1.58" y="0.0" z="-0.48" />
+      <spring constant="10.0" damping="0.05" max_force="4.5" />
+    </wheel>
+    <wheel percent_brake="1.0" caster_angle_rad="0.0"> <!-- vert stab -->
+      <pos x="-1.34" y="0.0" z="-0.48" />
+      <spring constant="10.0" damping="0.05" max_force="4.5" />
+    </wheel>
+    <wheel percent_brake="1.0" caster_angle_rad="0.0"> <!-- nose -->
+      <pos x="0.67" y="0.0" z="0.11" />
+      <spring constant="10.0" damping="0.05" max_force="4.5" />
+    </wheel>
+    <wheel percent_brake="1.0" caster_angle_rad="0.0"> <!-- fuselage front -->
+      <pos x="0.25" y="0.0" z="0.25" />
+      <spring constant="10.0" damping="0.05" max_force="4.5" />
+    </wheel>
+    <wheel percent_brake="1.0" caster_angle_rad="0.0"> <!-- fuselage rear -->
+      <pos x="-1.56" y="0.0" z="0.05" />
+      <spring constant="10.0" damping="0.05" max_force="4.5" />
+    </wheel>
+  </wheels>
+  <animations>
+    <animation type="ControlSurface">
+      <!-- elevator -->
+      <object name="hfin" max_angle="0.35" />
+      <control mapping="ELEVATOR" gain="1.0" />
+      <hinge x="-1.40" y="0.00" z="-0.01" />
+      <hinge x="-1.40" y="1.00" z="-0.01" />
+    </animation>
+    <animation type="ControlSurface">
+      <!-- rudder (controlled by AILERON) -->
+      <object name="vfin" max_angle="0.500" />
+      <control mapping="AILERON" gain="-1.0" />
+      <hinge x="-1.42" y="0.00" z="-0.48" />
+      <hinge x="-1.42" y="0.00" z="0.06" />
+    </animation>
+  </animations>
+  <launch>
+    <preset name_en="glider default (hand)" altitude="6" velocity_rel="1" angle="0" sal="0" rel_to_player="1" rel_front="0" rel_right="2" />
+  </launch>  
+</CRRCSim_airplane>

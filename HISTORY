@@ -1,0 +1,433 @@
+This is version 0.9.13, created on 2016-04-10
+---------------------------------------------------
+
+Release Notes for CRRCSim 0.9.13
+--------------------------------
+
+- Internationalisation: added translation in Czech.
+- Various improvements/fixes/new features to the aircraft aerodynamics and windfield models:
+  - fixed airmass rotation effect (e.g. thermals)
+  - added flap non linear effect & spoiler pitching moment
+  - improved propeller simulation
+  - added a realistic wind turbulence model based on MIL-HDBK-1797, setup in wind dialog.
+- New models:
+  - Graupner/Tangent Pilatus B4 2.6m
+  - Generic F3F glider, with realistic aerodynamics
+  - Sebart Angel S30E electric aerobatic model
+- Option to load model's mixer setting, if defined
+- Scene/airplane rendering and graphics development:
+  - added anti aliasing
+  - resizing of windows reactivated for Win32 version
+  - added "smart camera" mode
+  - added 3D wind vector visualisation option, toggled by View menu or W key
+  - much improved realism of shadows (airplane and scene objects) and sun light
+  - sun position & haze now defined in scenery file
+  - added model view window, toggled by M key
+  - improved treatment of translucent and partially translucent objects in scene (e.g. trees)
+  - new "population" tag to distribute objects in the scene
+  - fixed most airplane models and scene object 3d files (normals and degenerated surfaces)
+- New scenery: Simple woods, a simple "urban slope" scenery
+- F3F mode: optionally shows the planes of the bases for easier identification of model position.
+- New F3A mode.
+- Others bug fix
+
+
+Release Notes for CRRCSim 0.9.12
+--------------------------------
+
+- Automatic adaptation of the resolution to that of the screen in fullscreen mode
+- Internationalisation : messages are now on Englich, German, Italian or French.
+  The users can contribute to  the translation in the other languages.
+- Controls/configures dialogue improvement. Combined with test_mode. Works now after a crash (bug fix).
+- New calibration method.
+- Improvement of the dialogue of scenery selection. Alphabetical sorting.
+  Preview. Sky or resolution choice stored for every location.
+- New method of Wind Flow modelling from terrain, using Computational Fluid Dynamics 
+  (2d panel method in wind plane).
+- Tools for Wind Flow visualisation
+- Added Wasabi aerobatic glider model.
+- Revised & enhanced mixer functionalities.
+- Revised aero-model (stall,flap effect,other minor).
+- Added HeadsUpDisplay compass showing azimuth and elevation of current viewport.
+- New method of plan of the shadows. More realistic in the case of a ground not plan.
+  (Simplified  Shadow Volume method)
+- More readable dialogues (no transparency)
+- Console text display consumes less resources (reduces stuttering when much text is visible)
+- Added spoiler function to keyboard (b = brake)
+- Spoiler settings for Supra.
+- Others bug fix
+
+
+Release Notes for CRRCSim 0.9.11
+--------------------------------
+- Added command line option -V (print version info, configuration options and exit).
+- removed obsolete files from distribution
+- hitting any unused key causes CRRCSim to try reloading the FDMs parameters
+- Fixed bug #15694 Segfault when configuring audio interface (patch provided by Glenn Trigg)
+- Improved helicopter parameters
+- New FDM including an example model: multicopter
+- New CT6A transmitter interface (by Nikolay B. Eremeyev)
+- Implemented real engine downthrust, adjusted Flexifly accordingly
+- Repaired flap and spoiler parameters
+- Implemented feature request #4271: Model volume can now be configured through the GUI
+- Heli and Multicopter: reversed nick input to be like fixed wing
+- Fixed bug #16552 Collision detection with multiple objects fail
+- Fixed bug #16204 core dump on karmic. Fixed CMake build with libCGAL.
+- Simulate influence of retractable gears on aerodynamics
+- Implemented rudimentary crash handling with a new spring.max_force attribute
+- F3F on all scenery
+- Implemented scenery file specification v3 
+- Feature Request #4311 (Replay tool - a shadow plane): You can now save and replay
+  your flights and race against a shadow plane in F3F mode.
+- Fixed bug #017127 Selections are hardly visible in the GUI
+- Fixed bug #017076 Build error when CGAL installed on Ubuntu karmic
+- Implemented feature request #4470 Improve scenery selection dialog
+
+
+Release Notes for CRRCSim 0.9.10
+--------------------------------
+- New input functions: flap, spoiler, retract, prop/rotor pitch. Note: these
+  functions are right now only supported by few models (Sport has retractable
+  gear, Skorpion has spoiler and flaps).
+- Helicopter simulation. CRRCsim now features a basic flight model for
+  helicopters that simulates all kinds of helis (gas/electric, fixed/collective
+  pitch, single/coax rotor).
+- Better input device configuration. Removed some bugs, redesigned dialog.
+- Bugfix for 9600 baud FMSPIC interfaces.
+- Fixed bug #2012004: On Windows, the device combo box should now list all
+  available serial ports. Some additional fixes to serial interface initialization
+  and ctrlgen dialog handling (may fix #1921555 as well).
+- Feature request #004269: Volume control.
+- Fixed Bug #14363 (Crash when reconfiguring input method).
+- Fixed Bug #15028 (joystick configuration crash).
+- Fixed Bug #15136 (Segfault when exiting CRRCsim).
+- Fixed Bug #15138 (Seg Fault when trying to configure joystick).
+- Fixed Bug #15139 (options>controls>buttons doesn't alter config crrcsim.xml).
+- Fixed Bug #15161 (Axis assignment in Options->Controls->Buttons does not work).
+- Added a Unix manpage.
+- Framework for development and testing of flight envelope controllers.
+  (autopilot functions).
+- New scenery selection dialog.
+- Height calculation for custom/model-based sceneries.
+- Optional 3D windfield import.
+- JPEG texture loading support.
+
+
+Release Notes for CRRCSim 0.9.9
+-------------------------------
+- GNU autotools support: CRRCsim can be built using the standard
+  ./configure && make install procedure.
+- Changed airplane description file format to allow a ControlSurfaceAnimation
+  to be controlled by more than one control input (e.g. for elevons).
+- Fixed Windows installer: some of the documentation was missing.
+- FMSPIC interface code cleanup, added /dev/ttyUSBx interfaces.
+- Included patch from Tom Willis (3D preview in aircraft selection dialog).
+  This was later requested by an anonymous user as Feature Request 
+  item #1930079.
+- Conversion of audio interface code to Portaudio 19. The code will now work
+  with both Portaudio 18 and 19. ./configure will auto-detect and use the 
+  installed version. (done)
+- New transmitter interface "ZhenHua" for Walkera transmitters on the
+  serial port.
+- Removed dependency on GLUT and gle.
+- New pop-up console to display system messages.
+- The audio input device for the AUDIO interface can now be selected in the
+  controls dialog. More robust support for hotplugged audio devices.
+- Sloppy camera: The camera can be configured to follow the model with 
+  a slight delay.
+- New dialog Help --> Keys, which shows the key mapping.
+- Feature Requests item #1802286: The F3F results screen now shows the system
+  date and time at which a run was started and ended.
+
+
+Release Notes for CRRCSim 0.9.8
+-------------------------------
+- New model: The Gap65 is a beautiful aerobatics model airplane
+  designed by Pierpaolo Garofalo, who also created the model for
+  CRRCsim. The model demonstrates some of the new CRRCsim features
+  in 0.9.8: moving control surfaces and steerable tail wheel.
+- When reading description texts from an XML file, excessive white
+  space is removed from the text to make it more readable in the
+  dialog boxes.
+- The skybox texture offset option is now configurable through the
+  GUI.
+- The "wheel" section of an airplane description file now allows
+  mapping of a wheel to an R/C channel (for modelling steerable
+  nose- or tailwheels).
+- Added a control surface animation class that can be configured
+  from the XML model description file. This class moves the control
+  surfaces of the model according to control input from the
+  transmitter. The following models already use this feature:
+  Gap65, Allegro, Flexifly XLM.
+- Added a SAL option to the launch dialog to simulate a
+  side-arm-launch (only try this with special DLG models like the
+  Fireworks III from the crrcsim-addon-models package, because a
+  standard model can't compensate for the initial rotation around
+  the yaw axis!).
+- Feature Request #1123364: Models can now bring their own launch
+  presets in the airplane XML description file. The airplane
+  selection dialog now has a checkbox to load the default launch mode
+  when the model is selected. This checkbox is only shown if the
+  selected model features a default launch config.
+- The texture filenames are now defined in the scenery files, not in
+  crrcsim.xml.
+- Corrected a bug that sometimes caused the launch option dialog to
+  be placed partly off-screen.
+- Changed the default F3F sound folder to "sounds/f3f/default".
+- Eliminated the need to have an empty "beep" sound folder to select
+  the console beep as the F3F turn signal without .wav output.
+- Default wind settings can now be specified in each scenery file.
+  If no wind settings for a location are stored in the configuration
+  file, CRRCsim will try to load these scenery defaults before
+  falling back to the internal default.
+- More realistic FDM parameters for the Flexifly XLM model.
+- Patches to allow CRRCSim to interface to the Crossbow MNAV autopilot
+  available at http://sourceforge.net/projects/micronav by emulating a
+  Crossbow MNAV navigation and servo control board (product information
+  available at http://www.xbow.com/Products/productdetails.aspx?sid=193).
+- Applied patch #1646254 (Fix extra qualification in 0.9.7) submitted
+  by J.D. Williams.
+- Fixed a bug that made dynamic soaring impossible in 0.9.7.
+- Added PNG icon from patch #1647962 submitted by J.D. Williams.
+- Plane selection dialog now displays the current plane when it is 
+  opened.
+- Fixed problems with order of evaluation of f, x and y options.
+
+
+Release Notes for CRRCSim 0.9.7
+-------------------------------
+- New, more realistic thermal model (V3). See "thermalsim.html"
+  in the "documentation/thermals" subfolder for more details
+  on the new algorithm. The thermal model can be configured in
+  crrcsim.xml which by default contains some sensible
+  configuration values.
+- New airplane selector dialog: Airplanes are now sorted into
+  various categories, and the dialog shows the airplane description
+  from the XML file.
+- Bugfix: joystick selection did not work properly, it always
+  fell back to joystick 0. In addition, the joystick selection
+  dialog now shows the full device name in addition to the address.
+- Sky rendering can now optionally be done by projecting 
+  90-deg-FOV-textures (generated by TerraGen 
+  [http://www.planetside.co.uk/terragen/] or any other sky
+  rendering tool) onto a sky box.
+- Sky and some scenery parameters can now be configured through
+  the provided scenery files "davis-orig.xml" and 
+  "cape_cod-orig.xml".
+- In addition to the "Sky Box" and "Original Sky Dome" methods
+  for sky rendering, it's now also possible to render a simple
+  untextured sky dome.
+- Patch submitted by Kees Lemmens: Added support for accessing
+  multiple sound cards with the AUDIO interface. The card ID can
+  be configured in crrcsim.xml.
+- Bugfix: When installing CRRCsim on GNU/Linux with 
+  "make -f Makefile.Linux install_local", it didn't find the
+  F3F sound folders (but reported all folders below 
+  /usr/local/share/games/crrcsim/ as sound folders). 
+
+
+Release Notes for CRRCSim 0.9.6
+-------------------------------
+- New XML file format replaces the existing .air file format.
+- One model file can now feature more than one airplane
+  configuration (different looks, additional ballast, ...)
+- Converted all existing .air files to the new .xml file format.
+- Airplanes can now be assigned more than one sound file. All 
+  sounds will be played simultaneously, the mix ratio can be 
+  configured freely.
+- New sound type: "glider" sound (depending on relative and
+  absolute speed of an airplane)
+- Added a default glider sound file to some of the airplanes.
+- Feature request #1184231 Mac OS X: file location change request:
+  saved in user preferences folder
+- Removed static linkage of dlportio.dll on windows
+- Added a platform-specific message box that displays errors if 
+  CRRCsim was unable to start up
+- Fixed a rendering problem with F3F mode: base pylons appear 
+  translucent in training mode and text color should be white 
+  in "normal" mode
+- Fixed the problems with the sound folders for F3F on windows
+- improvement of macosx video intialisation reliability
+- added macosx xcode version 2.2 project file
+- Fixed sky display anomaly on macosx and atirage pro video
+- New model: Pemotec Flexifly XLM
+- New stars-and-stripes-finish for the "Sport"
+- Some more wind and thermal presets
+
+
+
+Release Notes for CRRCSim 0.9.5
+-------------------------------
+
+- New power and propulsion system: Instead of the old
+  "magic source of thrust" the powered planes now
+  feature a detailed simulation of the propulsion system.
+  It is mainly aimed towards electric planes and simulates
+  things like changing battery voltage over current drain
+  and capacity, engine/shaft/gearbox inertias and efficiency,
+  prop efficiency and prop folding.
+- Added a battery capacity indicator to the HUD
+- Added indicator for wind direction to the HUD
+- Airplane 3D models are now rendered by loading common
+  3D file formats (AC3D, 3D Studio Max, ...) instead of
+  describing their geometry in the .air files.
+- Video setup will now try different color depths before
+  giving up
+- Fixed bugs #1251999/#1252344: CRRCsim crashed when
+  selecting the parallel interface on Win32
+- Fixed a lot of coordinate system issues
+- Lots of structural changes to the code
+
+
+
+Release Notes for CRRCSim 0.9.4
+-------------------------------
+
+- Integrated F3F mode from crrcsim-f3f
+- More flexible engine sound handling: A .wav file for
+  the engine sound can be specified in the .air file,
+  together with an engine attribute (electric or glow)
+- "Pure" gliders now ignore the throttle input
+- New models: Zagi-XS, Rutan Quickie
+- Improved RCTRAN2 interface
+- Improved FMSPIC interface
+- Feature request #1184223: audio input mixer disable option.
+  Mixer can now be disabled for all interfaces.
+- Bugfixes
+
+
+
+Release Notes for CRRCSim 0.9.3
+-------------------------------
+
+- Acoustic variometer for all platforms
+- Configuration dialog for audio settings
+- Simplified configuration (one central dialog)
+- New dialog for transmitter calibration and mapping
+- New interface type: FMSPIC - serial connection via an
+  FMS-Pic-style cable. Supports 19200 baud / 0xFF and
+  9600 baud / 0xF0+ cables (9600/0xF0+ is still experimental)
+- Added a software mixer to the audio interface (exponential,
+  trim and rate limit settings)
+- Enabled new thermal simulation code
+- Added an FPS limiter to reduce CPU usage on fast systems
+- Fixed bug #1177488: Rudder reversal in test mode
+- Fixed issue #1093835: CRRCsim now reports an
+  error and cleanly exits if a texture file is missing instead of
+  crashing without error message.
+- Joystick now has a default mapping (axis 0 and 1 mapped to
+  elevator and aileron)
+- Fixed issue #1176549: overflow in windfield simulation
+- New model: arkanj-mg11.air
+
+
+
+
+Release Notes for CRRCSim 0.9.2
+-------------------------------
+
+What's new in 0.9.2?
+--------------------
+
+Graphical user interface
+
+The most obvious new feature is a dialog-based graphical user
+interface (GUI) which can be activated by pressing <ESC>. Use
+it to configure your transmitter interface, the video and audio
+settings, to choose a different airplane model or to save your
+configuration changes to disk. The GUI also provides a
+replacement for the old "verbose" mode which printed various
+information to stdout. All information will now be displayed
+right inside the simulation window if you activated the verbose
+mode (View-->Toggle verbose).
+
+
+XML configuration file
+
+The configuration is no longer stored in crrcsim.cfg. This file
+was replaced by crrcsim.xml. If you prefer configuring CRRCSim
+by hand instead of using the GUI, you can still edit this file
+with a text editor or an XML editor. Just in case you messed up
+anything in this file you can simply delete it. On the next startup
+everything will be reset to default values and crrcsim.xml will
+automatically be recreated.
+
+
+Transmitter interfaces
+
+AUDIO: This interface type now is an official part of CRRCSim on
+all supported platforms. It acquires the transmitter's PPM signal
+from the trainer chord plug via the PC's soundcard. More information
+on how to connect the transmitter can be found in the documentation
+directory.
+
+RCTRAN2 (experimental): This interface type is included as a
+possible replacement for the existing RCTRAN interface on GNU/Linux.
+It uses the /proc file system instead of sharing memory with the
+kernel through mbuff. For more information on how to build the kernel
+module and how to use this interface, please consult the information
+from the documentation directory.
+
+
+Launch mode configuration
+
+In older versions of CRRCSim the initial status of the airplane after
+a simulation reset was described in the .air file of this plane. Thus,
+you had to edit this file if you wanted to start at a different
+altitude or with a different velocity. Now the launch parameters
+(altitude, velocity and angle) can be configured from within CRRCSim.
+The launch dialog offers presets for a variety of launch modes 
+(hand start, ground start, HLG throw, winch start) and also offers the
+possibility to create new custom launch parameter sets.
+
+
+Auto-zooming
+
+To compensate for the limited resolution of a PC monitor which makes
+it difficult to control the plane when flying at great distance from
+the viewpoint, the zoom can now be configured to automatically follow
+your plane. You can access this setting through the video resolution
+dialog. Set the auto-zoom value to zero to disable this feature.
+
+
+New airplane models
+
+    * Skorpion, an F3F-oriented slope soarer
+    * Melyan 01, a twin-boom sports plane
+    * Tug, another sports plane
+    * Skimmer, a typical beginner model
+    * Zipper, a flying wing for slope soaring made by Birdworks
+    * Zip60, the sixty-inch-Zipper 
+
+
+Support for joysticks with up to eight axis
+
+Older versions only supported four axis which made it impossible
+to use the Great Planes USB controller as it maps the rudder control
+to a higher axis number.
+
+
+Basic sounds
+
+There is a simple audio variometer (currently linux only) and engine
+sound. Please notice that engine sound is currently not related to the
+selected model. When chosing a glider you have to turn of the engine
+sound manually. Plane-dependend sound effects will be integrated in a
+future release. 
+
+
+Test mode
+
+Pressing 'd' will change to test mode. This shows the effect of the
+input control signals on the plane without the risk of crashing.
+If AUDIO is selected as transmitter interface, a small oscilloscope
+will show the signal from the sound card input.
+
+---------------------------------------------------
+Detailed changelog:
+
+'glog' is provided by the following extension:
+
+    graphlog  command to view revision graphs from a shell
+
+use "hg help extensions" for information on enabling extensions

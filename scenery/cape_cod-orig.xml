@@ -1,0 +1,111 @@
+<?xml version="1.0"?>
+
+<crrcsimSceneryFile version="3">
+  
+  <!-- Some general information -->
+  <name>Cape Cod</name>
+  <categories>
+    <category>Slope</category>
+  </categories>
+  <description>
+    <en>
+Wellfleet - Great Island National Seashore Area,
+using the original hard-coded rendering.
+A cliff facing to the west, ideal for 270 deg wind.
+    </en>
+  </description>
+  <changelog>
+    <change>
+      <date>2006-06-10</date>
+      <author>Jan Reucker (slowhand_47@gmx.de)</author>
+      <en>Adapted format of general information to the scheme used
+          in airplane files.</en>
+    </change>
+    <change>
+      <date>2015-01-31</date>
+      <author>Luca G.</author>
+      <en>Added sun position and haze</en>
+    </change>
+  </changelog>
+  
+  <!-- Player position. -->
+  <views>
+    <position name="default" north="0" height="6." east="2"  />
+  </views>
+
+  <!-- Starting position for the model. -->
+  <start>
+    <position name="field" north="10" east ="2"  />
+  </start>
+
+  <!-- F3F settings -->
+  <F3F orientation="270" position_north="0" position_east="0" />
+ 
+  <!-- Default settings -->
+  <default>
+    <wind velocity="14" direction="270" />
+  </default>
+
+  <!-- Preview -->
+  <preview filename="textures/cape_cod_preview.jpg" />
+  
+  <!-- A sky box. -->
+  <sky type="box" size="10">
+    <descr_short >
+       <en>Little cloudy (Box) </en>
+    </descr_short>
+    <textures>
+      <north filename="textures/skybox_n.rgb" />
+      <south filename="textures/skybox_s.rgb" />
+      <west  filename="textures/skybox_w.rgb" />
+      <east  filename="textures/skybox_e.rgb" />
+      <up    filename="textures/skybox_u.rgb" />
+      <down  filename="" />
+    </textures>
+    <sun>
+      <position azimuth="210" elevation="25" />
+    </sun>    
+    <haze density="0.08">
+      <color r="0.85" g="0.90" b="0.95" />
+    </haze>    
+  </sky>
+  <!-- A sky dome, original style, textured -->
+  <sky type="original" texture="textures/clouds.rgb" radius="8000" >
+    <descr_short >
+       <en>Dome, textured</en>
+    </descr_short>
+    <sun>
+      <position azimuth="180" elevation="55" />
+    </sun>    
+    <haze density="0.2">
+      <color r="0.9" g="0.9" b="0.9" />
+    </haze>    
+  </sky>
+  <!-- A sky dome, original style, untextured -->
+  <sky type="original" radius="8000" >
+    <descr_short >
+       <en>Dome, untextured</en>
+    </descr_short>
+    <sun>
+      <position azimuth="180" elevation="55" />
+    </sun>    
+    <haze density="0.2">
+      <color r="0.9" g="0.9" b="0.9" />
+    </haze>    
+  </sky>
+
+  <!-- Scenery graphics: render the original CAPE_COD scenery -->
+  <scene type="built-in" variant="CAPE_COD">
+    <textures>
+      <water file="textures/water.rgb" />
+      <beachsand file="textures/beachsand.rgb" />
+      <scrub file="textures/scrub.rgb" />
+      <scrubedge file="textures/scrubedge.rgb" />
+      <south file="textures/south.rgb" />
+      <hilledge file="textures/hilledge.rgb" />
+      <waves file="textures/waves.rgb" />
+      <sand file="textures/sand.rgb" />
+    </textures>
+  </scene>
+
+</crrcsimSceneryFile>

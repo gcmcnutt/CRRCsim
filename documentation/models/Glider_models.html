@@ -1,0 +1,253 @@
+<html>
+
+<h1>Evaluation of glider model realism in CRRCsim</h1>
+
+<h2>1. Revisions of this document</h2>
+  <table cellpadding="3" border="1">
+    <tr>
+      <td>January 2013</td>
+      <td>Luca Gasparini</td>
+      <td>Wrote first version</td>
+    </tr>
+  </table>
+    
+<h2>2. Introduction</h2>
+
+  <p>             
+    CRRCSim provides several glider models to fly with.
+  </p>
+  <p>             
+    Some of them are included in the distribution package, others can be download from 
+    <A HREF="http://sourceforge.net/apps/mediawiki/crrcsim/index.php?title=Models">CRRCsim Wiki Models page</A>.<br>
+
+    An airplane model is defined by its 3D model, often an <TT>.ac</TT> file in 
+    folder <TT>objects</TT>, which is responsible for the appearance of the airplane, and by 
+    its FDM (flight dynamic model), descibed in a <TT>.xml</TT> file in folder <TT>models</TT>, which is responsible
+	for the simulation of its (aero)dynamic behaviour.
+  </p>
+  <p>             
+    This document analyzises most of the glider models looking in detail at a few of the many parameters which are 
+	part of the FDM and showing that (to the author's opinion) quite a few of the glider
+	models available as of <B>December 2012</B> have serious flaws which produce unrealistic simulations.
+  </p>
+
+<h2>3. A table of FDM parameters</h3>
+
+  <p>             
+  The table below shows some of the most important parameters of the FDM related
+  to: wing size, airfoil and airplane drag, mass and inertias. The reliability of these parameters
+  can often be judged based on some relatively simple considerations.
+  </p>
+  <p>             
+  While many more parameters are also important, in particular those describing the stability of the 
+  airplane and the reaction to the controls, they shall best be derived from an analysis of the airplane 
+  through e.g. <B>AVL</B> or <B>XFLR5</B> codes. In most cases it is not that easy to judge "by eyes" 
+  if they look reasonable or not.
+  Thus I will not make any comment about them here, assuming they are all ok.
+  </p>
+  <p>
+  In the table, models from <i>Allegro</i> to <i>Zipper</i> were included in the standard package as of December
+  2012, except for <i>Pilatus B4 2.6m</i> and <i>Generic F3F</i> which have been added by the 
+  author on January 2013; <i>Pilatus B4 New</i> is just the revised version of the original <i>Pilatus B4</i>.
+  The other models are representative of most of the glider models available for download on the 
+  <A HREF="http://sourceforge.net/apps/mediawiki/crrcsim/index.php?title=Models">CRRCsim Wiki Models page</A>.
+  </p>
+
+  <img src="xl_01.png"/><br>
+  
+  <p>
+  In the table above:<br>
+  <ul>
+    <li>
+      <FONT COLOR="#FF0000">RED</FONT> marks wrong values.<br>
+    </li>
+    <li>
+      <FONT COLOR="#FF8800">ORANGE</FONT> marks likely wrong values.<br>
+    </li>
+    <li>
+      <FONT COLOR="#FFFF00">YELLOW</FONT> marks likely inaccurate values.<br>
+    </li>
+  </ul>
+  </p>
+
+  <p>
+  Note that <i>Crossfire</i>, <i>Erwin</i>, <i>Ceres</i>,
+  <i>Vampire</i> and <i>Sniper Evo</i> actually share most 
+  of the FDM parameters with the <i>Skorpion</i>, and in fact <u>all</u> the stability & control parameters
+  (not shown in the table) are just an exact copy of those of the <i>Skorpion</i> while other parameters are 
+  equal or just slightly modified.<br>
+  This means that apart from looking differently they will all fly exactely the same in CRRCsim.<br>
+  Actually many more F3F/F3B gliders are available for download (in the <tt>CRRCsim-addon-models</tt> package): 
+  while having detailed and specific 3D models and very nice liveries, they all share the same FDM model of the 
+  <i>Skorpion</i>.<br>
+  Unfortunately, this means that they all share the flaws of the <i>Skorpion</i> FDM, as will be shown in the following!
+  </p>
+  <p>
+  Similarly, <i>Sovereign</i> and <i>Zipper</i> actually uses the same FDM as the <i>Allegro</i>. In this case, at least, 
+  they share a good FDM although the real glider may behave differently.
+  </p>
+
+<h3>3.1 Mass and inertias</h3>
+
+  <p>             
+  The following picture shows for each model the radius of gyration of the mass moment of inertia Ixx, Iyy, Izz 
+  (respectively for roll, pitch and yaw axis) in percentage of the wing span.
+  </p>
+  
+  <img src="xl_02.png"/><br>
+  
+  <p>
+  From the chart above we notice that:<br>
+  <ol>
+    <li>
+      All the <i>Skorpion</i>-like models have significantly smaller radius of gyration, hence lower moments of inertia.
+      Looking at the table above this is mostly due to an excessive mass. In fact, although F3F models
+      may be ballasted, mass of the order of 5kg up to 11kg (!) seem really excessive to me.
+    </li>
+    <li>
+      The original <i>Pilatus B4</i> (a 4.6m span glider) also has much too low moments of inertia.
+      In this case the problem is not the mass, which is reasonable, but the values of the inertias which
+      have been estimated wrong. This fact is promptly recognized when flying the model, which looks
+      really unrealistically "light" and responds too sharply to control inputs (e.g rudder).
+    </li>
+    <li>
+      The somewhat low inertias of the <i>Flexifly</i> are justified being it a foamie, and are thus
+      realistic.<br>
+    </li>
+    <li>
+      A new <i>Generic F3F</i> model has been derived from the <i>Skorpion</i>, to be used with <u>any</u> of the
+      available F3F 3D model. Wrong values have been corrected using reasonable guesses.
+      Just setting the mass in the range 3-4kg brings the inertias in the expected range suggesting that, 
+	  contrary to the mass, they were estimated right.<br>
+    </li>
+    <li>
+      The new <i>Pilatus B4 2.6m</i> model uses the same 3D model (i.e. the <tt>.ac</tt> file) of the original Pilatus B4 (scaled and
+      slightly revised), but all the FDM properties have been now redefined to reproduce as accurately as possible
+      the 2.6m wingspan version of this glider made by Tangent (author's latest model :-).<br>
+    </li>
+    <li>
+	  Mass and inertias of the <i>Pilatus B4 2.6m</i> have then been scaled-up back to the 4.6m size, and used to correct
+	  the original <i>Pilatus B4</i> data. The <i>Pilatus B4 New</i> model is thus back in line, providing a much more
+	  sensible and realistic simulation.
+    </li>
+  </ol>
+  </p>
+
+<h3>3.2 Drag</h3>
+
+  <p>             
+  The following picture shows for each model the efficiency (L/D) resulting from the FDM parameters for a few values
+  of the lift coefficient: -0.6 (inverted flight), 0.2 (speed), 0.6 (often close to max efficiency), 0.9 (often close 
+  to max lift).
+  </p>
+  
+  <img src="xl_03.png"/><br>
+  
+  <p>             
+  In CRRCsim (Larcsim FDM) the airplane drag is estimated considering a few contributions, among which:
+  <ul>
+    <li>
+    Minimum airplane drag <tt>CD_prof</tt>, which is the drag at the CL specified by <tt>CL_CD0</tt>. 
+    Note that despite its name <tt>CD_prof</tt> shall include the drag contribution due to fuselage, tails, etc.. not just that 
+    due to wing airfoil.<br>
+    </li>
+    <li>
+    Drag variation with the square of the lift coefficient <tt>CD_CLsq</tt> (mostly due to the variation of airfoil drag 
+    with angle of attack).
+    </li>
+    <li>
+    Effect of the Reynolds number based on the reference <tt>Speed</tt> and <tt>Uexp_CD</tt>: the larger the ratio between 
+    flying speed and the reference <tt>Speed</tt>, i.e. the larger the Reynolds number, the lower the drag; this effect is 
+    stronger for larger negative value of <tt>Uexp_CD</tt>.
+    <li>
+    Induced drag, related to CL, aspect ratio (= <tt>Span^2/Area</tt>) and <tt>span_eff</tt> factor.<br>
+    </li>
+  </ul>
+  </p>
+  <p>             
+  Additional drag contributions may come from control deflection and stalled condition but these effects are not included in
+  the computation of the efficiency shown in the chart.
+  </p>
+  <p>
+  From the chart above we notice that:<br>
+  <ol>
+    <li>
+      All the <i>Skorpion</i>-like models have too high efficiency at low CL (0.2) and much lower efficiency
+      at higher CL: this is not right.
+      Looking at the table above we see it is caused by: firstly a much too small <tt>CD_prof</tt> (too small even if 
+      it was the airfoil CD alone); secondly a huge wing area (about 3 times the real value!) which results in 
+      an extremely low aspect ratio (about 5, instead of 15!), hence a large induced drag at increasing CL.
+    </li>
+    <li>
+      The original <i>Pilatus B4</i> also has a similar behaviour due again to a much too small <tt>CD_prof</tt>.
+      But now the aspect ratio is ok, so the glider has an incredibly high efficiency.
+    </li>
+    <li>
+      By comparison, the new <i>Pilatus B4 2.6m</i>, <i>Pilatus B4 New</i> and <i>Generic F3F</i> models with
+      appropriate estimate of <tt>CD_prof</tt>, <tt>CL_CD0</tt> and <tt>Uexp_CD</tt> have reasonable
+      and realistic perfomances, with a proper variation of efficiency with CL.
+    </li>
+    <li>
+      Both <i>Fennec</i> and <i>Crobe</i> models have too small <tt>CD_prof</tt>, resulting in too high efficiency
+      for such small gliders (should be close but lower than respectively <i>Allegro</i> and <i>Apogee</i>).
+    </li>
+    <li>
+      In most cases efficiency at CL=-0.6 (inverted flight) results equal to that at CL=0.6. This is almost always wrong
+      since cambered airfoils usually have minimum drag at a CL greater than zero, the more cambered the airfoil the 
+      higher the CL at which minimum drag is achieved. Hence, they generate much less drag at CL=0.6 than CL=-0.6
+      (which in some cases might be even beyond the limit of negative stall).<br>
+      As we can see from the table for most models <tt>CL_CD0</tt> has just been set to zero (or practically zero), 
+      only exception being:
+      <i>Pilatus B4 2.6m</i>, <i>Pilatus B4 New</i>, <i>Generic F3F</i>, <i>Zagi-xs</i>, <i>Fennec</i>, <i>Crobe</i> and <i>Riser</i>.
+      As a consequence only these few models realistically have low efficiency at CL=-0.6.<br>
+      Thus, I marked in yellow all the models whose value of <tt>CL_CD0</tt> (and of <tt>CD_CLsq</tt> 
+      which is related to it) are most likely inaccurate, causing too good performance in inverted flight (although 
+      they may look realistic in normal flight).
+    </li>
+    <li>
+      The <i>Wasabi</i> model is a justified exception to the previous comment. In fact it has a symmetric airfoil
+      so that with flap at 0° it flies equally well straight or inverted. However, when flaps are lowered to 4°
+      the CL for minimum drag becomes positive, hence efficiency at large CL improves while efficiency at negative
+      CL reduces, as it happens in real-life.
+    </li>
+  </ol>
+  </p>
+   <p>             
+  Although their effect are more subtle and would require a longer explanation, the specification of the reference 
+  <tt>Speed</tt> and of <tt>Uexp_CD</tt> is also likely not right in many cases.<br>
+  <tt>Speed</tt> is often too low resulting in too low a reference Reynolds number, thus the drag computed
+  while flying is lower than intended.<br>
+  <tt>Uexp_CD</tt> is sometimes to large (e.g. -0.6 used for <i>Skorpion</i>-like models), which results in too low 
+  drag at high flying speeds.
+  In my opinion <tt>Uexp_CD</tt> should be within -0.25 to -0.45
+  </p>
+ 
+  
+<h2>4. Conclusion</h2>
+
+  <p>             
+  Many models are available for CRRCsim but some have serious flaws in their FDM parameters, significantly compromising 
+  the realism of the simulation.
+  The worst cases are the various F3F gliders (which are actually all sharing the same problematic FDM) 
+  and the two large scale gliders <i>Pilatus B4</i> and <i>Fox</i> (this last has not been discussed so far but its FDM is an 
+  exact copy of the flawed Pilatus one..).
+  </p>
+  <p>             
+  To provide a reasonable FDM for F3F-like gliders a new <i>Generic F3F</i> model has thus been implemented, replacing
+  <i>Crossfire</i>, <i>Erwin</i> and <i>Skorpion</i> in the standard distribution package; the various 3D models are now
+  just different graphical appearence of the same FDM.<br>
+  This FDM could also be applied to the many more 3D models of F3F gliders available as add-on (this requires editing of
+  the relevant <tt>.xml</tt> files).
+  </p>
+  <p>             
+  The FDM of <i>Pilatus B4</i> has been revised, based on new estimate of aerodynamics, mass and inertias obtained 
+  scaling to the larger size those of a new <i>Pilatus B4 2.6m</i> small scale glider which reproduces the model made by
+  Tangent.
+  </p>
+  <p>             
+  Most other models are reasonably realistic except for what the drag variation with lift is concerned which is
+  appropriately simulated only by a few models.
+  </p>
+  <br>
+  Happy flying with CRRCsim !
+</html>

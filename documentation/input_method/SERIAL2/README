@@ -1,0 +1,12 @@
+This is a very special interface, as it isn't useful to anyone but me (at
+this moment, at least). My TX is able to send out its state via a serial
+line in some special protocol. So this input-method decodes this protocol to
+feed the values to crrcsim.
+
+At the moment it only works for linux, but can easily be ported. Only the routines 
+for reading the serial port need to be rewritten for others OSs.
+
+If anyone is interested in using this interface (simple, as the UART is used),
+I will of course write down some additional info about it. 
+
+Jens Wilhelm Wulf, 14.08.2004

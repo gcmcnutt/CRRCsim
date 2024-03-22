@@ -1,0 +1,1261 @@
+<html>
+  <head>
+    <style type="text/css">
+    .fragment {
+       font-family: monospace
+    }
+    PRE.fragment {
+      border: 1px solid #CCCCCC;
+      background-color: #f5f5f5;
+      margin-top: 4px;
+      margin-bottom: 4px;
+      margin-left: 2px;
+      margin-right: 8px;
+      padding-left: 6px;
+      padding-right: 6px;
+      padding-top: 4px;
+      padding-bottom: 4px;
+    }
+    </style>
+  </head>
+  
+  <body>
+
+  <h1>Airplane parameters in xml, airplane model version 2</h1>
+
+  <p>
+  Also see <a href="heli01.html">helicopter model, version 1</a>.
+  </p>
+
+  <h2>0 About this document</h2>
+    
+    <p>
+    This document is not complete yet. It may be inaccurate or wrong, too.
+    </p>
+    <p>
+    This document should not provide examples. Please take a look at the files 
+    you got when downloading/installing CRRCSim.
+    At the time of this writing only <tt>superzagi.xml</tt> uses more features than other files.
+    </p>
+    <p>
+    You need to know basics about xml files: they are structured text. Whitespace and line breaks do not 
+    matter in most places. Just take a look at the examples and you will understand.
+    </p>
+    <p>
+    The files can be edited using a text editor. There are lots of them. Use something like notepad, vi,
+    emacs, joe...
+    </p>
+    
+    <h3>0.1 Changes</h3>
+      
+      <table border="1">
+        <tr><td>24.08.2008</td><td>J. W. Wulf</td>
+          <td>
+            More detailed section 2, 'Units'. AR explained. Updated CD_prof
+            description.
+          </td>
+        </tr>
+        <tr><td>25.08.2008</td><td>J. W. Wulf</td>
+          <td>
+            Example for section <tt>CG</tt>.
+          </td>
+        </tr>
+        <tr><td>17.09.2008</td><td>J. W. Wulf</td>
+          <td>
+            Added spoiler and flaps section.
+          </td>
+        </tr>
+        <tr><td>17.09.2008</td><td>J. Reucker</td>
+          <td>
+            Explained 3D node attributes.
+          </td>
+        </tr>
+        <tr><td>06.10.2008</td><td>Bob Parks</td>
+          <td>
+            More detailed explanations to some parameters.
+          </td>
+        </tr>
+        <tr><td>17.12.2009</td><td>J. Reucker</td>
+          <td>
+            Added retract section.
+          </td>
+        </tr>
+        <tr><td>23.12.2009</td><td>J. Reucker</td>
+          <td>
+            Added max_force attribute to spring section.
+          </td>
+        </tr>
+        <tr><td>27.11.2011</td><td>L. Gasparini</td>
+          <td>
+            Modified flap and spoiler section.
+          </td>
+        </tr>
+        <tr><td>29.12.2012</td><td>L. Gasparini</td>
+          <td>
+            Further modified flap and spoiler section.
+          </td>
+        </tr>
+      </table>
+    
+  
+  <h2>1 General information</h2>
+
+  </p>
+  The first part of the file should be quite easy to understand. It contains a
+  description of the model and a changelog.
+  Whenever you edit such a file, please add a new <tt>change</tt> section and fill
+  in what is needed. The example below shows a template.
+  </p>
+
+<div class="fragment"><pre class="fragment">
+  
+&lt;?xml version="1.0" encoding="iso-8859-1" ?&gt;
+&lt;CRRCSim_airplane version="2"&gt;
+  &lt;description&gt;
+    &lt;en&gt;
+        This plane has been automatically converted from superzagi.air. 
+        Please update this text if you know more about it.
+    &lt;/en&gt;
+  &lt;/description&gt;
+  &lt;changelog&gt;
+    &lt;change&gt;
+      &lt;date&gt;Unknown&lt;/date&gt;
+      &lt;author&gt;CRRCSim 0.9.5&lt;/author&gt;
+      &lt;en&gt;Automatically converted from .air file.&lt;/en&gt;
+    &lt;/change&gt;
+    &lt;change&gt;
+      &lt;date&gt;Please write date.&lt;/date&gt;
+      &lt;author&gt;Please write your name and email.&lt;/author&gt;
+      &lt;en&gt;Please write down what you changed.&lt;/en&gt;
+    &lt;/change&gt;
+  &lt;/changelog&gt;
+  
+  </pre></div>
+
+  </p>
+  Every text is written in english, so it is enclosed in <tt>&lt;en&gt; &lt;/en&gt;</tt>.
+  If you want to add something in italian for example, you should enclosed it in <tt>&lt;it&gt; &lt;/it&gt;</tt>.
+  </p>
+
+
+  <h2>2 Units</h2>
+    <p>
+    Some sections have an attribute <tt>units</tt>, which tells which units are used for the values in that section.
+    The tables below have a column named 'unit' if the unit is fixed,
+    otherwise they have columns like 'units=0' and 'units=1'.
+    </p>
+    <p>
+    For example, the section <tt>aero</tt> has attribute <tt>units</tt>. Its
+    documentation below tells you that you can set this attribute to '0' or
+    '1', which lets CRRCSim expect a value with the unit indicated by just
+    that table column.
+    </p>
+    <p>
+    There is a file called non_SI_units.txt in the CRRCSim distribution which explains some strange units.
+    </p>
+    <p>
+    Some parameters (especially aerodynamic coefficients) are without
+    dimension, so their unit is just '1' (not to be confused with 'units=0'
+    or 'units=1'!).
+    </p>
+    <p>
+    Some parameters (like filenames) of course can't be said to have a unit,
+    so their table entry is '-'.
+    </p>
+
+  <h2>3 Aerodynamics: section <tt>aero</tt></h2>
+
+    <p>
+    This section can stand on its own, but can also be a subsection of
+    <tt>config</tt>.
+    </p>
+
+    <h3>3.1 Subsection <tt>ref</tt></h3>
+      
+      <p>
+      The following table explains attributes in that subsection.
+      </p>
+
+      <table border="1">
+        <tr><th>Name</th>
+            <th>Description</th>
+            <th>units=0</th>
+            <th>units=1</th></tr>
+        
+        <tr><td>chord</td>
+            <td>reference chord</td>
+            <td>ft</td>
+            <td>m</td></tr>
+        
+        <tr><td>span</td>
+            <td>reference span</td>
+            <td>ft</td>
+            <td>m</td></tr>
+        
+        <tr><td>area</td>
+            <td>reference area</td>
+            <td>ft^2</td>
+            <td>m^2</td></tr>
+        
+        <tr><td>speed</td>
+            <td>Reference speed for Re-scaling of CD_prof (speed at which
+                drag is <tt>aero.drag.CD_prof</tt>).</td>
+            <td>ft/s</td>
+            <td>m/s</td></tr>
+        
+      </table>
+
+    <h3>3.2 Subsection <tt>misc</tt></h3>
+      
+      <table border="1">
+        <tr><th>Name</th>
+            <th>Description</th>
+            <th>units=0</th>
+            <th>units=1</th></tr>
+        
+        <tr><td>Alpha_0</td>
+            <td>baseline alpha<br>
+                This is the reference angle of attack (alpha) where a lot of parameters
+                are defined. It can be anything you want, but you have to be
+                consistent.  Common references would be the center line of the body, the
+                mean camber line of the wing root airfoil or the bottom of a flat bottom
+                airfoil.  If you are doing analysis in AVL, its probably easiest to make
+                this zero in the coordinates you use for the AVL model definition.  In
+                the AVL Stability Derivative output (ST command), this is labeled "Alpha".
+            </td>
+            <td>rad</td>
+            <td>rad</td></tr>
+                
+        <tr><td>eta_loc</td>
+            <td>eta_loc for stall model</td>
+            <td>1</td>
+            <td>1</td></tr>
+                
+        <tr><td>CG_arm</td>
+            <td>CG_arm for stall model, see below.</td>
+            <td>1</td>
+            <td>1</td></tr>
+                
+        <tr><td>span_eff</td>
+            <td>span efficiency: Effective span, 0.95 for most planes, 0.85
+                flying wing.<br>
+                This is a measure of how well the wing is working.  As mentioned, .95 is
+                a good value for a conventional, aft tail airplane.  Some flying wings
+                are essentially using the outer wing as a surrogate for the horizontal
+                tail, so the number is lower.   For a canard, it could also be low.  AVL
+                does a good job of estimating this parameter.  In the Stability
+                Derivative output dump, it is the parameter "e".  This parameter will
+                vary with angle of attack and stability margin, particularly if the wing
+                has twist.  For a glider, pick a case at relatively high CL, like near
+                the best glide ratio angle of attack, or near minimum sink.  This
+                parameter only has a weak effect on the handling, so get it sort of
+                close and dont worry about it.  (it is a big effect on efficiency).
+                Note that AVL tends to slightly over estimate this parameter, so you
+                might want to multiply the AVL value by .95 or so.
+            </td>
+            <td>1</td>
+            <td>1</td></tr>
+      </table>
+      
+      <h4>3.2.1 <tt>CG_arm</tt></h4>
+        <p>
+        Email from Mark Drela, 10.01.2006:
+        </p>
+        <p>
+        The stall model computes the values (dCL_left,  dCL_cent,  dCL_right)
+        which represent the changes in CL due to stall.<br>
+        To get the stall effect on the Cm, these are multiplied
+        by the length CG_arm, which is the distance between
+        the CG and the effective point of application of dCL:<br>
+           dCm_stall = (0.25*dCL_left + 0.5*dCL_cent + 0.25*dCL_right)*CG_arm;
+        </p>
+        <p>
+        The typical value CG_arm = 0.25 means that the point of application
+        of the averaged dCL is 0.25*chord ahead of the CG.
+        </p>
+        <p>
+        This CG_arm can be deduced from airfoil data.
+        If dCL and dCm are the changes due to stall,
+        the implied CG_arm is<br>
+        CG_arm = dCm/dCL<br>
+        Typically, both dCm and dCL will be negative, so CG_arm is positive.
+        </p>
+        <p>
+        You can also adjust CG_arm to get a realistic simulator
+        pitch response due to stall.  The larger CG_arm is, the more
+        pitch-down you will get during stall.
+        </p>              
+
+    <h3>3.3 Subsection <tt>m</tt></h3>
+      
+      <p>
+      These parameters deal with pitching moment, or how the airplane rotates
+      about the pitch axis (up or down elevator).  The actual value would be
+      foot-pounds or Newton-meters.  What we have here are coeffients, that do
+      not have dimensions, so we can apply them to airplanes of similar
+      configuration, but different sizes, airspeeds and air densities.
+      </p>
+      <p>
+      To take one of these coefficients and convert it to the actual moment we
+      would use the equation:<br>
+      M= 1/2 * rho * velocity^2 * wing area * wing chord * Cm
+      </p>
+      The first terms, "1/2 * rho * velocity^2" are what is called dynamic pressure, or
+      the ram pressure of the air.  (hold your hand out a car window to feel
+      this!).  "rho" is density of air. The moment is also proportional to the wing area (i.e. what the
+      pressure works on) and the chord of the wing (which is the moment arm).
+      The area and chord are called "reference parameters".  Usually they are
+      the actual area and the actual mean chord of the wing, but they could
+      actually be any area or length, as long as you are consistent.  In AVL,
+      these values are actually inputs to the program.  What counts is that
+      you be consistent.  They are listed in the ST dump as Sref (area) and
+      Cref (chord). In this file, they are <tt>aero.ref.area</tt> and
+      <tt>aero.ref.chord</tt>.
+      </p>
+      <p>
+      Note that the yaw and roll deriviatvies use the wing span as the
+      reference length instead of the chord.  That is Bref in the AVL output
+      and <tt>aero.ref.span</tt> in this file.
+      </p>
+      <p>
+      There are several terms that add up to the total pitching moment.
+      </p>            
+      
+      <table border="1">
+        <tr><th>Name</th>
+            <th>Description</th>
+            <th>units=0</th>
+            <th>units=1</th></tr>
+        
+        <tr><td>Cm_0</td>
+            <td>baseline Cm at angle_of_attack = <tt>aero.misc.Alpha_0</tt>.<br>
+                This is whatever the Cm is at the reference angle of attack.  It
+                can be varied by the airfoil, the neutral setting of the elevator, twist
+                in the wing etc.  In the AVL ST output dump, it is called "Cmtot"
+            </td>
+            <td>1</td>
+            <td>1</td></tr>
+                
+        <tr><td>Cm_a</td>
+            <td>pitch-moment / alpha (pitch stability).<br>Basically,
+                Cm = <tt>aero.m.Cm_0</tt> + <tt>aero.m.Cm_a</tt>*(Alpha - <tt>aero.misc.Alpha_0</tt>)<br>
+                This is the change in pitching moment due to changes in alpha
+                (angle of attack).  For a stable plane, this is negative, meaning if the
+                angle of attack increases, there is a nose down pitching moment.  It is
+                the slope of the CM vs alpha curve, as measured near the reference angle
+                of attack.<br>
+                In the AVL ST output, this is in the "stability axis derivatives"
+                section, y mom row, alpha column, labeled Cma.
+                </td>
+            <td>1</td>
+            <td>1</td></tr>
+                
+        <tr><td>Cm_q</td>
+            <td>pitch-moment / pitch-rate  (pitch damping)<br>
+                q is the "non dimensional pitch rate" of the airplane.
+                Basically, it is related to the loop diameter divided the wing chord.
+                It is the pitch damping effect.  Think of the tail as a long paddle
+                swinging through the air.  The faster you rotate it, the more moment it
+                makes, and the moment tries to stop the rotation.  For normal planes it
+                is mostly proportional to the tail area times the SQUARE of the moment
+                arm.  The force varies as the tangental speed of the tail in the
+                rotation, and that is the angular rate times the moment arm.   We take
+                the force, and multiply it by the moment arm to get the
+                pitching moment.<br>
+                In the AVL ST output  this one is in the "pitch rate q'" column, in the
+                y mom. Cm row, and labeled Cmq.  Its normally negative.  i.e. a rotation
+                rate causes a moment to try to stop it.
+            </td>
+            <td>1</td>
+            <td>1</td></tr>
+                
+        <tr><td>Cm_de</td>
+            <td>pitch-moment / elevator<br>
+                Cm delta elevator.  This is the elevator sensitivity, or how much
+                pitching moment do you get for a unit deflection of the elevator (delta
+                e is "change in elevator").  The way elevator is defined (trailing edge
+                down is positive deflection) we want this to be negative.  i.e. trailing
+                edge up gives a nose up moment.  You need to have defined an elevator in
+                AVL before it will tell you what this parameter is, but the label on it    
+                in the ST output depends on the order you defined control surfaces, so
+                its hard to give an example.  It will be in the last block of outputs in
+                the ST file, the column should be labeled elevator, or whatever you
+                called that control in the AVL setup.  The row will be "y mom Cm".  If
+                elevator was the second control defined, it would be labeled "Cmd2"
+            </td>
+            <td>1</td>
+            <td>1</td></tr>
+      </table>
+
+    <h3>3.4 Subsection <tt>lift</tt></h3>
+      
+      <table border="1">
+        <tr><th>Name</th>
+            <th>Description</th>
+            <th>units=0</th>
+            <th>units=1</th></tr>
+        
+        <tr><td>CL_0</td>
+            <td>baseline CL at angle_of_attack = <tt>aero.misc.Alpha_0</tt></td>
+            <td>1</td>
+            <td>1</td></tr>
+        
+        <tr><td>CL_max</td>
+            <td>positive stall limit</td>
+            <td>1</td>
+            <td>1</td></tr>
+        
+        <tr><td>CL_min</td>
+            <td>negative stall limit</td>
+            <td>1</td>
+            <td>1</td></tr>
+        
+        <tr><td>CL_a</td>
+            <td>lift slope; lift-force / alpha, round about 2 pi / (1 +
+                2/AR). AR=wingspan/(average chord).<br>Basically, 
+                CL = <tt>aero.lift.CL_0</tt> + <tt>aero.lift.CL_a</tt>*(Alpha - <tt>aero.misc.Alpha_0</tt>)</td></td>
+            <td>1</td>
+            <td>1</td></tr>
+
+        <tr><td>CL_q</td>
+            <td>lift-force / pitch-rate</td>
+            <td>1</td>
+            <td>1</td></tr>
+        
+        <tr><td>CL_de</td>
+            <td>lift-force / elevator</td>
+            <td>1</td>
+            <td>1</td></tr>
+        
+        <tr><td>CL_drop</td>
+            <td>CL drop during stall break</td>
+            <td>1</td>
+            <td>1</td></tr>
+        
+        <tr><td>CL_CD0</td>
+            <td>CL at minimum profile CD: 0.30 for 7037, 0.15 MH32, 0.0 RG15, AGxx, power</td>
+            <td>1</td>
+            <td>1</td></tr>
+      </table>
+
+    <h3>3.5 Subsection <tt>drag</tt></h3>
+      
+      <table border="1">
+        <tr><th>Name</th>
+            <th>Description</th>
+            <th>units=0</th>
+            <th>units=1</th></tr>
+        
+        <tr><td>CD_prof</td>
+            <td>profile CD at <tt>aero.ref.speed</tt></td>
+            <td>1</td>
+            <td>1</td></tr>
+                
+        <tr><td>Uexp_CD</td>
+            <td>CD Re-scaling exponent; scales profile CD with Reynolds number via simple power law</td>
+            <td>1</td>
+            <td>1</td></tr>
+                
+        <tr><td>CD_stall</td>
+            <td>drag coeff. during stalling</td>
+            <td>1</td>
+            <td>1</td></tr>
+                
+        <tr><td>CD_CLsq</td>
+            <td>d(CD)/d(CL^2),  curvature of parabolic profile polar: 0.01 composites, 0.015 saggy ships, 0.02 beat up ship</td>
+            <td>1</td>
+            <td>1</td></tr>
+                
+        <tr><td>CD_AIsq</td>
+            <td>drag due to aileron deflection. d(CD)/d(aileron^2) , curvature of ail. CD influence: 0.01/(max_aileron)^2</td>
+            <td>1</td>
+            <td>1</td></tr>
+                
+        <tr><td>CD_ELsq</td>
+            <td>drag due to elevon deflection. d(CD)/d(elevator^2), curvature of ele. CD influence: 0.01/(max_elevator)^2 for Zagi otherwise 0</td>
+            <td>1</td>
+            <td>1</td></tr>                
+      </table>
+
+    <h3>3.6 Subsection <tt>Y</tt></h3>
+      
+      <table border="1">
+        <tr><th>Name</th>
+            <th>Description</th>
+            <th>units=0</th>
+            <th>units=1</th></tr>
+        
+        <tr><td>CY_b</td>
+            <td>side-force / sideslip</td>
+            <td>1</td>
+            <td>1</td></tr>
+        
+        <tr><td>CY_p</td>
+            <td>side-force  / roll-rate</td>
+            <td>1</td>
+            <td>1</td></tr>
+        
+        <tr><td>CY_r</td>
+            <td>side-force  / yaw-rate</td>
+            <td>1</td>
+            <td>1</td></tr>
+        
+        <tr><td>CY_dr</td>
+            <td>side-force  / rudder</td>
+            <td>1</td>
+            <td>1</td></tr>
+        
+        <tr><td>CY_da</td>
+            <td>side-force  / aileron</td>
+            <td>1</td>
+            <td>1</td></tr>
+      </table>
+
+    <h3>3.7 Subsection <tt>l</tt></h3>
+      
+      <table border="1">
+        <tr><th>Name</th>
+            <th>Description</th>
+            <th>units=0</th>
+            <th>units=1</th></tr>
+        
+        <tr><td>Cl_b</td>
+            <td>roll-moment / sideslip (crucial for rudder-only turns)</td>
+            <td>1</td>
+            <td>1</td></tr>
+        
+        <tr><td>Cl_p</td>
+            <td>roll-moment / roll-rate   (roll damping)</td>
+            <td>1</td>
+            <td>1</td></tr>
+        
+        <tr><td>Cl_r</td>
+            <td>roll-moment / yaw-rate</td>
+            <td>1</td>
+            <td>1</td></tr>
+        
+        <tr><td>Cl_dr</td>
+            <td>roll-moment / rudder</td>
+            <td>1</td>
+            <td>1</td></tr>
+        
+        <tr><td>Cl_da</td>
+            <td>roll-moment / aileron</td>
+            <td>1</td>
+            <td>1</td></tr>
+      </table>
+
+    <h3>3.8 Subsection <tt>n</tt></h3>
+      
+      <table border="1">
+        <tr><th>Name</th>
+            <th>Description</th>
+            <th>units=0</th>
+            <th>units=1</th></tr>
+        
+        <tr><td>Cn_b</td>
+            <td>yaw-moment  / sideslip (yaw stability)</td>
+            <td>1</td>
+            <td>1</td></tr>
+        
+        <tr><td>Cn_p</td>
+            <td>yaw-moment  / roll-rate   (yaw-roll coupling)</td>
+            <td>1</td>
+            <td>1</td></tr>
+        
+        <tr><td>Cn_r</td>
+            <td>yaw-moment  / yaw-rate  (yaw damping)</td>
+            <td>1</td>
+            <td>1</td></tr>
+        
+        <tr><td>Cn_dr</td>
+            <td>yaw-moment  / rudder</td>
+            <td>1</td>
+            <td>1</td></tr>
+        
+        <tr><td>Cn_da</td>
+            <td>yaw-moment  / aileron</td>
+            <td>1</td>
+            <td>1</td></tr>
+      </table>
+
+    <h3>3.9 Subsection <tt>flaps</tt></h3>
+      
+      <p>
+      Lift, drag and moment coefficients are altered
+      when using flaps. For an example, see <tt>Skorpion.xml</tt> and <tt>Wasabi.xml</tt>.
+      </p>
+
+      <table border="1">
+        <tr><th>Name</th>
+            <th>Description</th>
+            <th>units=0</th>
+            <th>units=1</th></tr>
+        
+        <tr><td>drag</td>
+            <td>How much drag is added when using flaps? <br>
+            CD = CD_without_flaps + (flap_input^2) * <tt>flap.drag</tt></td>
+            <td>1</td>
+            <td>1</td></tr>
+        
+        <tr><td>lift</td>
+            <td>How much lift is added when using flaps? <br>
+            CL = CL_without_flaps + flap_input * <tt>flap.lift</tt></td>
+            <td>1</td>
+            <td>1</td></tr>
+        
+        <tr><td>moment</td>
+            <td>How much moment is added when using flaps? <br>
+            Cm = Cm_without_flaps + flap_input * <tt>flap.moment</tt></td>
+            <td>1</td>
+            <td>1</td></tr>
+        
+        <tr><td>eff_ratio</td>
+            <td>How much of the initial flap effectiveness (lift/drag/moment derivative)
+            is retained at the maximum deflection angle (flap_input=0.5) ? <br>
+            Flap effectiveness usually decreases for large deflections (> 10-20deg), e.g. 
+            when flap are also used as landing aids (cfr. Wasabi model).
+            This non-linear behaviour can be simulated setting <tt>flap.eff_ratio</tt> < 1. <br>
+            Reasonable values of <tt>flap.eff_ratio</tt> range  from 0.5 down to 0.1 for 
+            maximum deflection from 30 to 60deg. <br>
+            The actual effectiveness is evaluated as:
+            flap.lift(@flap_input) = flap.lift * (1. - (1. - <tt>flap.eff_ratio</tt>)) * flap_input
+            and similarly for drag and moment. <br>
+            </td>
+            <td>1</td>
+            <td>1</td></tr>
+      </table>
+
+      <p>
+      Usually changing flap setting change pitching moment and thus alter
+      the trimmed angle of attack (AoA), so that elevator position must be adjusted
+      (trimmed) to either keep the angle of attack unchanged or to trim to the new desired
+      AoA. If you set <tt>flap.moment</tt> = 0, then the trimmed AoA will stay 
+      constant.
+      </p>
+      <p>
+      Flap (camber changing flap) can also be used "mixed" with elevator, so that an elevator
+      input also generate a flap deflection to optimize airfoil camber for the desired lift
+      coefficient (e.g. flaps are lowered when elevator is pulled).
+      To achieve this effect the elevator should be mixed into flap input: the right amount of 
+      mixing is model dependent.
+      </p>
+      
+    <h3>3.10 Subsection <tt>spoiler</tt></h3>
+    
+      <p>
+      This is similar to <tt>flap</tt>, except that the drag effect is linear not quadratic and
+      that there is no eff_ratio parameter (spoiler effect is linear).
+      </p>
+      
+    <h3>3.11 Subsection <tt>retract</tt></h3>
+    
+      <p>
+      This subsection describes how a retractable gear influences drag and lift
+      (similar to a spoiler). For an example, see <tt>sport.xml</tt>.
+      </p>
+
+      <table border="1">
+        <tr><th>Name</th>
+            <th>Description</th>
+            <th>units=0</th>
+            <th>units=1</th></tr>
+        
+        <tr><td>drag</td>
+            <td>How much drag is added when the gear is not fully retracted? <br>
+            CD = CD_without_gear + (1.0 - retract_input) * <tt>retract.drag</tt></td>
+            <td>1</td>
+            <td>1</td></tr>
+        
+        <tr><td>lift</td>
+            <td>How does the gear influence lift? <br>
+            CL = CL_without_gear + (1.0 - retract_input) * <tt>retract.lift</tt></td>
+            <td>1</td>
+            <td>1</td></tr>
+      </table>
+      
+      <p>
+      Please note that <tt>retract.lift</tt> is usually a negative coefficient, because the
+      gear will disturb the airflow when it is not fully retracted and the wheel wells
+      are open.
+      </p>
+
+    <h3>3.12 Subsection <tt>prop</tt></h3>
+    
+      <p>
+      This subsection describes model-dependant interaction effects between propeller
+      and aerodynamics. For an example, see <tt>Angel_S30E.xml</tt>.
+      </p>
+
+      <table border="1">
+        <tr><th>Name</th>
+            <th>Description</th>
+            <th>units=0</th>
+            <th>units=1</th></tr>
+        
+        <tr><td>torquefactor</td>
+            <td>Which fraction of propeller's torque actually produce a rolling moment ? <br>
+            roll_torque =  prop_torque * <tt>prop.torquefactor</tt></td>
+            <td>1</td>
+            <td>1</td></tr>
+      </table>
+      
+      <p>
+      Please note that <tt>prop.torquefactor</tt> shall be a coefficient < 1 (default to 0.25), 
+      because propeller's slipstream produces an aerodynamic rolling moment counteracting torque effect.
+      Changing the sign of <tt>prop.torquefactor</tt> to negative change the net rolling effect from rolling left
+      to rolling right, i.e. simulating a counterclockwise rotating propeller (seen from the cockpit).
+      </p>
+      
+  <h2>4 Configuration: section <tt>config</tt></h2>
+
+    <p>
+    There can be more than one configuration for an airplane, so there may be several
+    <tt>config</tt> sections. Because of this, each <tt>config</tt> needs a description.
+    </p>
+    
+  <div class="fragment"><pre class="fragment">
+  &lt;config version="1"&gt;
+    &lt;descr_long&gt;
+      &lt;en&gt; Powerful motor which makes this config heavy, too.&lt;/en&gt;
+    &lt;/descr_long&gt;
+    &lt;descr_short&gt;
+      &lt;en&gt;powerful and heavy&lt;/en&gt;
+    &lt;/descr_short&gt;
+  </pre></div>
+
+    <p>
+    Additionally, instead of using the general <tt>aero</tt> section,
+    a <tt>config</tt> section can contain its own <tt>aero</tt>
+    section (see k2.xml for an example).
+    </p>
+
+    <h3>4.1 Subsection <tt>mass_inertia</tt></h3>
+      
+      <table border="1">
+        <tr><th>Name</th>
+            <th>Description</th>
+            <th>units=0</th>
+            <th>units=1</th></tr>
+        
+        <tr><td>Mass</td>
+            <td>Mass of airplane</td>
+            <td>slug</td>
+            <td>kg</td></tr>
+        
+        <tr><td>I_xx</td>
+            <td></td>
+            <td>slug ft^2</td>
+            <td>kg m^2</td></tr>
+        
+        <tr><td>I_yy</td>
+            <td></td>
+            <td>slug ft^2</td>
+            <td>kg m^2</td></tr>
+        
+        <tr><td>I_zz</td>
+            <td></td>
+            <td>slug ft^2</td>
+            <td>kg m^2</td></tr>
+        
+        <tr><td>I_xz</td>
+            <td></td>
+            <td>slug ft^2</td>
+            <td>kg m^2</td></tr>
+      </table>
+
+    <h3>4.2 Subsection <tt>sound</tt></h3>
+      
+      <p>
+      The <tt>sound</tt> subsection contains the description of the sound
+      samples used for this airplane. Each sample is described in a
+      <tt>sample</tt> subsubsection.
+      </p>
+      
+      <h4>4.2.1 Subsubsection <tt>sample</tt></h4>
+      
+      <table border="1">
+        <tr><th>Name</th>
+            <th>Description</th>
+            <th>units=0</th>
+            <th>units=1</th></tr>
+        
+        <tr><td>filename</td>
+            <td>name of file for engine sound</td>
+            <td>-</td>
+            <td>-</td></tr>
+        
+        <tr><td>type</td>
+            <td>Type of sound: 0 glow engine, 1 electric engine, 2 glider sound</td>
+            <td>-</td>
+            <td>-</td></tr>
+        
+        <tr><td>pitchfactor</td>
+            <td>This number converts from speed of propeller to pitch of engine sound.</td>
+            <td>s</td>
+            <td>s</td></tr>        
+
+        <tr><td>maxvolume</td>
+            <td>The maximum sample volume (0.0 ... 1.0). The loudest sample should
+                be set to 1.0.</td>
+            <td>1</td>
+            <td>1</td></tr>        
+
+        <tr><td>v_min</td>
+            <td>Only for type=2: minimal velocity (relative to the airplane's
+            &quot;neutral&quot; velocity) at which the sound can be heard</td>
+            <td>1</td>
+            <td>1</td></tr>        
+
+        <tr><td>v_max</td>
+            <td>Only for type=2: velocity (relative to the airplane's
+            &quot;neutral&quot; velocity) at which the sound reaches
+            maximum volume.</td>
+            <td>1</td>
+            <td>1</td></tr>        
+
+        <tr><td>dist_max</td>
+            <td>Only for type=2: distance at which the sound reaches the
+            minimum volume</td>
+            <td>ft</td>
+            <td>m</td></tr>        
+
+      </table>
+
+    <h3>4.3 Subsection <tt>power</tt></h3>
+
+      <p>
+      There is a separate documentation 
+      (<a href=../power_propulsion/power_propulsion.html><tt>../power_propulsionspower_propulsion.html</tt></a>)
+      which explains the power and propulsion system.
+      </p>
+      
+  <h2>5 Graphics: section <tt>graphics</tt></h2>
+  <h3>5.1 Specifying a 3D model file</h3>
+
+    <p>
+    This section binds one or more 3D models to an XML file. The 3D model is what you actually
+    see on screen when loading this model XML file. 
+    There can be more than one graphical representation for an airplane (e.g. for
+    different configurations or different finishs), so there may be several
+    <tt>graphics</tt> sections. Because of this, each <tt>graphics</tt> needs a description.
+    </p>
+    
+    <div class="fragment"><pre class="fragment">
+    &lt;graphics version="1" model="zagi.ac" &gt;
+      &lt;descr_long&gt;
+        &lt;en&gt;Automatically converted from superzagi.air.&lt;/en&gt;
+      &lt;/descr_long&gt;
+      &lt;descr_short&gt;
+        &lt;en&gt;default&lt;/en&gt;
+      &lt;/descr_short&gt;
+    </pre></div>
+  
+    <p>
+    Currently you only need to specify the name of the graphics file.
+    </p>
+
+  <h3>5.2 A word on 3D model files</h3>
+    <p>The PLIB library used in CRRCsim to display the airplane model graphics can
+    handle a lot of different file types. However, files in AC3D format (.ac) or
+    3DStudioMax format (.3ds) seem to work best. Any decent modelling tool should
+    be able to export at least one of these formats. AC3D, Blender and Wings3D have
+    been reported to work fine for creating CRRCsim models.</p>
+
+  <h3>5.3 Object names in 3D files</h3>
+    <p>3D modelling tools usually compose the whole <i>model</i> (the content of the
+    3D model file) from <i>objects</i>. An object is a group of <i>surfaces</i> (or <i>faces</i>
+    for short) defined by connected <i>vertices</i> (a vertex is a single point in
+    3D space).</p>
+
+    <p>On object level, a modelling tool usually allows the user to define arbitrary
+    names for single objects. These names provide better orientation while modelling.
+    In CRRCsim, object names are also used to manipulate objects in several ways, like
+    animating model parts or controlling the rendering process. Therefore the following
+    conventions have been defined:</p>
+
+    <ul>
+      <li>The object name assigned to a model part in a 3D modelling tool may 
+          contain blanks (space characters). However, CRRCsim only uses everything
+          up to the first blank as the object's real name. If you assign the name
+          &quot;Right wing&quot; to an object, CRRCsim will internally refer to this
+          object as &quot;Right&quot;. Therefore it is recommended to substitute blanks
+          by underscore characters (&quot;Right_wing&quot;) or use CamelCase notation
+          (&quot;RightWing&quot;).</li>
+      <li>The rest of an object's name (everything after the first blank character)
+          is treated as additional information (&quot;attributes&quot;)for the 3D
+          rendering process. An object with the name &quot;Rotor_disc -shadow&quot;
+          is internally referred to as &quot;Rotor_disc&quot;, and the attribute
+          &quot;-shadow&quot; tells the 3D engine not to render a shadow for this
+          part of the model.</li>
+    </ul>
+
+  <h3>5.4 Object attributes</h3>
+    <p>
+    The following rendering attributes (see the preceding section) are currently
+    defined for 3D objects:
+    </p>
+
+    <table border="1">
+      <tr><th>Attribute</th>
+          <th>Description</th></tr>
+
+      <tr><td>-shadow</td>
+          <td>This object shall not cast a shadow.</td></tr>
+    </table>
+  
+
+  <h2>6 Hard points and wheels: section <tt>wheels</tt></h2>
+    <p>
+    This section contains a number of entries, each of them describing one hard 
+    point on the airplane. The caster angle is specified with respect to the
+    plane body's z-axis, a value of zero means that the wheel is oriented straight
+    ahead (which should be the case for most gears).
+    </p>
+    
+      <table border="1">
+        <tr><th>Name</th>
+            <th>Description</th>
+            <th>units=0</th>
+            <th>units=1</th></tr>
+
+        <tr><td>percent_brake</td>
+            <td>Percentage of max braking applied initially</td>
+            <td>1</td>
+            <td>1</td></tr>
+        
+        <tr><td>caster_angle_rad</td>
+            <td>wheel angle</td>
+            <td>rad</td>
+            <td>rad</td></tr>
+        
+      </table>
+
+    <h3>6.1 Subsection <tt>pos</tt></h3>
+      <p>Position of hard point in body axes with regard to center of gravity. 
+      Unit is feet (<tt>units="0"</tt>) or meters (<tt>units="1"</tt>).
+      x positive forward, y positive right, z positive down.</p>
+
+      
+      <p>Remark: 3D modelling tools sometimes use other coordinate system
+      orientations. In this case the coordinates of a hard point have to
+      be converted into the CRRCsim coordinate system. Here's an example
+      for AC3D and Blender:</p>
+      
+      <table border="1">
+      <tr>
+        <th>Axis in XML file</th>
+        <th>Axis in AC3D</th>
+        <th>Axis in Blender</th>
+      </tr>
+      
+      <tr><td align="center">+X</td><td align="center">+Z</td><td align="center">-Y</td></tr>
+      <tr><td align="center">+Y</td><td align="center">-X</td><td align="center">-X</td></tr>
+      <tr><td align="center">+Z</td><td align="center">-Y</td><td align="center">-Z</td></tr>
+      </table>
+      
+      <p>This means that a point in AC3D at X = -3.28, Y = 0.55, Z = -0.37
+      (this could be the right wingtip of a 2m sailplane) will result in the
+      following position tag:</p>
+
+      <div class="fragment"><pre class="fragment">
+        &lt;pos x=&quot;-0.37&quot; y=&quot;3.28&quot; z=&quot;-0.55&quot; /&gt;
+      </pre></div>
+
+      <p>Hardpoints may be located on animated control surfaces (e.g. on a
+      retractable gear). In this case, specify an additional attribute
+      &quot;animation&quot; that contains the name of the control surface
+      animation that controls this part of the 3D model. Example (from
+      sport.xml):</p>
+
+      <div class="fragment"><pre class="fragment">
+        &lt;pos x=&quot;0.41677001&quot; y=&quot;0&quot; z=&quot;0.52499998&quot; animation=&quot;nose_gear&quot; /&gt;
+      </pre></div>
+
+      <p>In this case, the &lt;animations&gt; section of the file should of course
+      contain an element &lt;object name=&quot;nose_gear&quot; /&gt; that defines
+      the actual movement. See section 8 for more details on animations.</p>
+
+    <h3>6.2 Subsection <tt>spring</tt></h3>
+      <p>This subsection defines the springiness of the hardpoint, e.g. if
+      a collision of this hardpoint with ground makes the plane bounce, is
+      damped by the hardpoint's flexibility or leads to a crash.</p>
+      
+      <p>The flight dynamics model calculates the forces on each hardpoint
+      resulting from interaction with the ground or solid objects. If this
+      value exceeds the specified <tt>max_force</tt>, the plane will be
+      considered as crashed. The <tt>max_force</tt> attribute is optional;
+      if it is not specified, it will internally be set to a very high
+      default value so that this hardpoint will only cause a crash on
+      insanely high load.</p>
+      
+      <table border="1">
+        <tr><th>Name</th>
+            <th>Description</th>
+            <th>units=0</th>
+            <th>units=1</th></tr>
+        
+        <tr><td>constant</td>
+            <td>spring constant, has to be positive</td>
+            <td>slug / s^2 = lbf / ft</td>
+            <td>N/m</td></tr>
+        
+        <tr><td>damping</td>
+            <td>damping, has to be positive</td>
+            <td>slug / s   = lbf / (ft/s)</td>
+            <td>N/(m/s)</td></tr>
+
+        <tr><td>max_force</td>
+            <td>maximum force, has to be positive</td>
+            <td>lbf</td>
+            <td>N</td></tr>
+        </table>
+      
+    <h3>6.3 Subsection <tt>steering</tt></h3>
+      <p>In this subsection a mapping of the hardpoint to an R/C channel can
+      be defined. Possible values for the &quot;mapping&quot; parameter are &quot;NOTHING&quot;
+      (which makes this subsection redundant), &quot;RUDDER&quot;, &quot;AILERON&quot;
+      or &quot;ELEVATOR&quot;. By specifying a negative value for max_angle the
+      coupling from the control input to the wheel will be reversed. A positive
+      angle should be correct for a tail wheel while a steerable nose wheel usually
+      needs a negative angle.</p>
+      
+      <table border="1">
+        <tr><th>Name</th>
+            <th>Description</th>
+            <th>units=0</th>
+            <th>units=1</th></tr>
+        
+        <tr><td>mapping</td>
+            <td>symbolic name of the R/C channel</td>
+            <td>-</td>
+            <td>-</td></tr>
+        
+        <tr><td>max_angle</td>
+            <td>deflection of the wheel at full control input</td>
+            <td>rad</td>
+            <td>rad</td></tr>
+      </table>
+      
+      <p>Example: this maps a nose wheel to the rudder channel, giving
+      20 degrees (= 0.349 radians) of wheel deflection at full rudder input.</p>
+      <div class="fragment"><pre class="fragment">
+        &lt;steering mapping="RUDDER" max_angle="-0.349" /&gt;
+      </pre></div>
+
+      
+  <h2>7 Center of gravity: section <tt>CG</tt></h2>
+      <p>
+        Position of center of gravity in body axes with regard to coordinates used by 
+        <tt>wheels</tt> and the 3D graphics file.<br>
+        Unit is feet (<tt>units="0"</tt>) or meters (<tt>units="1"</tt>).
+        x positive forward, y positive right, z positive down. Example:
+        <div class="fragment"><pre class="fragment">
+          &lt;CG units="0" x="-0.2234252" y="0" z="-0.043131893" /&gt;
+        </pre></div>
+      </p>
+      <p>
+        This section and values do not have to exist, it is optional. 
+        However, it gives you the following advantage:
+        There is no need to create the 3D model (and the points in the <tt>wheels</tt> section)
+        around the center of gravity. You can use any reference 
+        point and give the position of the CG using your coordinates in this section.
+      </p>
+      <p>
+        This also makes it possible to change the location of the CG without changing the 3D model and 
+        <tt>wheels</tt>.
+      </p>
+      <p>
+        You can visually check the position of the CG using test mode, as the airplane rotates
+        around the center of gravity (given that throttle=0).
+      </p>
+
+  <h2>8 Animated parts: section <tt>animations</tt></h2>
+      <p>This section contains information needed to animate parts of
+      the model, e.g. to move the control surfaces according to stick
+      input. It is optional to define animations for a model; however
+      it is strongly recommended to make use of this feature because
+      it adds much to the appearance of a model.</p>
+      
+      <p>To animate a part of a 3D model it is required that this part
+      is modelled as an independent object in the 3D model file, and
+      that the object has a unique name. A proper 3D modelling tool
+      should allow one to group surfaces to objects and give them names,
+      so this shouldn't be a problem.</p>
+      
+      <p>The <tt>&lt;animations&gt;</tt> section contains one 
+      <tt>&lt;animation&gt;</tt> subsection per animated object. The
+      <tt>&lt;animation&gt;</tt> tag must contain a <tt>type</tt>
+      attribute to define the kind of animation that should be created.
+      Currently only the type <tt>ControlSurface</tt> is implemented.</p>
+
+      <table border="1">
+        <tr><th>Name</th>
+            <th>Description</th>
+            <th>unit</th></tr>
+        
+        <tr><td>type</td>
+            <td>kind of animation</td>
+            <td>-</td></tr>
+      </table>
+
+    <h3>8.1 Animation type <tt>ControlSurface</tt></h3>
+      <p>This kind of animation is used to rotate an object of the 3D model
+      around an arbitrary axis according to stick input. It can be used to
+      animate control surfaces like elevator or ailerons, or to animate
+      gears that retract with a rotational movement.</p>
+      
+      <h4>8.1.1 Subsection <tt>object</tt></h4>
+        <p>This subsection defines the object to which the animation
+        is applied and the maximum amount of movement.</p>
+        
+        <table border="1">
+          <tr><th>Name</th>
+              <th>Description</th>
+              <th>unit</th></tr>
+          
+          <tr><td>name</td>
+              <td>name of the object in the 3D model</td>
+              <td>-</td></tr>
+
+          <tr><td>max_angle</td>
+              <td>control surface deflection at full control input</td>
+              <td>rad</td></tr>
+        </table>
+      
+      <h4>8.1.2 Subsection <tt>control</tt></h4>
+        <p>This subsection defines how the surface interacts with the
+        input from the controller. <tt>mapping</tt> can be set to one
+        of <tt>RUDDER</tt>, <tt>ELEVATOR</tt>, <tt>AILERON</tt>,
+        <tt>THROTTLE</tt>, <tt>FLAP</tt>, <tt>SPOILER</tt>, <tt>RETRACT</tt>
+        or <tt>PITCH</tt>. There can be more than one <tt>control</tt>
+        section for a surface, e.g. there will be a mapping to
+        <tt>ELEVATOR</tt> and <tt>AILERON</tt> if the model has elevon
+        controls (aka &quot;delta-mix&quot;). The <tt>gain</tt> setting
+        determines the relationship of the control input to the
+        surface deflection. A <tt>gain</tt> value of <tt>1.0</tt> means
+        that the surface will travel the full <tt>max_angle</tt> from
+        the <tt>object</tt> section above if the associated control
+        is moved to its extents. Negative <tt>gain</tt> values will
+        reverse the surface movement.</p>
+      
+        <table border="1">
+          <tr><th>Name</th>
+              <th>Description</th>
+              <th>unit</th></tr>
+          
+          <tr><td>mapping</td>
+              <td>symbolic name of the R/C channel</td>
+              <td>-</td></tr>
+
+          <tr><td>gain</td>
+              <td>control surface deflection at full control input</td>
+              <td>-</td></tr>
+        </table>
+      
+      <h4>8.1.3 Subsection <tt>hinge</tt></h4>
+        <p>To define the rotation axis of the control surface it is
+        mandatory to define exactly two <tt>&lt;hinge&gt;</tt> subsections.
+        The rotation will occur around an imaginary axis from the
+        first to the second hinge, and the direction of the rotation can
+        be determined by applying the right-hand rule to this axis.
+        The X/Y/Z values are kind of unit-less (&quot;OpenGL&quot;-units).
+        They can be determined by selecting a vertex close to the hinge
+        point in the 3D modelling tool and then transforming the
+        displayed vertex coordinates into the coordinate system
+        described below (same as with the <tt>&lt;wheel&gt;</tt>
+        positions described above).</p>
+        
+        <table border="1">
+          <tr><th>Name</th>
+              <th>Description</th>
+              <th>unit</th></tr>
+          
+          <tr><td>x</td>
+              <td>X coordinate (positive forward)</td>
+              <td>-</td></tr>
+          <tr><td>y</td>
+              <td>Y coordinate (positive right)</td>
+              <td>-</td></tr>
+          <tr><td>z</td>
+              <td>Z coordinate (positive down)</td>
+              <td>-</td></tr>
+        </table>
+
+        <p>This is an example for the animation of left and right
+        aileron on an 1.6m aerobatics model, giving
+        20 degrees (= 0.349 radians) of control surface deflection at full
+        aileron input, assuming that the aileron objects of the
+        3D model are called <tt>ail_right</tt> and <tt>ail_left</tt>:</p>
+        <div class="fragment"><pre class="fragment">
+        &lt;animations&gt;
+          &lt;animation type="ControlSurface"&gt;
+            &lt;object name="ail_right" max_angle="0.349" /&gt;
+            &lt;control mapping="AILERON" gain="-1.0" /&gt;
+            &lt;hinge x="-0.56" y="0.63" z="0.03" /&gt;
+            &lt;hinge x="-2.64" y="0.40" z="0.02" /&gt;
+          &lt;/animation&gt;
+          &lt;animation type="ControlSurface"&gt;
+            &lt;object name="ail_left" max_angle="0.349" /&gt;
+            &lt;control mapping="AILERON" gain="-1.0" /&gt;
+            &lt;hinge x="0.56" y="0.63" z="0.03" /&gt;
+            &lt;hinge x="2.64" y="0.40" z="0.02" /&gt;
+          &lt;/animation&gt;
+        &lt;/animations&gt;
+        </pre></div>
+
+  <h2>9 Launch presets: section <tt>launch</tt></h2>
+    <p>This section is optional. It contains launch presets that will
+    be shown in the launch dialog of the GUI if this airplane is
+    currently selected. The &lt;launch&gt; section shall only contain
+    &lt;preset&gt; tags, each one containing the attributes that
+    describe the launch process like in CRRCsim's main configuration file.</p>
+
+    <table border="1">
+      <tr><th>Name</th>
+          <th>Description</th>
+          <th>unit</th></tr>
+      
+      <tr><td>name_en</td>
+          <td>name of the preset for the GUI dialog</td>
+          <td>-</td></tr>
+
+      <tr><td>altitude</td>
+          <td>launch altitude above ground</td>
+          <td>ft</td></tr>
+
+      <tr><td>velocity_rel</td>
+          <td>velocity relative to the trimmed flight velocity</td>
+          <td>-</td></tr>
+
+      <tr><td>angle</td>
+          <td>launch angle (+ means "nose up")</td>
+          <td>rad</td></tr>
+          
+      <tr><td>sal</td>
+          <td>simulate side-arm-launch (0: no, 1: yes)</td>
+          <td>-</td></tr>
+          
+      <tr><td>rel_to_player</td>
+          <td>use launch position which is relative to player (0: no, 1: yes)</td>
+          <td>-</td></tr>
+          
+      <tr><td>rel_front</td>
+          <td>launch position relative to player: forward distance (backwards negative)</td>
+          <td>foot</td></tr>
+          
+      <tr><td>rel_right</td>
+          <td>launch position relative to player: distance to the right (left negative)</td>
+          <td>foot</td></tr>
+    </table>
+        
+    <p>Example:</p>
+    <div class="fragment"><pre class="fragment">
+      &lt;launch&gt;
+        &lt;preset name_en="Gap65 default (ground)" altitude="0" velocity_rel="0" angle="0.22" sal="0" 
+                rel_to_player="1" rel_front="1" rel_right="-2" /&gt;
+      &lt;/launch&gt;
+    </pre></div>
+
+  </body>
+</html>

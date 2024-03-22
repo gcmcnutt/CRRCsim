@@ -1,0 +1,457 @@
+<!-- Many parts in this document are just copied from doxygen output. After
+     copying, use the following commands to convert links:
+     
+     # replace:
+     sed -e "s/<a class=[^>]*>Power::\([^<]*\)<\/a>/<a href=#\1>\1<\/a>/g" \
+         -e "s/<a class=[^>]*>\([^<]*\)<\/a>/<a href=#\1>\1<\/a>/g" \
+         -e "s/Engine_DCM/Engine/g" \
+         power_propulsion.html > power_propulsion_new.html
+         
+     # check, repair this initial comment:
+     meld power_propulsion.html power_propulsion_new.html
+
+     This is how the conversion should look like:
+
+     <a class="el" href="classPower_1_1Power.html">Power</a>   should become   <a href="#Power">Power</a>
+          
+     -->
+
+<html>
+  <head>
+    <style type="text/css">
+    .fragment {
+       font-family: monospace
+}
+PRE.fragment {
+	border: 1px solid #CCCCCC;
+	background-color: #f5f5f5;
+	margin-top: 4px;
+	margin-bottom: 4px;
+	margin-left: 2px;
+	margin-right: 8px;
+	padding-left: 6px;
+	padding-right: 6px;
+	padding-top: 4px;
+	padding-bottom: 4px;
+}
+    </style>
+  </head>
+  
+  <body>
+    <h1>1 Introduction</h1>
+      <p>
+        This file explains the power and propulsion system of CRRCSim to enable you to create your own
+        configurations.
+      </p>
+      <p>
+        Most things here are taken from the developers documentation, which is extracted from the source 
+        code using a tool called doxygen. It may happen that this document is out of date, but the 
+        documentation in the source code is not.
+      </p>
+      <h2>1.1 History</h2>
+        <table cellpadding="5">
+          <tr><td valign="right">23.09.2005</td><td>Jens Wilhelm Wulf</td><td>The system has just been implemented into CVS.
+                           Took most texts from source code to put this document together.</td></tr>
+          <tr><td valign="right">26.02.2009</td><td>Jens Wilhelm Wulf</td><td>update, added examples</td></tr>
+          <tr><td valign="right">22.10.2009</td><td>Jens Wilhelm Wulf</td><td>downthrust update</td></tr>
+          <tr><td valign="right">08.12.2014</td><td>Luca Gasparini</td><td>rightthrust & prop tuning factors</td></tr>
+        </table>
+        
+        
+<h1><a name="Power">2 Overview</a></h1>
+  <!-- begin: simply copied from Power::Power -->
+This class manages everything related to battery, engine, propeller. Throughout this class (and the classes used by it) the SI unit system is used (with a small number of exceptions).<p>
+Values used are:<ul>
+<li>lengths <code>H</code> and <code>D</code> in m</li><li>rotational velocity <code>omega</code> in rad/s</li><li>rotational velocity <code>n</code> in 1/s</li><li>linear velocity <code>V</code> in m/s</li><li>Torque <code>M</code> in Nm</li><li>Force/thrust <code>F</code> in N</li><li>Inertia <code>J</code> in kg m^2</li><li>Resistance <code>R</code> in Ohm</li><li>Current <code>I</code> in A</li><li>Voltage <code>U</code> in V</li><li>Capacity <code>C</code> in Ah</li></ul>
+<p>
+One airplane needs exactly one <a href=#Power>Power</a> system, even if the latter is empty. The <a href=#Power>Power</a> system for one airplane can contain the following items, which are organized in a tree-like structure which represents mechanical and electrical connections.<ul>
+<li><a href=#Battery>Battery</a> <br>
+ At least one is needed, unless you have a glider.</li><li><a href=#Shaft>Shaft</a> <br>
+ At least one is needed. Every engine/propeller is (mechanically) connected to a shaft. One or more shafts are connected to a battery. This is what electrically relates engines to batteries.</li><li><a href=#Engine>Engine</a> <br>
+ One or more engines can be connected to a shaft.</li><li><a href=#Propeller>Propeller</a> or <a href=#SimpleThrust>SimpleThrust</a> <br>
+ One or more of them can be connected to a shaft.</li></ul>
+<p>
+This is an example setup (without gearboxes):<p>
+<div align="center">
+<img src="inline_dotgraph_1.dot.png" alt="inline_dotgraph_1.dot" border="0" usemap="#inline_dotgraph_1.dot.map">
+<map name="inline_dotgraph_1.dot.map"></map>
+</div>
+<p>
+The system is configured using a description in xml. The connections mentioned above are given by the structure of xml elements. Here's an example of a system with one battery; there is a gearbox with two engines driving one prop. <div class="fragment"><pre class="fragment">
+   &lt;power&gt;
+     &lt;battery filename="nicd12_30" throttle_min="0"&gt;
+       &lt;shaft J="2E-6" brake="0"&gt;
+         &lt;engine filename="astro_cobalt_10"&gt;
+           &lt;gearing J="0" i="2.5" /&gt;
+         &lt;/engine&gt;
+         &lt;engine filename="astro_cobalt_10"&gt;
+           &lt;gearing J="0" i="2.5" /&gt;
+         &lt;/engine&gt;
+         &lt;propeller D="0.3" H="0.2" J="3E-6" n_fold="-1" /&gt;
+       &lt;/shaft&gt;
+     &lt;/battery&gt;    
+   &lt;/power&gt;
+   </pre></div><p>
+Take a look at the individual items for details of their description.<p>
+If you don't want to define every single item of the system, you can take the easy way. Use a description like this: <div class="fragment"><pre class="fragment">
+     &lt;automagic F="12" V="15.8"&gt;
+      &lt;battery throttle_min="0"&gt;
+        &lt;automagic T="420" /&gt;
+        &lt;shaft J="0" brake="1"&gt;
+          &lt;propeller D="0.243" H="0.17" J="0" n_fold="5" /&gt;
+          &lt;engine&gt;
+            &lt;automagic omega_p="2827" eta_opt="0.78" eta="0.7" /&gt;
+          &lt;/engine&gt;
+        &lt;/shaft&gt;
+      &lt;/battery&gt;
+    &lt;/automagic&gt;
+   </pre></div><p>
+This will create a power system which delivers a thrust of <code>F=12 N</code> at a velocity of <code>V=15.8 m/s</code>. The battery will be designed to last <code>T=420 s</code>. You also need to fill in the dimensions of the propeller. It is best to take everything else as shown in the example.<p>
+If you use this <em>automagic</em> way of creating the system, the program will output the configuration it calculated from your values to give you a starting point for fine grained tunings.<p>
+  <!-- end:   simply copied from Power::Power -->
+
+
+<h1>3 Elements of a power system</h1>
+
+  <h2><a name="Battery">3.1 Battery</a></h2>
+      <!-- begin: simply copied from Power::Battery -->
+This class models a battery.<p>
+A battery has an initial capacity. While current is being drawn from the battery, the capacity left becomes smaller. Once nothing is left, its voltage is set to zero. The battery is definitely empty in this case.<p>
+Apart from this behaviour, the voltage is modelled as <code>U = U_0(C, C_0) - R_I * I</code>. <code>I</code> is the current drawn from the battery.<p>
+The no-load-voltage <code>U_0</code> is a function of the capacity left. It is read from a table.<p>
+If the battery voltage drops below <code>U_off</code>, the voltage is set to zero and locked. By setting the throttle command to zero, it can be unlocked again. This is similar to what speed controllers do.<p>
+Set <code>throttle_min</code> to &gt; 0 to model a glow engine which can only be started once and runs at that minimum throttle afterwards.<p>
+The xml configuration of a battery looks like this: <div class="fragment"><pre class="fragment">
+   &lt;battery C="1.2" U_0="9.6" U_off="7" R_I="10E-3" throttle_min="0"&gt;
+     &lt;U_0rel&gt;
+       1.05;
+       0.95;
+       0.90;        
+       0.85;
+       0.85;        
+       0.85;        
+       0.85;        
+       0.85;        
+       0.85;        
+       0.80;        
+       0.75;        
+       0.70;
+     &lt;/U_0rel&gt;
+     ...shafts connected to this battery...
+   &lt;/battery&gt;
+   </pre></div><p>
+In contrast to other values in the power system, the initial capacity <code>C</code> is given in Ah, not As.<p>
+It is possible to read the parameters of a battery from a separate file. In this case use something like <div class="fragment"><pre class="fragment">
+   &lt;battery filename="nicd12_30" throttle_min="0"&gt;
+   </pre></div> instead of writing down the parameters directly. The system will try to load a file <code>./models/battery/nicd12_30.xml</code> which might look like this: <div class="fragment"><pre class="fragment">
+   &lt;?xml version="1.0"?&gt;
+
+   &lt;battery C="3.0" U_0="12" U_off="9" R_I="10E-3"&gt;
+     &lt;U_0rel&gt;
+       1.05;
+       0.95;
+       0.90;        
+       0.85;
+       0.85;        
+       0.85;        
+       0.85;        
+       0.85;        
+       0.85;        
+       0.80;        
+       0.75;        
+       0.70;
+     &lt;/U_0rel&gt;
+   &lt;/battery&gt;
+   </pre></div><p>
+In both cases, the section <code>U_0rel</code> is a table showing the no-load-voltage <code>U_0</code> as a function of the capacity left. The table does not contain absolute values. In this example, <code>U_0</code> at full charge is <code>1.05 * 12 V</code>. It does not matter how many entries this table contains; they are assumed to be at equal distances as far as the capacity left is concerned.<p>
+<!-- end:   simply copied from Power::Battery -->
+
+
+  <h2><a name="Shaft">3.2 Shaft</a></h2>
+      <!-- begin: simply copied from Power::Shaft -->
+This class models a shaft to which engines and propellers (any number of them) are connected.<p>
+For folding props a speed brake is needed, but it didn't work as expected in <a href=#Engine>Engine</a>. Therefore the simulation of the brake was ripped out of the engine (where the real model proved to be too weak) and has been put into the shaft. So if the brake is enabled, it will force the shaft to stop rotating as soon as the throttle command is zero.<p>
+Example for an xml description:<p>
+<div class="fragment"><pre class="fragment">
+   &lt;shaft J="0.0E-5" brake="1"&gt;
+    ...engines and propellers...
+   &lt;/shaft&gt;
+   </pre></div> <code>J</code> is the inertia of the shaft; if <code>brake</code> is not zero, this shaft will stop rotating as soon as the throttle command is zero. This is needed for folding props.<p>
+   <!-- end:   simply copied from Power::Shaft -->
+
+
+  <h2><a name="Gearing">3.3 Gearing</a></h2>
+      <!-- begin: simply copied from Power::Gearing -->
+This class models a gearing which connects engines/propellers to a shaft. Everything connected to a shaft must be a subclass of it.<p>
+The xml description of a gearing must be written inside of the element which is connected to the shaft by the gearbox. It looks like this: <div class="fragment"><pre class="fragment">
+     &lt;gearing i="1.13" J="0" /&gt;
+   </pre></div> A gearbox might have an inertia <code>J</code> which is not zero. This inertia is the value seen by the shaft. The inertia of the propeller/engine is translated to the shaft automatically.<p>
+Given <code>omega</code> is the speed of the shaft, <code>i*omega</code> is the speed of the device which is connected to the shaft using this gearing.<p>
+<!-- end:   simply copied from Power::Gearing -->
+
+
+  <h2><a name="Engine">3.4 Engine</a></h2>
+      <!-- begin: simply copied from Power::Engine -->
+This class models a direct current motor. The model is quite realistic. However, modeling the emc brake proved to be not strong enough to stop a <a href=#Propeller>Propeller</a> in flight. But this is a problem of the <a href=#Propeller>Propeller</a> I think. The brake is modelled by <a href=#Shaft>Shaft</a> now.<p>
+The xml configuration of an engine looks like this (without gearbox to shaft): <div class="fragment"><pre class="fragment">
+   &lt;engine k_M="4.3e-03" R_I="0.185" J_M="1.79e-05" I_0="1.01" /&gt;
+   </pre></div><p>
+Example for an xml description, connection to shaft via a gearbox:<p>
+<div class="fragment"><pre class="fragment">
+   &lt;engine k_M="4.3e-03" R_I="0.185" J_M="1.79e-05" I_0="1.01" &gt;
+     &lt;gearing i="1.13" J="0" /&gt;
+   &lt;/engine&gt;
+   </pre></div> The inertia <code>J</code> of the engine is translated to the shaft automatically. The inertia <code>J</code> of the gearing is the value seen by the shaft.<p>
+See <a href=#Gearing>Gearing</a> for a description of a gearbox.<p>
+It is possible to read the parameters of a engine from a separate file. In this case use something like <div class="fragment"><pre class="fragment">
+   &lt;engine filename="astro_cobalt"/&gt;
+   </pre></div> <div class="fragment"><pre class="fragment">
+   &lt;engine filename="astro_cobalt"&gt;
+     &lt;gearing i="1.13" J="0" /&gt;
+   &lt;/engine&gt;
+   </pre></div> instead of writing down the parameters directly. The system will try to load a file <code>./models/engine/astro_cobalt.xml</code> which might look like this: <div class="fragment"><pre class="fragment">
+   &lt;?xml version="1.0"?&gt;
+   &lt;!--
+    Astro Cobalt 05 at 10 V
+   
+    Data taken from
+    Retzbach, Ludwig: Ratgeber Elektroflug, Neckar Verlag, 1991.
+  
+    M_r = 1.15E-2; // Nm
+    I_0 = M_r/k_M = 2.74A
+  
+    J_M is just guessed.
+  
+    --&gt;
+
+   &lt;engine R_I="0.08" k_M="0.42E-2" I_0="2.74" J_M="1.6E-6" &gt;
+   &lt;/engine&gt;
+   </pre></div><p>
+Given <code>U_K</code> is the voltage applied to the engine and omega is its speed, it will draw a current of <code>I_M = (U_K - omega * k_M) / R_I</code> and will apply a torque to the gearing which is <code>M_M = k_M * (I_M - I_0)</code>.<p>
+Finding a complete parameter set for a specific engine can be impossible, but luckily the parameters can be calculated from measured data. Given the current draw for the idle engine and voltage, current draw and speed values for at least two different load points (one of them may be the idle point as well), all electric parameters can be calculated.<p>
+A worked example: Speed 400 with flux ring<p>
+For one model I wanted to simulate a Speed 400 (aka Mabuchi RS-380 PH) with an additional flux ring. I found an Excel sheet on the Internet that contained motor data for exactly this engine:<p>
+<div class="fragment"><pre class="fragment">
+    U_K [V]  I_M [A]   n [rpm]  n [1/s]   remark
+    -----------------------------------------------------------------------------------
+     7.96     0.94     22290    371.5     idle, n = n_0, U_K = U_0 and I_M = I_0
+     7.37     7.47     13740    229       near max. load
+   </pre></div> J_M, the engine's rotor's inertia, can be found in the manufacturer's data sheet, or it has to be guessed. I assumed 1.0E-6 for the Speed 400. You can estimate it by regarding the rotor as a solid iron cylinder of mass m (in kg) and diameter d (in m) using the formula<p>
+<div class="fragment"><pre class="fragment">
+   J_M = 0.5 * m * d^2 / 4
+   </pre></div><p>
+All this resulted in the following engine file:<p>
+<div class="fragment"><pre class="fragment">
+   &lt;?xml version="1.0"?&gt;
+   &lt;!--
+     Mabuchi 380 (aka Speed 400) with additional flux ring
+     
+     J_M is just guessed.
+   --&gt;
+   
+    &lt;engine_dcm  J_M="1.0E-6" calc="1"&gt;
+      &lt;data&gt;
+        &lt;data U_K="7.96" I_M="0.94" n="371.5" /&gt;
+        &lt;data U_K="7.37" I_M="7.47" n="229.0" /&gt;
+      &lt;/data&gt;  
+      &lt;data_idle&gt;
+        &lt;data I_M="0.94" /&gt;
+      &lt;/data_idle&gt;
+    &lt;/engine_dcm&gt;
+   </pre></div><p>
+There must be at least two entries with different load points, but if you have more, just supply all of them.<p>
+If you only have one set of idle data, the voltage does not matter. But if you can provide several values for idle current at a certain voltage, do so. Replace <div class="fragment"><pre class="fragment">
+      &lt;data_idle&gt;
+        &lt;data I_M="0.94" /&gt;
+      &lt;/data_idle&gt;
+   </pre></div> by something like <div class="fragment"><pre class="fragment">
+      &lt;data_idle&gt;
+        &lt;data U_K="7.96" I_M="0.94" /&gt;
+        &lt;data U_K="6.13" I_M="0.87" /&gt;
+        &lt;data U_K="5.07" I_M="0.82" /&gt;
+      &lt;/data_idle&gt;
+   </pre></div><p>
+   <!-- end:   simply copied from Power::Engine -->
+
+
+  <h2><a name="Propeller">3.5 Propeller</a></h2>
+      <!-- begin: simply copied from Power::Propeller -->
+This class models a propeller. It is far from perfect, so you can't use it to optimize your real airplane, but it should be good enough to achieve the feeling of a realistic propeller in the simulation.<p>
+The <a href=#Propeller>Propeller</a> can be configured to be a folding prop, which folds as soon as it rotates slower than <code>omega_fold</code>. From the xml config, <code>n_fold</code> is read and converted using <code>(omega_fold = n_fold * 2 * pi)</code>. If a prop is folded, it will not create a positive torque to the <a href=#Shaft>Shaft</a> (and keep it rotating) and will not create drag to the airplane. If <code>n_fold</code> is negative, this is not a folding prop.<p>
+Propeller rotational direction is usually clockwise seen from the back (pressure side), however it can be changed setting <code>rotation</code> to -1.<p>
+
+If your model needs downthrust or rightthrust, you can tell the simulation about the propeller's position 
+(relative to center of gravity in body axis) and angle of downthrust and rightthrust (positive down and to the right, in degrees).
+Note however that position parameters shall not be used for helicopters and multicopters, since in this cases propeller simulation is only applied to compute axial thrust and torque. 
+Additionally, for multicopters specific parameters exist to define rotational direction of each prop, thus propeller's "rotation" parameter shall not be used.<p>
+
+Prop performance for each model can be tuned to better suit real life behaviour with following scale factors:<ul>
+<li><code>F_V0_scale</code> <br>
+ scale factor for static thrust (default 1).</li>
+<li><code>V_F0_scale</code> <br>
+ scale factor for flying speed at which thrust becomes zero (default 1).</li>
+<li><code>P_scale</code> <br>
+ scale factor for absorbed power (default 1).</li>
+<li><code>Pfactor_scale</code> <br>
+ scale factor for so-called P-factor pitch/yaw moment effect (default 1).</li></ul>
+<p>
+
+Formulas used: see homepage of Martin Hepperle, <a href="http://www.mh-aerotools.de/">http://www.mh-aerotools.de/</a> plus additional static 
+thrust correction factor taken from Gabriel Staples 
+<a href="http://electricrcaircraftguy.blogspot.it/2014/04/propeller-static-dynamic-thrust-equation-background.html"> article</a><p>
+Example for an xml description for direct connection to shaft:<p>
+<div class="fragment"><pre class="fragment">
+   &lt;propeller D="0.2" H="0.14" J="0" n_fold="5"  /&gt;
+   </pre></div><p>
+Example for an xml description, connection to shaft via a gearbox:<p>
+<div class="fragment"><pre class="fraagment">
+   &lt;propeller D="0.2" H="0.14" J="0" n_fold="5"  &gt;
+     &lt;gearing i="1.13" J="0" /&gt;
+   &lt;/propeller&gt;
+   </pre></div>
+   Example including rotation, position and downthrust/rightthrust:
+<div class="fragment"><pre class="fraagment">
+   &lt;propeller D="0.2" H="0.14" J="0" n_fold="5" rotation="1" &gt;
+     &lt;pos x="0.22" z="0" downthrust="2" rightthrust="2" /&gt;
+   &lt;/propeller&gt;
+   </pre></div>
+   Example including tuning factors:
+<div class="fragment"><pre class="fraagment">
+   &lt;propeller D="0.2" H="0.14" J="0" n_fold="5"  &gt;
+     &lt;tune F_V0_scale="1.1" V_F0_scale="1" P_scale="1" Pfactor_scale="1" /&gt;
+   &lt;/propeller&gt;
+   </pre></div>
+   The inertia <code>J</code> of the propeller is translated to the shaft automatically. The inertia <code>J</code> of the gearing is the value seen by the shaft.<p>
+See <a href=#Gearing>Gearing</a> for a description of a gearbox.<p>
+It is possible to read the parameters of a propeller from a separate file. In this case use something like <div class="fragment"><pre class="fragment">
+   &lt;propeller filename="10x7" /&gt;
+   </pre></div> <div class="fragment"><pre class="fragment">
+   &lt;propeller filename="10x7"  &gt;
+     &lt;gearing i="1.13" J="0" /&gt;
+   &lt;/propeller&gt;
+   </pre></div> instead of writing down the parameters directly. The system will try to load a file <code>./models/propeller/10x7.xml</code> which might look like this: <div class="fragment"><pre class="fragment">
+   &lt;?xml version="1.0"?&gt;
+   &lt;!--
+      This is just a sample.
+   
+      Units are SI!
+      H, D: m
+      J:    kg m^2  
+    --&gt;
+
+   &lt;propeller H="13E-2" D="17E-2" J="1.2E-6" n_fold="5"&gt;
+   &lt;/propeller&gt;
+   </pre></div> 
+   The parameters regarding position and tuning are not in the propeller file, as they are not parameters
+   which describe the propeller itself, but how the propeller is mounted and interacts with the airframe.<p>
+   <!-- end:   simply copied from Power::Propeller -->
+
+
+  <h2><a name="SimpleThrust">3.6 SimpleThrust</a></h2>
+      <!-- begin: simply copied from Power::SimpleThrust -->
+This is a very simple propeller to model CRRCSims first engine: thrust, no matter at which airspeed.<p>
+This simple propeller is connected to a shaft via some gearing. The gearing is described by<ul>
+<li><code>i</code> <br>
+ gear ratio</li></ul>
+<p>
+Given <code>omega</code> is the speed of the shaft this simple propeller is connected to, it will rotate at <code>(omega_p = i * omega)</code> and provide a thrust of <code>(F = k_F * omega_p)</code>.<p>
+The torque applied to the shaft is <code>(M = -1 * k_M * omega_p * i)</code>.<p>
+Example for an xml description for direct connection to shaft:<p>
+<div class="fragment"><pre class="fragment">
+   &lt;simplethrust k_F="0.004" k_M="0.00001" /&gt;
+   </pre></div><p>
+Example for an xml description, connection to shaft via a gearbox:<p>
+<div class="fragment"><pre class="fragment">
+   &lt;simplethrust k_F="0.005" k_M="0.00002" &gt;
+     &lt;gearing i="1.13" J="0" /&gt;
+   &lt;/simplethrust&gt;
+   </pre></div><p>
+See <a href=#Gearing>Gearing</a> for a description of a gearbox.<p>
+<!-- end:   simply copied from Power::SimpleThrust -->
+
+
+
+<h1>4 Determining engine parameters</h1>
+<h2>4.1 Formulas</h2>
+<p>
+Finding a complete parameter set for a specific engine can be impossible, but luckily the parameters can be calculated from measured data. Given the voltage, current draw and speed for the idle engine and the same three values for a load point, all electric parameters can be calculated using the above formula <code>I_M = (U_K - omega * k_M) / R_I</code>, because k_M and R_I can be assumed to be independend of the load applied to the engine.<p>
+Assume that the idle engine draws an idle current of I_M = I_0 when running without a propeller at a voltage U_K = U_0. The engine will run at its idle speed for this voltage, n = n_0. The angular velocity omega can be calculated as <code>omega_0 = 2 * PI * n / 60</code> when n is given in "rpm". For this idle point, the formula looks like this:<p>
+<div class="fragment"><pre class="fragment">   I_0 = (U_0 - omega_0 * k_M) / R_I = (U_0 - (2 * PI * n_0 / 60)) / R_I&lt;/tt&gt;
+   </pre></div><p>
+Applying the measured data from the load point to the formula (I_M = I_L, U_K = U_L and n = n_L) results in: <div class="fragment"><pre class="fragment">   I_L = (U_L - omega_L * k_M) / R_I = (U_L - (2 * PI * n_L / 60)) / R_I&lt;/tt&gt;
+   </pre></div><p>
+Now there are two equations with two unknown variables, so this can be solved using some linear algebra. Solve one equation for k_M and insert it into the other equation. Solve the resulting formula for R_I:<p>
+<div class="fragment"><pre class="fragment">   R_I = (n_L * U_0 - n_0 * U_L) / (n_L * I_0 - n_0 * I_L)
+   
+   or
+   
+   R_I = (omega_L * U_0 - omega_0 * U_L) / (omega_L * I_0 - omega_0 * I_L)
+   </pre></div><p>
+Then solve the original formula for k_M, insert the calculated R_I and the measured values from the load point (or the idle point, that doesn't really matter) to get k_M:<p>
+<div class="fragment"><pre class="fragment">   k_M = (U_L - R_I * I_L) / (2 * PI * n_L / 60)         (n_L in rpm)
+   
+   or
+   
+   k_M = (U_L - R_I * I_L) / omega_L                     (omega_L in rad/s)
+   </pre></div><p>
+
+<h2>4.2 A worked example: Speed 400 with flux ring</h2>
+<p>For one model I wanted to simulate a Speed 400 (aka Mabuchi RS-380 PH) with an additional flux ring. I found an Excel sheet on the Internet that contained motor data for exactly this engine:<p>
+<div class="fragment"><pre class="fragment">    U_K [V]  I_M [A]   n [rpm]  omega [rad/s]   remark
+    -----------------------------------------------------------------------------------
+     7.96     0.94     22290    2334.2           idle, n = n_0, U_K = U_0 and I_M = I_0
+     7.37     7.47     13740    1438.9           near max. load
+   </pre></div><p>
+Using the above formulas I calculated R_I<p>
+<div class="fragment"><pre class="fragment">   R_I = (n_L * U_0 - n_0 * U_L) / (n_L * I_0 - n_0 * I_L)
+       = (13740 * 7.96V - 22290 * 7.37V) / (13740 * 0.94A - 22290 * 7.47A)
+       = 0.357 Ohm
+   </pre></div><p>
+and k_M <div class="fragment"><pre class="fragment">   k_M = (U_L - R_I * I_L) / omega_L
+       = (7.37V - 0.357 Ohm * 7.47A) / 1438.9 rad/s
+       = 0.00327 Vs    (or 3.27E-3 Vs)
+   </pre></div><p>
+That was the hardest part. The remaining parameters are easy: I_0 can be directly read from the measured data (0.94A). n_0 was also measured, but remember that it has to be in 1/s, not in rpm, so we divide it by 60: n_0 = 22290 / 60 = 371.5 1/s<p>
+J_M, the engine's rotor's inertia, can be found in the manufacturer's data sheet, or it has to be guessed. I assumed 1.0E-6 for the Speed 400. You can estimate it by regarding the rotor as a solid iron cylinder of mass m (in kg) and diameter d (in m) using the formula<p>
+<div class="fragment"><pre class="fragment">   J_M = 0.5 * m * d^2 / 4
+   </pre></div><p>
+All this resulted in the following engine file:<p>
+<div class="fragment"><pre class="fragment">   &lt;?xml version="1.0"?&gt;
+   &lt;!--
+     Mabuchi 380 (aka Speed 400) with additional flux ring
+     
+     J_M is just guessed.
+   --&gt;
+   
+   &lt;engine_dcm R_I="0.357" k_M="3.27E-3" I_0="0.94" J_M="1.0E-6" n_0="371.5"&gt;
+   &lt;/engine_dcm&gt;
+   </pre></div><p>
+
+<h1>5. Example fold/brake settings</h2>
+  <table border="1">
+    <tr>
+      <th>configuration</th>
+      <th><tt>battery.throttle_min</tt></th>
+      <th><tt>battery.shaft.brake</tt></th>
+      <th><tt>battery.shaft.propeller.n_fold</tt></th>
+    </tr>
+    <tr>
+      <td>elecrical engine, folding prop</td>
+      <td><tt>0</tt></td>
+      <td><tt>1</tt></td>
+      <td><tt>5</tt></td>
+    </tr>
+    <tr>
+      <td>elecrical engine, non-folding prop</td>
+      <td><tt>0</tt></td>
+      <td><tt>0</tt></td>
+      <td><tt>-1</tt></td>
+    </tr>
+    <tr>
+      <td>combustion engine, non-folding prop</td>
+      <td><tt>0.2</tt></td>
+      <td><tt>0</tt></td>
+      <td><tt>-1</tt></td>
+    </tr>
+  </table>
+  

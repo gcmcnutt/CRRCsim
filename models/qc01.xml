@@ -1,0 +1,355 @@
+<?xml version="1.0" ?>
+<CRRCSim_airplane version="1" type="mcopter01">
+  <categories>
+    <category>Rotorcraft</category>
+  </categories>
+  <description>
+    <en>
+This is a first quadrocopter model for CRRCSim. Simple graphics.
+      
+Note that a quadrocopter's behaviour mainly depends on the 
+control software running it, so expect this one to behave 
+different from every quadrocopter around. However, it is helpful
+to get a feeling of the visual/orientation problems you'll face 
+when flying one.
+      
+Use the spoiler input to switch between attitude and rate control
+when using the third configuration.
+    </en>
+  </description>
+  <changelog>
+    <change>
+      <date>2009-07-06</date>
+      <author>Jens W. Wulf</author>
+      <en>Created it.</en>
+    </change>
+    <change>
+      <date>2010-05-15</date>
+      <author>J. Reucker</author>
+      <en>Added max_force to springs</en>
+    </change>
+    <change>
+      <date>2010-10-21</date>
+      <author>Jens W. Wulf</author>
+      <en>Added graphics jww05 (copter5.ac)</en>
+    </change>
+    <change>
+      <date>2010-10-27</date>
+      <author>Jens W. Wulf</author>
+      <en>New configuration which allows to switch between rate and attitude control</en>
+    </change>
+  </changelog>
+  <wheels version="1" units="0">
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="7" damping="0.06" max_force="2.0" />
+      <pos x="0" y="0" z="-0.164042" />
+    </wheel>
+    
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="7" damping="0.06" max_force="2.0" />
+      <pos x="-0.27142879" y="0.87838417" z="-0.12139108" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="7" damping="0.06" max_force="2.0" />
+      <pos x="-0.1468962" y="0.96159418" z="-0.12139108" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="7" damping="0.06" max_force="2.0" />
+      <pos x="-2.27654e-17" y="0.99081366" z="-0.12139108" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="7" damping="0.06" max_force="2.0" />
+      <pos x="0.1468962" y="0.96159418" z="-0.12139108" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="7" damping="0.06" max_force="2.0" />
+      <pos x="0.27142879" y="0.87838417" z="-0.12139108" />
+    </wheel>
+    
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="7" damping="0.06" max_force="2.0" />
+      <pos x="0" y="0.62007874" z="0.1312336" />
+    </wheel>
+    
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="7" damping="0.06" max_force="2.0" />
+      <pos x="0.27142879" y="-0.87838417" z="-0.12139108" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="7" damping="0.06" max_force="2.0" />
+      <pos x="0.1468962" y="-0.96159418" z="-0.12139108" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="7" damping="0.06" max_force="2.0" />
+      <pos x="4.55308e-17" y="-0.99081366" z="-0.12139108" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="7" damping="0.06" max_force="2.0" />
+      <pos x="-0.1468962" y="-0.96159418" z="-0.12139108" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="7" damping="0.06" max_force="2.0" />
+      <pos x="-0.27142879" y="-0.87838417" z="-0.12139108" />
+    </wheel>
+    
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="7" damping="0.06" max_force="2.0" />
+      <pos x="-2.845675e-18" y="-0.62007874" z="0.1312336" />
+    </wheel>
+    
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="7" damping="0.06" max_force="2.0" />
+      <pos x="-0.87838417" y="0.27142879" z="-0.12139108" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="7" damping="0.06" max_force="2.0" />
+      <pos x="-0.87838417" y="-0.27142879" z="-0.12139108" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="7" damping="0.06" max_force="2.0" />
+      <pos x="-0.96159418" y="-0.1468962" z="-0.12139108" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="7" damping="0.06" max_force="2.0" />
+      <pos x="-0.99081366" y="-9.10616e-17" z="-0.12139108" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="7" damping="0.06" max_force="2.0" />
+      <pos x="-0.96159418" y="0.1468962" z="-0.12139108" />
+    </wheel>
+    
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="7" damping="0.06" max_force="2.0" />
+      <pos x="-0.62007874" y="2.845675e-18" z="0.1312336" />
+    </wheel>
+    
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="7" damping="0.06" max_force="2.0" />
+      <pos x="0.87838417" y="0.27142879" z="-0.12139108" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="7" damping="0.06" max_force="2.0" />
+      <pos x="0.96159418" y="0.1468962" z="-0.12139108" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="7" damping="0.06" max_force="2.0" />
+      <pos x="0.99081366" y="2.27654e-17" z="-0.12139108" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="7" damping="0.06" max_force="2.0" />
+      <pos x="0.96159418" y="-0.1468962" z="-0.12139108" />
+    </wheel>
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="7" damping="0.06" max_force="2.0" />
+      <pos x="0.87838417" y="-0.27142879" z="-0.12139108" />
+    </wheel>
+    
+    <wheel percent_brake="0.5" caster_angle_rad="0">
+      <spring constant="7" damping="0.06" max_force="2.0" />
+      <pos x="0.62007874" y="-2.845675e-18" z="0.1312336" />
+    </wheel>
+  </wheels>
+    
+
+  <!-- Ground effect parameters should be quite independent of the helicopter 
+       parameters...shouldn't they? However, they can be adjusted to make it easier 
+       for users to get them right and provide feedback. -->
+  <GroundEffect>
+    <dist  mul="1.5" />
+  </GroundEffect>
+
+  <Disturbance tau_filter="0.2" time="0.2" />
+  
+  <CG units="0" x="0" y="0" z="-0.0054680666" />
+  
+  <graphics version="1" model="qc01.ac">
+    <descr_long>
+      <en>cross config</en>
+    </descr_long>
+    <descr_short>
+      <en>cross config</en>
+    </descr_short>
+  </graphics>
+
+  <graphics version="1" model="qc01_x.ac">
+    <descr_long>
+      <en>x config: although it is possible to simulate the x config instead of only
+          displaying it, this is not done here -- it would double this files size, mainly
+          copying everything only to get the same behaviour. However, hard points/ground interaction
+          is not perfect using this graphics config.
+      </en>
+    </descr_long>
+    <descr_short>
+      <en>x config</en>
+    </descr_short>
+  </graphics>
+      
+  <graphics version="1" model="copter3.ac">
+    <descr_long>
+      <en>jww03</en>
+    </descr_long>
+    <descr_short>
+      <en>jww03</en>
+    </descr_short>
+  </graphics>
+
+  <graphics version="1" model="copter5.ac">
+    <descr_long>
+      <en>jww05</en>
+    </descr_long>
+    <descr_short>
+      <en>jww05</en>
+    </descr_short>
+  </graphics>
+
+  <config version="1">
+    <descr_long>
+      <en>attitude controlled</en>
+    </descr_long>
+    <descr_short>
+      <en>attitude controlled</en>
+    </descr_short>
+    <mass_inertia version="1" units="1" Mass="0.40" I_xx="0.0034965875"
+      I_yy="0.0034965875" I_zz="0.0068260583" I_xz="1.3235659e-20" />
+    <sound version="1">
+      <sample filename="fan.wav" type="1" pitchfactor="0.03" maxvolume="1" />
+    </sound>
+    <aero version="1" >
+      <yaw   dist="0.00" damp1="0.00341" />
+      <roll  dist="0.00" damp1="0.0009" />
+      <speed damp="0.006" />
+      <props> <!-- positions relative to center of gravity! -->
+        <prop x= "0.185" y= "0"     dir="-1" />
+        <prop x="-0.185" y= "0"     dir="-1" />
+        <prop x= "0"     y= "0.185" />
+        <prop x= "0"     y="-0.185" />
+      </props>        
+    </aero>
+    <controllers>
+      <ScaleThrottle off="0.06" min="0.178" mul="0.54" />
+      <MCopter01>
+        <roll  scale="1.8"   kp="7"    kd="0.246" />
+        <pitch scale="-1.8"  kp="7"    kd="0.246" />
+        <yaw   scale="-9.93" kp="0.352" ki="0.835" />
+      </MCopter01>
+    </controllers>
+    <power>
+      <battery C="0.375" U_0="12" U_off="0" R_I="10E-3" throttle_min="0">
+        <U_0rel>
+          1.00;
+          1.00;
+        </U_0rel>
+        <shaft J="0" brake="0">
+          <propeller D="0.235" H="0.1644" J="0" n_fold="-1" />
+          <engine k_M="0.008536" R_I="0.3712" J_M="5.0E-6" I_0="0" rate_max="999999999"  log="0" />
+        </shaft>
+      </battery>
+    </power>
+  </config>
+    
+  <config version="1">
+    <descr_long>
+      <en>rate controlled</en>
+    </descr_long>
+    <descr_short>
+      <en>rate controlled</en>
+    </descr_short>
+    <mass_inertia version="1" units="1" Mass="0.4" I_xx="0.0034965875"
+      I_yy="0.0034965875" I_zz="0.0068260583" I_xz="1.3235659e-20" />
+    <sound version="1">
+      <sample filename="fan.wav" type="1" pitchfactor="0.03" maxvolume="1" />
+    </sound>
+    <aero version="1" >
+      <yaw   dist="0.00" damp1="0.00341" />
+      <roll  dist="0.00" damp1="0.0009" />
+      <speed damp="0.006" />
+      <props> <!-- positions relative to center of gravity! -->
+        <prop x= "0.185" y= "0"     dir="-1" />
+        <prop x="-0.185" y= "0"     dir="-1" />
+        <prop x= "0"     y= "0.185" />
+        <prop x= "0"     y="-0.185" />
+      </props>        
+    </aero>
+    <controllers>
+      <ScaleThrottle off="0.06" min="0.178" mul="0.54" />
+      <LimitFlipThrottle max90="0.618" max180="0.3" />
+      <Omega>
+        <scale_roll_pitch a="3.8544" b="249.69" exp="6" />
+        <roll  scale= "1" kp="0.246" ki="0.835" kd="0.0015" />
+        <!-- todo: kd müsste eigentlich 0.0053 sein. 
+                   Mit damp1=0.0009 geht 0.0025, 
+                   für 0.0053 braucht man damp1=0.5, was ich aber
+                   definitiv nicht gemessen habe. -->
+        <pitch scale= "-1" kp="0.246" ki="0.835" kd="0.0015" />
+        <yaw   scale="-9.93" kp="0.352" ki="0.835" />
+      </Omega>
+    </controllers>
+    <power>
+      <battery C="0.375" U_0="12" U_off="0" R_I="10E-3" throttle_min="0">
+        <U_0rel>
+          1.00;
+          1.00;
+        </U_0rel>
+        <shaft J="0" brake="0">
+          <propeller D="0.235" H="0.1644" J="0" n_fold="-1" />
+          <engine k_M="0.008536" R_I="0.3712" J_M="5.0E-6" I_0="0" rate_max="999999999"  log="0" />
+        </shaft>
+      </battery>
+    </power>
+  </config>
+    
+  <config version="1">
+    <descr_long>
+      <en>attitude or rate controlled (use spoiler channel)</en>
+    </descr_long>
+    <descr_short>
+      <en>attitude or rate controlled</en>
+    </descr_short>
+    <mass_inertia version="1" units="1" Mass="0.40" I_xx="0.0034965875"
+      I_yy="0.0034965875" I_zz="0.0068260583" I_xz="1.3235659e-20" />
+    <sound version="1">
+      <sample filename="fan.wav" type="1" pitchfactor="0.03" maxvolume="1" />
+    </sound>
+    <aero version="1" >
+      <yaw   dist="0.00" damp1="0.00341" />
+      <roll  dist="0.00" damp1="0.0009" />
+      <speed damp="0.006" />
+      <props> <!-- positions relative to center of gravity! -->
+        <prop x= "0.185" y= "0"     dir="-1" />
+        <prop x="-0.185" y= "0"     dir="-1" />
+        <prop x= "0"     y= "0.185" />
+        <prop x= "0"     y="-0.185" />
+      </props>        
+    </aero>
+    <controllers>
+      <ScaleThrottle off="0.06" min="0.178" mul="0.54" />
+      <MCopter01>
+        <roll  scale="1.8"   kp="7"    kd="0.246" rate_max="3.878" />
+        <pitch scale="-1.8"  kp="7"    kd="0.246" rate_max="3.878" />
+        <yaw   scale="-9.93" kp="0.352" ki="0.835" />
+        <Omega switch_channel="spoiler">
+          <scale_roll_pitch a="3.8544" b="249.69" exp="6" />
+          <roll  scale= "1" kp="0.246" ki="0.835" kd="0.0015" />
+          <pitch scale="-1" kp="0.246" ki="0.835" kd="0.0015" />
+        </Omega>
+      </MCopter01>
+    </controllers>
+    <power>
+      <battery C="0.375" U_0="12" U_off="0" R_I="10E-3" throttle_min="0">
+        <U_0rel>
+          1.00;
+          1.00;
+        </U_0rel>
+        <shaft J="0" brake="0">
+          <propeller D="0.235" H="0.1644" J="0" n_fold="-1" />
+          <engine k_M="0.008536" R_I="0.3712" J_M="5.0E-6" I_0="0" rate_max="999999999"  log="0" />
+        </shaft>
+      </battery>
+    </power>
+  </config>
+    
+  <launch>
+    <preset name_en="heli default (ground)" altitude="0" velocity_rel="0" angle="0" sal="0" rel_to_player="1" rel_front="5" rel_right="0" />
+  </launch>
+  
+</CRRCSim_airplane>

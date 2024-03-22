@@ -1,0 +1,51 @@
+<?xml version="1.0"?>
+
+<crrcsimSceneryFile version="1">
+
+  <!-- The file name of the height map: -->
+  <!-- ToDo: remove path! -->
+  <heightmap filename="scenery/coast.tga" />
+  
+  <!-- Scenery dimensions:
+        "size"    specifies dimensions of the scenery along the
+                  x and z axis (in OpenGL steps [unitless])
+        "offset"  specifies the offset of the terrain's origin
+                  (x = 0, z = 0) in relation to the OpenGL world
+                  origin. If offset.x = -size.x/2 and 
+                  offset.z = -size.z/2, then the OpenGL world origin
+                  will be in the terrain center.
+        "height"  specifies how the height values from the heightmap
+                  will be translated into OpenGL world coordinates.
+  -->
+  <dimension>
+    <size     x = "2000"
+              z = "2000" />
+    <offset   x = "1000"
+              z = "1000" />
+    <height   min = "0.0"
+              max = "100.0" />
+  </dimension>
+  
+  <player>
+    <position x = "0"
+              y = "104"
+              z = "-3"  />
+  </player>
+  
+  <model>
+    <position x = "0"
+              y = "104"
+              z = "-3"  />
+  </model>
+
+  <!-- Texture section -->
+  <textures>
+    <texture filename="test.tga">
+      <origin x="0.0"
+              y="0.0"
+              scale="1.0" />
+    </texture>
+  </textures>
+
+</crrcsimSceneryFile>
+

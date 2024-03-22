@@ -1,0 +1,20 @@
+obj-m := rctran2.o
+
+KSRC  := /lib/modules/$(shell uname -r)/build
+PWD   := $(shell pwd)
+
+default: build
+
+build:
+	make -C $(KSRC) SUBDIRS=$(PWD) modules
+
+install:
+	@# completely broken ATM - removes the whole dir
+	@#make -C $(KSRC) SUBDIRS=`pwd` modules_install
+	@echo "Install it yourself ..."
+
+clean:
+	@# kbuild can't handle this (yet ?)
+	@#make -C $(KSRC) SUBDIRS=`pwd` clean
+	rm -f *.o *.ko *.mod.o *.mod.c .*.{cmd,flags}
+	rm -rf config.status config.log autom4te*.cache

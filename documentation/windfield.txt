@@ -1,0 +1,55 @@
+Windfield simulation includes thermals. Please take a look into the
+subdirectory "./thermals/" if you are interested.
+
+-------------------------------------------------------------
+
+Changelog:
+  2012-10-28: several updates later..
+  2005-10-14: first version
+
+
+-------------------------------------------------------------
+
+
+
+(2012-10-28)
+--------------------------
+Windfield is hardcoded for built-in scenaries only.
+For model-base scenaries a couple of options exists to estimate wind
+from the terrain height profile.
+
+The effect of wind turbulence has been added, based on Dryden digital 
+filter model as specified in MIL-HDBK-1797. Only the low-altitude model
+is implemented since it is valid up to 1000ft.
+
+
+
+(2005-10-14)
+--------------------------
+Windfield is hardcoded, which means that (apart from thermals) it is not
+worth describing it. Please take a look at windfield.cpp.
+
+What needs to be done
+---------------------
+ - random variations in direction and strength
+ - turbulences (the FDM needs work in this case, too)
+ - terrain dependend windfield
+
+
+How does "Slope Soaring Sim" do it?
+-----------------------------------
+enviroment.*
+wind_field_generator.*
+There are some methods "*wind_from_terrain", called from enviroment.cpp.
+filtered_separated_wind_from_terrain
+How does "runtime" work? Is it Velocity Environment::get_background_wind_from_terrain(const Position & pos,
+                                                       bool thermal) const?
+
+
+How does "JSBSim" do it?
+------------------------
+src/models/FGAtmosphere.cpp includes different models for turbulence. No
+windfield simulation based on terrain. Maybe this is done somewhere else?
+There must be a call to void SetWindNED(double wN, double wE, double wD)
+somewhere. But I guess that this is in FlightGear, as JSBSim doesn't know
+anything about the terrain?

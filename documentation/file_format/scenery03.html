@@ -1,0 +1,633 @@
+<html>
+  <head>
+    <style type="text/css">
+    .fragment {
+       font-family: monospace
+}
+PRE.fragment {
+	border: 1px solid #CCCCCC;
+	background-color: #f5f5f5;
+	margin-top: 4px;
+	margin-bottom: 4px;
+	margin-left: 2px;
+	margin-right: 8px;
+	padding-left: 6px;
+	padding-right: 6px;
+	padding-top: 4px;
+	padding-bottom: 4px;
+}
+    </style>
+  </head>
+  
+  <body>
+
+  <h1>Scenery description in XML</h1>
+
+  <h2>0 About this document</h2>
+    
+    <p>
+      This document describes version 3 of the CRRCsim scenery file format.
+    </p>
+    <p>
+      <b>Disclaimer:</b> This document is not complete yet. It may be inaccurate
+      or wrong, too.
+    </p>
+    <p>
+      This document does not provide complete examples. Please take a look at
+      the scenery files you got when downloading/installing CRRCsim. The file
+      <tt>simple.xml</tt> in CRRCsim's <tt>scenery</tt> folder demonstrates
+      many of the features discussed in this document.
+    </p>
+    <p>
+      You need to know basics about xml files: they are structured text. Whitespace
+      and line breaks do not matter in most places. Just take a look at the
+      examples and you will understand.
+    </p>
+    <p>
+      The files can be edited using a text editor. There are lots of them. Use
+      something like Notepad++, vi, emacs, joe... Even the standard Windows notepad
+      will do, but it is recommended to use an editor that features syntax
+      highlighting for XML files to spot any obvious formatting errors immediately.
+    </p>
+    
+    <h3>0.1 Changes</h3>
+      
+      <table border="1">
+        <tr><td>2010-01-01</td><td>J. Reucker</td>
+          <td>
+            First version of this document.
+          </td>
+        </tr>
+        <tr><td>2010-01-09</td><td>J. Reucker</td>
+          <td>
+            Added details about rotation axes in model based scenery.
+          </td>
+        </tr>
+        <tr><td>2010-05-16</td><td>J. Reucker</td>
+          <td>
+            Changed sky definition schema: Now multiple sky sections are allowed
+            in a single XML file.
+          </td>
+        </tr>
+        <tr><td>2012-01-25</td><td>J. Li&eacute;nard</td>
+          <td>
+            Added preview sections
+          </td>
+        </tr>
+        <tr><td>2015-12-30</td><td>L. Gasparini</td>
+          <td>
+            Added details about new object attributes
+          </td>
+        </tr>
+        <tr><td>2016-01-20</td><td>L. Gasparini</td>
+          <td>
+            Added details about new object population feature and translucent rendering attribute
+          </td>
+        </tr>
+        <tr><td>2016-03-28</td><td>L. Gasparini</td>
+          <td>
+            Added details about new object attribute "shadow"
+          </td>
+        </tr>
+      </table>
+    
+  
+  <h2>1 General information</h2>
+
+  <p>Like most other XML files used in CRRCsim, a scenery description starts with
+  the XML file header and a changelog.
+  Whenever you edit such a file, please add a new <tt>change</tt> section and fill
+  in what is needed. The example below shows a template.</p>
+
+<div class="fragment"><pre class="fragment">
+  
+&lt;?xml version=&quot;1.0&quot;?&gt;
+
+&lt;crrcsimSceneryFile version=&quot;4&quot;&gt;
+  
+  &lt;!-- Some general information --&gt;
+  &lt;name&gt;My scenery&lt;/name&gt;
+  &lt;categories&gt;
+    &lt;category&gt;Field&lt;/category&gt;
+  &lt;/categories&gt;
+  &lt;description&gt;
+    &lt;en&gt;My first scenery file for CRRCsim.&lt;/en&gt;
+  &lt;/description&gt;
+  &lt;changelog&gt;
+    &lt;change&gt;
+      &lt;date&gt;2009-12-20&lt;/date&gt;
+      &lt;author&gt;Jan Reucker (slowhand_47@gmx.de)&lt;/author&gt;
+      &lt;en&gt;Created.&lt;/en&gt;
+    &lt;/change&gt;
+  &lt;/changelog&gt;
+  
+  </pre></div>
+
+  <p>Every text is written in english, so it is enclosed in <tt>&lt;en&gt; &lt;/en&gt;</tt>.
+  If you want to add something in italian for example, you should enclose it in
+  <tt>&lt;it&gt; &lt;/it&gt;</tt>. <i>Other languages than <tt>en</tt> are not
+  supported yet by CRRCsim, so at the time of writing information in other languages
+  is solely visible for those reading or editing your scenery file directly.</i></p>
+
+
+  <h2>2 Units</h2>
+    <p>
+      All numeric attribute values in a scenery file are written as plain numbers
+      without engineering units. All length or position values are assumed to
+      be in feet (ft).
+    </p>
+
+  <h2>3 Coordinate system</h2>
+    <p>
+      All positional values are specified using the following attributes:
+      
+      <table border ="1">
+        <tr><th>Attribute</th>
+            <th>Axis (internal)</th>
+            <th>Direction</th></tr>
+        <tr><td>north</td><td>x</td><td>positive north, negative south</td></tr>
+        <tr><td>east</td><td>y</td><td>positive east, negative west</td></tr>
+        <tr><td>height</td><td>-z</td><td>positive up, negative down</td></tr>
+      </table>
+    </p>
+    <p>The attributes listed in the table above are used in all tags
+    specifying some kind of position. In earlier versions of CRRCsim, the
+    attributes <tt>x</tt>, <tt>y</tt> and <tt>z</tt> were used. This is
+    still possible for specifying object positions in a model-based
+    scenery (for compatibility reasons), but it's strongly discouraged and
+    may be removed in future versions of CRRCsim without further notice.</p>
+
+  <h2>4 Player positions: section <tt>views</tt></h2>
+  <p>This section defines possible viewpoints for the player. <i>Currently
+  CRRCsim will only use the first <tt>position</tt> that is found in the <tt>views</tt>
+  section.</i></p>
+
+  <div class="fragment"><pre class="fragment">
+  
+  &lt;views&gt;
+    &lt;position name=&quot;default&quot; north=&quot;0&quot; east=&quot;0&quot; height=&quot;4&quot;  /&gt;
+  &lt;/views&gt;
+
+  </pre></div>
+  
+  <h2>5 Starting positions: section <tt>start</tt></h2>
+  <p>The starting position for the model. As with
+  the player position, you may specify more than one starting location. The 
+  topmost position will be used as default, but you may select a different one from
+  the "Launch" dialog: selecting "Launch from start" instead of the default
+  "Launch from player" shows a drop list of the available start position.</p>
+  
+  <div class="fragment"><pre class="fragment">
+
+  &lt;start&gt;
+    &lt;position name=&quot;field&quot; north=&quot;0&quot; east=&quot;0&quot; height=&quot;4&quot;  /&gt;
+  &lt;/start&gt;
+
+  </pre></div>
+
+  <h2>6 Default values: section <tt>default</tt></h2>
+  <p>Some default values. Right now, you may only specify the default wind
+  parameters.</p>
+
+  <div class="fragment"><pre class="fragment">
+
+  &lt;default&gt;
+    &lt;wind velocity=&quot;3&quot; direction=&quot;180&quot; /&gt;
+  &lt;/default&gt;
+
+  </pre></div>
+
+  <h2>7 Appearance of the sky: section <tt>sky</tt></h2>
+  <p>
+    The appearance of the sky is determined by the <tt>&lt;sky&gt;</tt> tag.
+    There are two different types of sky available: a sky dome and a sky box.
+    A scenery file can contain an arbitrary number of sky definitions. This
+    allows for simulating different weather conditions or time of day, or
+    providing different texture resolutions to adapt textured skies to the
+    available GPU power.
+  </p>
+  
+  <h3>7.1 General description</h3>
+  <p>
+    The sky section should contain a brief description, which is in turn
+    composed of a long and a short description. The short description is used
+    in menus or list boxes, while the long description may contain some more
+    information.
+  </p>
+
+  <div class="fragment"><pre class="fragment">
+  
+  &lt;descr_short&gt;
+    &lt;en&gt;default&lt;/en&gt;
+  &lt;/descr_short&gt;
+  &lt;descr_long&gt;
+    &lt;en&gt;The default sky box with 512x512 pixel textures.&lt;/en&gt;
+  &lt;/descr_long&gt;
+  </pre></div>
+  
+  <h3>7.2 Sky dome</h3>
+  <p>
+    The sky dome produces a sky like in the first CRRCsim version.
+    Think of it as a textured semi-sphere above your head. You can set the
+    texture and the radius of the semi-sphere.
+  </p>
+  
+  <div class="fragment"><pre class="fragment">
+  
+  &lt;sky type=&quot;original&quot; texture=&quot;textures/clouds.rgb&quot; radius=&quot;10000&quot;&gt;
+    &lt;descr_short&gt;
+      &lt;en&gt;original&lt;/en&gt;
+    &lt;/descr_short&gt;
+    &lt;descr_long&gt;
+      &lt;en&gt;The original CRRCsim textured sky dome.&lt;/en&gt;
+    &lt;/descr_long&gt;
+  &lt;/sky&gt;
+  </pre></div>
+  
+  <p>If you omit the texture name, CRRCsim will generate an untextured but
+  colored (from grey haze on the horizon to deep blue in the zenith)
+  semi-sphere. This may help those people with broken OpenGL implementations
+  that don't get the textured dome right.</p>
+  
+  <div class="fragment"><pre class="fragment">
+  
+  &lt;sky type=&quot;original&quot; /&gt;
+  </pre></div>
+
+  <h3>7.3 Sky box</h3>
+  <p>After CRRCsim version 0.9.6, a new sky rendering method was implemented:
+  The sky box. It's nothing but a cube with the viewer/player in the middle.
+  A texture can be projected onto each cube face. If the textures are
+  seamless and feature the right kind of distortion for the cubical
+  projection, this will give a very realistic impression of the sky.</p>
+  
+  
+  <div class="fragment"><pre class="fragment">
+  
+  &lt;sky type=&quot;box&quot; size=&quot;10.0&quot;&gt;
+    &lt;descr_short&gt;
+      &lt;en&gt;default&lt;/en&gt;
+    &lt;/descr_short&gt;
+    &lt;descr_long&gt;
+      &lt;en&gt;The default sky box with 512x512 pixel textures.&lt;/en&gt;
+    &lt;/descr_long&gt;
+    &lt;textures&gt;
+      &lt;north filename=&quot;textures/skybox_n.rgb&quot; /&gt;
+      &lt;south filename=&quot;textures/skybox_s.rgb&quot; /&gt;
+      &lt;west  filename=&quot;textures/skybox_w.rgb&quot; /&gt;
+      &lt;east  filename=&quot;textures/skybox_e.rgb&quot; /&gt;
+      &lt;up    filename=&quot;textures/skybox_u.rgb&quot; /&gt;
+      &lt;down  filename=&quot;&quot; /&gt;
+    &lt;/textures&gt;
+  &lt;/sky&gt;
+  </pre></div>
+
+  <p>Cube faces without a texture will not be rendered.</p>
+
+  <p>There are several tools available that deal with artificial landscape/sky
+  generation. Most of them should be able to generate a set of textures for the
+  sky box. TerraGen, for example, works like a charm. Just generate a flat
+  terrain (remember, we're interested in the sky, not the terrain!) and set up
+  the sky. Set up the camera with a 90 degrees field of vision (FOV) in the
+  center of the terrain at zero altitude, zero pitch, heading north. Render
+  a 512x512 pixel image (or any other power-of-two square format, like 256x256
+  or 1024x1024, if your graphics card can handle it). This is the &quot;north&quot;
+  texture. Now only change the camera heading to 90 deg. and render the
+  &quot;east&quot; texture, while 180 deg. and 270 deg. are the setups for
+  &quot;south&quot; and &quot;west&quot;. Then point the camera back north and
+  pitch it up 90 degrees to render the &quot;up&quot; texture. If you also want
+  to add a &quot;down&quot; texture, pitch the camera down to -90 degrees while
+  looking north and render. Remember to save all textures after rendering! The
+  textures will be saved as &quot;.bmp&quot; (Windows bitmap) files, please
+  convert them to SGI format (&quot;.rgb&quot;, turning on RLE compression is
+  strongly recommended). Then fill in the texture names in the XML file, copy
+  the textures to the &quot;textures&quot; subdirectory and enjoy your new sky.
+  </p>
+  
+  <h2>8 Preview</h2>
+  <p> A preview image is a small image of the scenery. It is used in the dialogue of scenery selection  <tt>(Options / Location)</tt>.
+  This image has to have, preferably,  a dimension of 256x128 pixels and be in a file format accepted by Plib for textures. The format <tt> .jpg </tt> is accepted.<p>
+ <p>The file used as preview is indicated by the tag <tt>&lt;preview&gt;</tt> </p> 
+     <div class="fragment"><pre class="fragment">
+  &lt;preview filename=&quot;textures/simple_preview.jpg&quot; /&gt;
+  </pre></div>
+  <h3>Only one preview  by scene</h3>
+  <p>The definition is placed at the same level as the other sections</p>
+
+ <h3>Several previews </h3>
+ <p>If the scenery contains some variant of sky, it is possible to indicate a specific preview has each. It is necessary for it to put the definition in the accordant sky section.</p>
+    <div class="fragment"><pre class="fragment">
+  
+  &lt;sky type=&quot;box&quot; size=&quot;10.0&quot;&gt;
+    &lt;preview filename=&quot;textures/simple_thunderstorm_preview.jpg&quot; /&gt;
+    &lt;descr_short&gt;
+      &lt;en&gt;Sky of thunderstorm&lt;/en&gt;
+    &lt;/descr_short&gt;
+    &lt;textures&gt;
+      &lt;north filename=&quot;textures/skybox_th_n.rgb&quot; /&gt;
+      &lt;south filename=&quot;textures/skybox_th_s.rgb&quot; /&gt;
+      &lt;west  filename=&quot;textures/skybox_th_w.rgb&quot; /&gt;
+      &lt;east  filename=&quot;textures/skybox_th_e.rgb&quot; /&gt;
+      &lt;up    filename=&quot;textures/skybox_th_u.rgb&quot; /&gt;
+      &lt;down  filename=&quot;&quot; /&gt;
+    &lt;/textures&gt;
+  &lt;/sky&gt;
+  </pre></div>
+  <p> It is possible to mix both syntaxes: if a varying of sky has no preview, the generic preview is used.</p>
+  
+  <h2>9 The scene description: section <tt>scene</tt></h2>
+  
+  <p>The last tag in the current files tells CRRCsim what to render in addition
+  to the sky. This description starts with the <tt>scene</tt> tag. The
+  <tt>type</tt> attribute of this tag defines the semantics of the tags inside
+  the <tt>scene</tt> section.</p>
+  <p> The optional <tt>altitude</tt> attribute of this tag defines the altitude (in feets) of scenery. It is useful in scenery of mountain to take into account the variation of air density. The height parameters in the scenery description are values relative to this altitude.<p>
+  
+  <h3>Built-in sceneries: <tt>type=&quot;built-in&quot;</tt></h3> 
+
+  <p>There are two built-in sceneries in CRRCsim: Davis field and the slope at
+  Cape Cod. To render these sceneries, specify either <tt>DAVIS</tt> or
+  <tt>CAPE_COD</tt> as the value of the <tt>variant</tt> attribute of the
+  <tt>scene</tt> tag.</p>
+  
+  <p>Rendering the Davis field scenery:</p>
+  <div class="fragment"><pre class="fragment">
+
+  &lt;scene type=&quot;built-in&quot; variant=&quot;DAVIS&quot; /&gt;
+  </pre></div>
+
+  <p>Rendering the Cape Cod scenery:</p>
+  <div class="fragment"><pre class="fragment">
+
+  &lt;scene type=&quot;built-in&quot; variant=&quot;CAPE_COD&quot; /&gt;
+  </pre></div>
+
+  <p>There's nothing more to configure for these <tt>scene</tt> variants.</p>
+
+  <h3>Model-based sceneries: <tt>type=&quot;model-based&quot;</tt></h3> 
+
+  <h4>Adding objects to the scenery</h4>
+  <p>Everything between &lt;scene&gt; and &lt;/scene&gt; describes graphical
+  objects. The order of the objects is mostly not important but it may actually
+  influence: rendering speed, rendering effects of translucent objects,
+  vertical position of an objects if attribute <tt>above_ground=&quot;0&quot;</tt>.
+  For faster rendering opaque object should be defined in order front-to-back, 
+  while for best rendering quality translucent objects should be defined last 
+  and ordered back-to-front.</p>
+  
+  <p>The <tt>object</tt> tag loads a 3D model and adds it to the scenery.
+  A lot of different file formats are supported. AC3D files (.ac) and
+  (.3ds) should work quite well. In theory, the SSG library loads many more
+  formats (.x, .dxf, .ase, .atg, .mdl, .flt, .m, .md2, .obj, .tri, VRML), but
+  this is not yet tested with CRRCsim due to the lack of models. Other
+  SSG-based projects show that it works.</p>
+  
+  <p>An object can be loaded once and then placed several times in the scenery.
+  This saves texture memory, because all textures are shared between the
+  instances of the object. There currently are two options to place objects in
+  the scenery: <tt>instance</tt> and <tt>population</tt>. An <tt>instance</tt>
+  adds a single copy of the object in a specific location, while a 
+  <tt>population</tt> adds several copies of the object distributed over an
+  area of the scene.</p>
+  
+  <h4>Object attributes</h4>
+  <p>A <tt>terrain</tt> attribute declares the object to be part of the terrain
+  contour. This means that the object will add to the terrain height at this
+  point and therefore be included in wind calculations. Be careful, each
+  <tt>terrain</tt> object will also increase the CPU workload more than
+  non-terrain-objects! The default value for the <tt>terrain</tt> attribute
+  is &quot;1&quot;, so <tt>terrain=&quot;0&quot;</tt> must explicitely be
+  specified to exclude an object from terrain height calculations.</p>
+  
+  <p>A <tt>visible</tt> attribute declares the object to be visible. 
+  Invisible objects are not rendered but they add to terrain height
+  and are thus included in wind calculation. They are used to define
+  collision boxes (see below).
+  A non-visible object which is also non-terrain is actually useless...
+  The default value for the <tt>visible</tt> attribute is &quot;1&quot;.</p>
+  
+  <p>The <tt>translucent</tt> attribute (default value &quot;1&quot;)
+  influences how translucent objects (i.e. objects having alpha information)
+  are rendered.
+  The actual meaning depends on the object being terrain or non-terrain.</p>
+  
+  <p>A terrain object with <tt>translucent=&quot;1&quot;</tt> is rendered 
+  translucent (using so-called alpha blending), while if <tt>translucent=
+  &quot;0&quot;</tt> then it is assumed that it shall be rendered fully
+  transparent and it only has the purpose of: a) being used for terrain height 
+  and wind computations, b) hide objects behind it.
+  This is different from an invisible terrain object, which does not 
+  hides objects further back.
+  Terrain objects with <tt>translucent=&quot;0&quot;</tt> are in fact
+  intended to be used for terrain in photo-realistic sceneries, where
+  the visual apparence of the terrain is actually incorporated into the 
+  skybox textures, but the terrain shall anyway mask objects located
+  behind it. In theory, setting <tt>translucent=&quot;0&quot;</tt> allows
+  a faster rendering than leaving it to 1, while achieving the same
+  effects.</p>
+  
+  <p>A non-terrain object with <tt>translucent=&quot;1&quot;</tt> is also 
+  rendered translucent (using alpha blending), but additionally all areas
+  with alpha < 0.1 (i.e. almost fully transparent) are discarded so that
+  objects behind stay visible. This allows rendering of objects with highly
+  transparent areas (e.g. a tree texture applied to a simple rectangle) without
+  unrealistically masking objects behind.
+  However, correct rendering of the translucency requires back-to-front
+  order, and rendering is slower. 
+  If <tt>translucent=&quot;0&quot;</tt>, instead,
+  the texture is assumed to be an on-off one (alpha either 0 or 1),
+  and only areas with alpha almost 1 are rendered as fully-opaque, while
+  other areas are discarded. This allow a similar but faster and fully 
+  order-independent rendering of partially transparent objects (again think 
+  about a tree as before), althoug with lower rendering quality.
+  Actually a trick is implemented which allows for a nice, order-independent,
+  artifact-free, although slower, rendering of partially transparent objects.</p>
+  
+  <p>The <tt>cutout</tt> attribute declares the object to be automatically
+  rotated along its vertical (z) axis so to always face the viewer (i.e.
+  the x-z plane is kept parallel to the camera). 
+  It is useful to render such things as trees using a low poly object
+  and a texture. As such it is typically used for non-terrain objects.
+  The default value for the <tt>cutout</tt> attribute is &quot;0&quot;</p>
+  
+  <p>The <tt>shadow</tt> attribute declares that the object shall cast shadows.
+  So far casted shadow, for both airplanes and scenery objects, are computed
+  usign the "shadow volumes" algorithm.
+  The default value for the <tt>shadow</tt> attribute is &quot;0&quot;</p>
+  
+  <h4>Instance</h4>
+  <p>Each instance must have position coordinates
+  (<tt>north</tt>|<tt>east</tt>|<tt>height</tt> or <tt>x</tt>|<tt>y</tt>|<tt>z</tt>) 
+  and optional orientation parameters (<tt>h</tt>|<tt>p</tt>|<tt>r</tt> for heading, 
+  pitch and roll).
+  North, east and height coordinates must always be specified as absolute world
+  coordinates (remember, the unit is &quot;ft.&quot;). Heading, pitch and roll
+  are related to local body coordinates of the object (in degrees). The
+  orientation of the heading/pitch/roll rotations is similar to the
+  coordinate system used for the airplane model: heading specifies a rotation 
+  around the vertical (z) axis, pitch rotates around the horizontal lateral (y)
+  axis, and roll rotates around the longitudinal (x) axis.</p>
+  
+  <p>The additional attribute <tt>above_ground=&quot;1&quot;</tt> may be used
+  to specify that the given height is to be intended above local ground level:
+  thus <tt>height=&quot;0&quot;</tt> is a handy way to place the object right
+  on the ground (assuming that the origin of the 3D object model is located
+  at its lowest point). Note that by default <tt>above_ground=&quot;0&quot;</tt>.</p>
+  
+  <p>Here's a simple example:</p>
+  
+  <div class="fragment"><pre class="fragment">
+
+    &lt;object filename=&quot;freqboard.ac&quot; terrain=&quot;0&quot;&gt;
+      &lt;instance north=&quot;20.0&quot; east=&quot;-160&quot; height=&quot;0&quot; h=&quot;90&quot; p=&quot;0&quot; r=&quot;0&quot; /&gt;
+    &lt;/object&gt;
+  </pre></div>
+  
+  <p>This frequency board is located 20 feet north and 160 feet west of the
+  scene origin. It faces east (it is rotated 90 degrees around the vertical
+  axis). The board is excluded from height calculations. </p>
+  
+  <h4>Population</h4>
+  <p>Objects in a population are distributed regularly (like a matrix of objects)
+  in a parallelogram-shaped area of the scene.
+  One vertex of the parallelogram is the origin of the area,
+  whose position in absolute world cordinates is specified by
+  (<tt>north</tt>|<tt>east</tt>|<tt>height</tt> or <tt>x</tt>|<tt>y</tt>|<tt>z</tt>). 
+  The two sides of the parallegram exiting from the origin are given by vectors 
+  (<tt>d1_north</tt>|<tt>d1_east</tt>|<tt>d1_height</tt> or 
+  <tt>d1_x</tt>|<tt>d1_y</tt>|<tt>d1_z</tt>) and
+  (<tt>d2_north</tt>|<tt>d2_east</tt>|<tt>d2_height</tt> or 
+  <tt>d2_x</tt>|<tt>d2_y</tt>|<tt>d2_z</tt>). Every component of d1 and d2 vectors
+  defaults to 0.</p>
+  
+  <p>The total number of objects in the population is <tt>n1</tt> times <tt>n2</tt>,
+  with <tt>n1</tt> the number of objects along each line parallel to edge d1, and
+  <tt>n2</tt> the number of objects along each line parallel to edge d2.</p>
+  
+  <p>The regular distribution of the objects may be perturbed to make it somewhat
+  irregular, hence more "natural". Spacing in d1 and d2 directions may be perturbed
+  by <tt>d1_noise</tt> and <tt>d2_noise</tt>, with location being altered by up to
+  +/-0.5 times noise value.</p>
+  
+  <p>The size of the objects can be altered too (bigger/smaller) as well as their
+  vertical dimension (taller/shorter) and horizontal dimension (fatter/slimmer) 
+  specifying respectively non-zero <tt>s_noise</tt>, <tt>sz_noise</tt> and
+  <tt>sx_noise</tt>. Size noise values are in percentage of original object size.
+  They all sum-up to define actual object size and shape.
+  Note that overall scale noise only reduces object size, while x and z scale noise
+  perturbes object size both increasing and reducing the respective original 
+  dimension.</p> 
+  
+  <p>The additional attribute <tt>above_ground=&quot;1&quot;</tt> is again used
+  to specify that the given height is to be intended above local ground level.</p>
+  
+  <p>Here's a simple example:</p>
+  
+  <div class="fragment"><pre class="fragment">
+
+    &lt;object filename=&quot;populus_nigra.ac&quot; terrain=&quot;0&quot; cutout=&quot;1&quot;&gt;
+      &lt;population above_ground=&quot;1&quot;
+        north=&quot;-450&quot; east=&quot;500&quot; height=&quot;0&quot;
+        n1=&quot;61&quot; d1_north=&quot;900&quot; d1_east=&quot;0&quot; d1_noise=&quot;3&quot;
+        n2=&quot;9&quot; d2_north=&quot;0&quot; d2_east=&quot;240&quot; d2_noise=&quot;3&quot;
+        s_noise=&quot;0.03&quot; sx_noise=&quot;0.05&quot; sz_noise=&quot;0.05&quot;/&gt;
+    &lt;/object&gt;
+  </pre></div>
+  
+  <p>This is a small woods occupying a rectangular area of size 900x240 feets, the longer 
+  edge being aligned in north-south direction. The trees are distributed along 9 rows
+  of 61 trees each. The location of each tree is perturbed up to +/-1.5 feets in each direction.
+  Tree size may be reduced up to 3%; additionally, tree may be taller/shorter or 
+  larger/thinner by up to +/-2.5%. The trees are excluded from height calculations.
+  In fact they are simple 2D images, as indicated by the attribute 
+  <tt>cutout=&quot;1&quot;</tt>. A collision box (see below) will likely be specified
+  subsequently. Note that because using <tt>above_ground=&quot;1&quot;</tt> the 
+  collision box must in fact be specified AFTER the population, otherwise it will sit
+  on top of the collision box!</p>
+
+  <h4>Collision boxes</h4>
+  <p>If you exclude complex models from being part of the terrain by setting
+  <tt>terrain=&quot;0&quot;</tt>, the airplane can fly right through them.
+  The usual solution for this issue is to add a collision box to the scene.
+  A collision box is an object of very low complexity that is not rendered
+  (so it is not visible in the scenery). Instead it is only used for collision
+  detection and height calculation (hence wind calculation as well).</p>
+  
+  <p>Although the term &quot;collision box&quot; is widely used for this kind
+  of object, their shape is not limited to boxes. In theory, arbitrary objects
+  can be loaded, but please bear in mind that the goal of using collision boxes
+  is to reduce the triangle count for collision detection, so using a box,
+  a pyramid or a similar low-poly shape is a good idea.</p>
+  
+  <p>The objects can have arbitrary material properties, colours or textures.
+  CRRCsim will exclude them completely from the rendering stage, so the models
+  don't have to be transparent. But textures and materials will consume memory,
+  so the collision objects should be made from a single material without a
+  texture.</p>
+  
+  <p>To add an object as a collision box, simply set the <tt>visible</tt>
+  attribute of an object to &quot;0&quot;:</p>
+  
+  <div class="fragment"><pre class="fragment">
+
+    &lt;!-- A collision box for a static aircraft model --&gt;
+    &lt;object filename=&quot;aircraft_collbox.ac&quot; visible=&quot;0&quot;&gt;
+      &lt;instance north=&quot;-70.0&quot; east=&quot;60&quot; height=&quot;0&quot; h=&quot;45&quot; /&gt;
+    &lt;/object&gt;
+  </pre></div>
+
+  <p>The default value for the <tt>visible</tt> attribute
+  is &quot;1&quot;, so <tt>visible=&quot;0&quot;</tt> must explicitely be
+  specified to make an object invisible.</p>
+  
+  <h4>Embedded attributes</h4>
+  <p>Instead of adding two separate objects for the visible representation and
+  the collision box/terrain height, you can combine both objects in a single 3D model file.
+  To tell CRRCsim which parts of the 3D model shall be visible and which parts belong
+  to the terrain (collision box), make use of the node naming feature of your 3D modelling
+  tool. CRRCsim will treat everything up to the first space character as the
+  part's real name, everything else is interpreted as an attribute. Each attribute
+  consists of a plus or minus sign followed directly by a keyword. The following
+  attributes may be changed within an object file:</p>
+  
+  <table border ="1">
+  <tr><th>Attribute</th>
+      <th>Effect</th></tr>
+  <tr><td>+terrain</td><td>Include this part in height-of-terrain calculations</td></tr>
+  <tr><td>-terrain</td><td>Exclude this part from height-of-terrain calculations</td></tr>
+  <tr><td>+visible</td><td>Include this part in the rendering (make it visible)</td></tr>
+  <tr><td>-visible</td><td>Exclude this part from rendering (make it invisible)</td></tr>
+  <tr><td>+translucent</td><td>Translucent (alpha blending) rendering</td></tr>
+  <tr><td>-translucent</td><td>Non-translucent (fully opaque or fully transparent) rendering</td></tr>
+  </table>
+
+  <p>Note that the attributes optionally assigned to each individual object in the file
+  override the default setting specified in the scenery file. Also note that the
+  <tt>cutout</tt> attribute cannot be altered within a file.
+  Additionally, only the <tt>-shadow</tt> attribute can be used within a file
+  to avoid an object casting shadows, however by default NO object will cast shadow unless
+  the <tt>shadow = 1</tt> attribute is specified in the scenery description. 
+  The use of <tt>+shadow</tt> embedded attribute has no effect in this respect.</p>
+    
+  <p>For example, in Blender, each part of a model is called an &quot;object&quot;. You
+  can assign individual names to each object. Let's assume that you model a picnic
+  table to be placed in your scenery. Create a new object and call it &quot;table -terrain&quot;
+  (object panel, edit the datablock name field to read &quot;OB:table -terrain&quot;).
+  Model your table. Then create a new object, call it &quot;box -visible&quot; and
+  model the collision box. Select table and box and export both to an AC3D model.
+  Then add this model to your scenery file in the usual way, but don't specify
+  any &quot;terrain&quot; or &quot;visible&quot; attributes in the XML file.
+  CRRCsim will automatically make the box invisible and ignore the table for
+  height calculations.</p>
+  
+  <h2>10 End of file</h2>
+
+  <div class="fragment"><pre class="fragment">
+
+  &lt;/crrcsimSceneryFile&gt;
+  </pre></div>
+  
+
+
+  </body>
+</html>

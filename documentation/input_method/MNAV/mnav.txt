@@ -1,0 +1,64 @@
+The MNAV Interface
+
+This interface emulates the Crossbow Technology MNAV (see
+http://www.xbow.com/Products/productdetails.aspx?sid=193) vehicle sensor
+suite and servo control board. If you want to use the Crossbow MNAV
+autopilot, which is already modified to use this interface, please see
+autopilot.txt instead; this documentation is intended for developers who are
+writing or modifying programs to send and receive data through the MNAV
+interface.         
+
+The MNAV interface is able to operate over serial, TCP (client or server),
+or UDP (client or server) by changing inputMethod.mnav.device in
+crrcsim.xml. Possible values are:       
+
+    * "serial,<device>,<speed>", e.g. "serial,/dev/ttyS0,115200"
+    * "tcp,<host>,<port>", e.g. "tcp,192.168.0.5,12345"
+    * "tcpserver,<host>,<port>" or "tcpserver,<host>/<netmask>,<port>", e.g. 
+      "tcpserver,192.168.0.5,12345" or "tcpserver,192.168.0.5/255.255.255.0,12345"
+    * "udp,<host>,<port>", e.g. "udp,192.168.0.5,12345"
+    * "udpserver,<host>,<port>" or "udpserver,<host>/<netmask>,<port>", e.g. 
+      "udpserver,192.168.0.5,12345" or "udpserver,192.168.0.5/255.255.255.0,12345". 
+
+As input, the MNAV interface accepts 8 2-byte servo values (CH0-CH7) in an
+elevon configuration, i.e. after conversion to the range of [-0.5,0.5] (CH0
+and CH1) or [0,1] (CH2):        
+
+    * elevator = -(CH1 - CH0) / 2
+    * aileron = (CH1 + CH0) / 2
+    * throttle = CH2. 
+
+Unlike other CRRCSim interfaces, the MNAV interface also provides vehicle
+state data so that it can interface with an autopilot: 
+
+    * 3-axis acceleration (accelerometers)
+    * 3-axis angular rate
+    * 3-axis magnetic field (magnetometers)
+    * 3-axis temperature (currently has value zero)
+    * absolute pressure
+    * pitot pressure
+    * GPS
+    * PPM (hard-coded values optimized for interface to Crossbow MNAV
+      autopilot--does not reflect any user input because the MNAV interface takes
+      the place of interactive input; any interactive input must be mediated by
+      the autopilot, i.e. the autopilot must have a separate user input interface
+      that allows the autopilot to be disabled and the simulated vehicle to be
+      flown directly using the input format described above).          
+
+The input and output message formats are described in Chapter 4 of the MNAV
+User's Manual (see
+http://www.xbow.com/Support/Support_pdf_files/MNAV100CA_Users_Manual.pdf).
+In particular, the MNAV interface receives Set Servo ('SS') and Set Reverse
+Bits ('SP') messages, and sends Scaled Mode vehicle data messages with GPS,
+Servo, and PPM data ('N'), although by changing some #define values at the
+top of mnav.cpp it can also send other types of Scaled Mode vehicle data
+messages (the Crossbow 'S' type, and a non-Crossbow 'I' type that includes
+all data in the 'N' type as well as roll, pitch, and yaw data).          
+
+The MNAV interface works out of the box with a modified version of the
+Crossbow MNAV autopilot that will be released by Crossbow in the near
+future. For now, a pre-release version of the combined Autopilot-CRRCSim
+system can be downloaded from the micronav Sourceforge site at
+http://sourceforge.net/project/showfiles.php?group_id=146680.         
+
+Todd R. Templeton, 1/30/2007

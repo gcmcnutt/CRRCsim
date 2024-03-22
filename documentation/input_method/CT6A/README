@@ -1,0 +1,152 @@
+The protocol description has been posted by the user *kipitsimple*
+at a forum www.rcgroups.com.
+
+URL: <http://www.rcgroups.com/forums/showpost.php?p=11384029&postcount=79>
+
+/************************************************** ************************************************** *************
+Description of Turborix 2.4Ghz Programmable Radio Gear Channel Data/Settings array's
+/************************************************** ************************************************** *************
+
+Baudrate is 115kbd
+serial data : 8 bit, noparity, nohandshake
+
+Channel data is send by transmitter approx every 20mSec.
+Data burst duration (90uSec * 18 Bytes) is approx 1.6 mSec
+
+
+Description of Channel data array ( 18 bytes )
+------------------------------------------------------------------------------------------------------------------
+index | description | Values
+------------------------------------------------------------------------------------------------------------------
+0 : header0 = 85
+1 : header1 = 252
+2 : high_byte of (ch1+1000)
+3 : low_byte of (ch1+1000)
+4 : high_byte of (ch2+1000)
+5 : low_byte of (ch2+1000)
+6 : high_byte of (ch3+1000)
+7 : low_byte of (ch3+1000)
+8 : high_byte of (ch4+1000)
+9 : low_byte of (ch4+1000)
+10: high_byte of (ch5+1000)
+11: low_byte of (ch5+1000)
+12: high_byte of (ch6+1000)
+13: low_byte of (ch6+1000)
+14: high_byte of 2044-(ch3+1000) !
+15: low_byte of 2044-(ch3+1000) !
+16: high_byte of checksum
+17: low_byte of checksum
+
+
+high_byte -> (Channelvalue + 1000) / 256
+low_byte -> (Channelvalue + 1000) mod 256
+checksum -> sum of bytes 2 to 15
+
+
+/**************************************************
+Description of Turborix 2.4Ghz Programmable Radio Gear Settings Data array ( 69 bytes )
+------------------------------------------------------------------------------------------------------------------
+Settings 10,11,12 and 25 to 44 are only for helicopter
+
+
+
+------------------------------------------------------------------------------------------------------------------
+index | description | Values
+------------------------------------------------------------------------------------------------------------------
+0 HeaderByte 1 -> always 85
+1 HeaderByte 2 -> 253 in case of receiving settings from device ( query = 85,250,0 )
+-> 255 in case of sending settings to device
+------------------------------------------------------------------------------------------------------------------
+2 Model stick configuration -> high_nib(4..7) : Model > 1=0x0* 2=0x1* 3=0x2* 4=0x3*
+-> low_nib (0..3) : Type > ACRO=0x*0 H-120=0x*1 H-90=0x*2 H-140=0x*3
+------------------------------------------------------------------------------------------------------------------
+3 CH1 - CH6 reverse bits -> b0..b5 <> Ch1..Ch6 normal=0 reverse=1
+------------------------------------------------------------------------------------------------------------------
+4 CH1 DualRate ON value -> 0..100%
+5 CH1 DualRate OFF value -> 0..100%
+6 CH2 DualRate ON value -> 0..100%
+7 CH2 DualRate OFF value -> 0..100%
+8 CH4 DualRate ON value -> 0..100%
+9 CH4 DualRate OFF value -> 0..100%
+------------------------------------------------------------------------------------------------------------------
+
+helicopter (10,11,12)
+------------------------------------------------------------------------------------------------------------------
+10 Swash AFR CH1 -> -100..+100 (two's complement format > 0x9c..0x64)
+11 Swash AFR CH2 -> -100..+100 (two's complement format > 0x9c..0x64)
+12 Swash AFR CH6 -> -100..+100 (two's complement format > 0x9c..0x64)
+------------------------------------------------------------------------------------------------------------------
+
+
+------------------------------------------------------------------------------------------------------------------
+13 CH1 Endpoint 1 -> 0..120%
+14 CH1 Endpoint 2 -> 0..120%
+15 CH2 Endpoint 1 -> 0..120%
+16 CH2 Endpoint 2 -> 0..120%
+17 CH3 Endpoint 1 -> 0..120%
+18 CH3 Endpoint 2 -> 0..120%
+19 CH4 Endpoint 1 -> 0..120%
+20 CH4 Endpoint 2 -> 0..120%
+21 CH5 Endpoint 1 -> 0..120%
+22 CH5 Endpoint 2 -> 0..120%
+23 CH6 Endpoint 1 -> 0..120%
+24 CH6 Endpoint 2 -> 0..120%
+------------------------------------------------------------------------------------------------------------------
+
+helicopter (24..44)
+------------------------------------------------------------------------------------------------------------------
+25 Throttle Curve EP0 NORMAL -> 0..100%
+26 Throttle Curve EP0 ID -> 0..100%
+27 Throttle Curve EP1 NORMAL -> 0..100%
+28 Throttle Curve EP1 ID -> 0..100%
+29 Throttle Curve EP2 NORMAL -> 0..100%
+30 Throttle Curve EP2 ID -> 0..100%
+31 Throttle Curve EP3 NORMAL -> 0..100%
+32 Throttle Curve EP3 ID -> 0..100%
+33 Throttle Curve EP4 NORMAL -> 0..100%
+34 Throttle Curve EP4 ID -> 0..100%
+------------------------------------------------------------------------------------------------------------------
+35 Pitch Curve EP0 NORMAL -> 0..100%
+36 Pitch Curve EP0 ID -> 0..100%
+37 Pitch Curve EP1 NORMAL -> 0..100%
+38 Pitch Curve EP1 ID -> 0..100%
+39 Pitch Curve EP2 NORMAL -> 0..100%
+40 Pitch Curve EP2 ID -> 0..100%
+41 Pitch Curve EP3 NORMAL -> 0..100%
+42 Pitch Curve EP3 ID -> 0..100%
+43 Pitch Curve EP4 NORMAL -> 0..100%
+44 Pitch Curve EP4 ID -> 0..100%
+------------------------------------------------------------------------------------------------------------------
+
+
+------------------------------------------------------------------------------------------------------------------
+45 CH1 SubTrim -> -120..+120 (two's complement format > 0x88 - 0x78 )
+46 CH2 SubTrim -> -120..+120 (two's complement format > 0x88 - 0x78 )
+47 CH3 SubTrim -> -120..+120 (two's complement format > 0x88 - 0x78 )
+48 CH4 SubTrim -> -120..+120 (two's complement format > 0x88 - 0x78 )
+49 CH5 SubTrim -> -120..+120 (two's complement format > 0x88 - 0x78 )
+50 CH6 SubTrim -> -120..+120 (two's complement format > 0x88 - 0x78 )
+------------------------------------------------------------------------------------------------------------------
+51 Mixer 1 source/destination -> low_nib=dest. high_nib=src. Value : 0..5=ch1..ch6 (6..7=VRA..VRB >source only)
+52 Mixer 1 Up Rate -> -100..+100 (two's complement format > 0x9c..0x64)
+53 Mixer 1 Down Rate -> -100..+100 (two's complement format > 0x9c..0x64)
+54 Mixer 1 switch -> 0=SWA 1=SWB 2=ON 3=OFF
+55 Mixer 2 source/destination -> low_nib=dest. high_nib=src. Value : 0..5=ch1..ch6 (6..7=VRA..VRB >source only)
+56 Mixer 2 Up Rate -> -100..+100 (two's complement format > 0x9c..0x64)
+57 Mixer 2 Down Rate -> -100..+100 (two's complement format > 0x9c..0x64)
+58 Mixer 2 switch -> 0=SWA 1=SWB 2=ON 3=OFF
+59 Mixer 3 source/destination -> low_nib=dest. high_nib=src. Value : 0..5=ch1..ch6 (6..7=VRA..VRB >source only)
+60 Mixer 3 Up Rate -> -100..+100 (two's complement format > 0x9c..0x64)
+61 Mixer 3 Down Rate -> -100..+100 (two's complement format > 0x9c..0x64)
+62 Mixer 3 switch -> 0=SWA 1=SWB 2=ON 3=OFF
+------------------------------------------------------------------------------------------------------------------
+63 Switch A function select -> 0=NULL 1=DualRate 2=throttlecutoff 3=NORMAL/ID
+64 Switch B function select -> 0=NULL 1=DualRate 2=throttlecutoff 3=NORMAL/ID
+------------------------------------------------------------------------------------------------------------------
+65 Variable A function select -> 0=NULL 1=pitajdust
+66 Variable B function select -> 0=NULL 1=pitajdust
+------------------------------------------------------------------------------------------------------------------
+67 Checksum High Byte -> sum(byte2..byte66) / 256
+68 Checksum Low Byte -> sum(byte2..byte66) mod 256
+------------------------------------------------------------------------------------------------------------------
+***************/

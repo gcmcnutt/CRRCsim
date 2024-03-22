@@ -1,0 +1,131 @@
+Autopilot
+
+
+CRRCSim works out of the box with the Crossbow MNAV autopilot. The required
+changes to the autopilot have not yet made it into the main autopilot source
+tree, but a precompiled Windows prerelease version (Autopilot-CRRCSim) is
+available on the Crossbow MNAV autopilot Sourceforge site at
+http://sourceforge.net/project/showfiles.php?group_id=146680.     
+
+Full autopilot functionality is currently only supported on Windows because
+the Crossbow MNAV autopilot's ground station is only available for Windows
+(although all other components of the system are cross-platform). The ground
+station runs with various degrees of success with different versions of
+Wine, but a better long-term solution is to port the Crossbow MNAV ground
+station to a cross-platform windowing toolkit.         
+
+
+Basic Usage
+
+   1. Download and unzip Autopilot-CRRCSim from the the Crossbow MNAV
+      autopilot Sourceforge site at
+      http://sourceforge.net/project/showfiles.php?group_id=146680.     
+   2. Right-click on the GrounddStaion <sic> shortcut in the
+      Autopilot-CRRCSim root directory, and fix "Target" and "Start in" to reflect
+      the directory into which you unzipped Autopilot-CRRCSim.   
+   3. Plug in joystick (The USB InterLink Controller by Futaba is convenient
+      because it is much like a normal RC controller). 
+   4. Run GrounddStaion using the shortcut in the Autopilot-CRRCSim root directory.
+   5. Double-click on "Load Map" and choose "CRRC - Davis Field".
+   6. Choose GUI->3D Display.
+   7. In the CRRCSim window that comes up, hit ESC, then choose
+      Options->Controls. Choose input method to be Joystick, press Configure...,
+      choose what channel corresponds to Aileron, Elevator, and Throttle (Rudder
+      is not used), and click Calibrate to calibrate the joystick. Once you exit
+      out of the controls windows, hit ESC again to remove the menu bar at the top
+      and unpause the display.     
+   8. Back in the ground station, choose Autopilot->Start Local Autopilot.
+      The autopilot will come up in a terminal window. 
+   9. Maximize the throttle control on your joystick.
+  10. Back in the ground station, choose Simulator->Start Simulator. The
+      simulator will come up in a terminal window. 
+  11. Looking at the ground station and 3D display, fly airplane to a decent
+      altitude (you shouldn't have to actually touch the controls if the throttle
+      is maximized because it will go up on its own).   
+  12. With the focus on the 3D display, hit F1 and then 1 to engage the
+      autopilot (at any time, F1 and then 2 will disengage it and return to flying
+      the airplane manually).   
+  13. Back in the ground station, double-click on locations on the map in
+      the ground station to choose waypoints, and then double-click "Upload Waypoints". 
+  14. "Clear Waypoints", choose waypoints, "Upload Waypoints" as desired. 
+
+
+Using a Different Input Device
+
+The basic usage instructions given above are not dependent on joystick
+usage. Any other CRRCSim-supported input device may be used instead; just
+select the input device of your choice in the 3D display's input device
+dialog.            
+
+
+Note About the Cygwin DLL
+
+The autopilot as compiled for Windows (avionics.exe) uses the Cygwin DLL. If
+you have Cygwin installed on your computer, use your existing Cygwin DLL
+instead of the one in the Autopilot-CRRCSim distribution (delete the one in
+the distribution and copy yours in its place, or just delete the one in the
+distribution if your Cygwin DLL is in your PATH), as it appears that
+programs using some different versions of the Cygwin DLL cannot run at the
+same time. This should not require you to recompile the autopilot, as the
+Cygwin DLL has not changed so as to break compatibility in a long time. 
+
+
+
+Advanced Usage
+
+The Autopilot-CRRCSim combination is designed to be capable of testing new
+autopilot control laws, etc, in both a hardware-in-the-loop configuration
+and a full-desktop-simulation configuration.          
+
+
+Communication Arrangement
+
+    * CRRCSim in simulator mode (no GUI) exchanges state data and servo
+      commands with autopilot. 
+    * CRRCSim in 3D display mode (no simulation) exchanges operator commands
+      and state data with ground station. 
+    * Ground station forwards operator commands from 3D display (converted
+      to servo format) to autopilot, and forwards state data from autopilot to 3D
+      display.     
+    * The upshot: You can fly any of the following using the same ground
+      station, 3D display, and joystick: real airplane with real autopilot
+      hardware, real autopilot hardware using state data from simulator, autopilot
+      and simulator on the same PC. You can also fly a real airplane (with real
+      autopilot hardware) using an RC transmitter and the same ground station and
+      3D display (using autopilot options differing by removing "-unav off" and
+      "-uplinkservo on").         
+
+
+Running the Autopilot on Separate Hardware
+
+    * Compile autopilot for hardware and OS as necessary (See TODDNOTES.TXT
+      in Autopilot-CRRCSim's modified MNAV autopilot source for details about
+      compiling the autopilot on a variety of platforms).    
+    * See MNAV.bat in the ground station directory, in particular the line
+      that begins with "avionics". You'll want to run the same command on your
+      other hardware, modifying the -ip and -simip parameters to be the IP
+      addresses of your ground station and simulator computers.        
+
+
+Running the Simulator on Separate Hardware
+
+    * Compile CRRCSim as necessary.
+          o In the current Autopilot-CRRCSim release, the CRRCSim source is
+            separated; copy the modified files into the CRRCSim source directory before
+            compiling.  
+          o When compiling CRRCSim on Windows (using Dev-C++), compile it as
+            "Win32 Console" to make it so that you can quit CRRCSim in no-gui simulator
+            mode (otherwise it runs in the background).       
+    * See crrcsim-sim.bat in the ground station directory, in particular the
+      line that begins with "crrcsim". You'll want to run the same command on your
+      other hardware, modifying the inputMethod.mnav.device in crrcsim-sim.xml as
+      described in mnav.txt.         
+
+
+Using a Different Autopilot
+
+The interfaces used for CRRCSim to communicate with the Crossbow MNAV
+autopilot are very general; see mnav.txt for more details. 
+
+
+Todd R. Templeton, 1/30/2007

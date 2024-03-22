@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+<CRRCSim_airplane version="2">
+  <name>
+    <en>Outrage</en>
+  </name>
+  <categories>
+    <category>Gliders</category>
+    <category>F3J</category>
+  </categories>
+  <description>
+    <en>
+This plane has been automatically converted from outrage.air. 
+Please update this text if you know more about it.
+    </en>
+  </description>
+  <changelog>
+    <change>
+      <date>Unknown</date>
+      <author>CRRCSim 0.9.5</author>
+      <en>Automatically converted from .air file.</en>
+    </change>
+    <change>
+      <date>Please write date.</date>
+      <author>Please write your name and email.</author>
+      <en>Please write down what you changed.</en>
+    </change>
+    <change>
+      <date>2009-02-25</date>
+      <author>Jens W. Wulf</author>
+      <en>Added launch default</en>
+    </change>
+    <change>
+      <date>2010-05-14</date>
+      <author>J. Reucker</author>
+      <en>Added max_force to springs</en>
+    </change>
+  </changelog>
+  <aero version="1" units="0">
+    <ref chord="0.59" span="9.83333" area="5.90278" speed="19.685" />
+    <misc Alpha_0="0.0174533" eta_loc="0.15" CG_arm="0.5" span_eff="0.95" />
+    <m Cm_0="-0.00311741" Cm_a="-1.34578" Cm_q="-23.4844" Cm_de="-1.17825" />
+    <lift CL_0="0.398299" CL_max="1.1" CL_min="-0.6" CL_a="5.88706" CL_q="9.54584"
+       CL_de="0.25791" CL_drop="0.5" CL_CD0="0" />
+    <drag CD_prof="0.017" Uexp_CD="-0.5" CD_stall="0" CD_CLsq="0.01" CD_AIsq="0"
+       CD_ELsq="0" />
+    <Y CY_b="-0.22415" CY_p="-0.07555" CY_r="0.148107" CY_dr="0.1403" CY_da="0.01568" />
+    <l Cl_b="-0.0676447" Cl_p="-0.697272" Cl_r="0.105437" Cl_dr="0.0145291"
+       Cl_da="0.170637" />
+    <n Cn_b="0.0589554" Cn_p="-0.0479304" Cn_r="-0.03887" Cn_dr="-0.0410879"
+       Cn_da="0.00192351" />
+  </aero>
+  <config version="1">
+    <descr_long>
+      <en>Automatically converted from outrage.air.</en>
+    </descr_long>
+    <descr_short>
+      <en>default</en>
+    </descr_short>
+    <mass_inertia version="1" units="0" Mass="0.114271" I_xx="0.3788"
+       I_yy="0.0893666" I_zz="0.444015" I_xz="0.000636856" />
+    <sound version="1">
+      <sample filename="" type="0" pitchfactor="0" maxvolume="1" />
+    </sound>
+  </config>
+  <graphics version="1" model="outrage.ac">
+    <descr_long>
+      <en>Automatically converted from outrage.air.</en>
+    </descr_long>
+    <descr_short>
+      <en>default</en>
+    </descr_short>
+  </graphics>
+  <wheels version="1" units="0">
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.266" y="5.0830002" z="-0.19" />
+      <spring constant="60" damping="0.2" max_force="15.0" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.67580003" y="5.0830002" z="-0.19" />
+      <spring constant="60" damping="0.2" max_force="15.0" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.266" y="-5.0830002" z="-0.19" />
+      <spring constant="60" damping="0.2" max_force="15.0" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.67580003" y="-5.0830002" z="-0.19" />
+      <spring constant="60" damping="0.2" max_force="15.0" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="1" y="0" z="0.1" />
+      <spring constant="60" damping="0.2" max_force="15.0" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-3.1659999" y="1.02" z="-0.85699999" />
+      <spring constant="60" damping="0.2" max_force="15.0" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-3.1659999" y="-1.02" z="-0.85699999" />
+      <spring constant="60" damping="0.2" max_force="15.0" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="0" y="0" z="0.1" />
+      <spring constant="60" damping="0.2" max_force="15.0" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-3.1659999" y="0" z="0.1" />
+      <spring constant="60" damping="0.2" max_force="15.0" />
+    </wheel>
+  </wheels>
+  <launch>
+    <preset name_en="glider default (hand)" altitude="6" velocity_rel="1" angle="0" sal="0" rel_to_player="1" rel_front="0" rel_right="2" />
+  </launch>  
+</CRRCSim_airplane>

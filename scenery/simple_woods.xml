@@ -1,0 +1,153 @@
+<?xml version="1.0"?>
+
+<crrcsimSceneryFile version="3">
+  
+  <!-- Some general information -->
+  <name>Simple woods scenery</name>
+  <categories>
+    <category>Field</category>
+  </categories>
+  <description>
+    <en>
+A demonstration for the new modelled scenery engine.
+Derived from "Simple scenery", adding a small woods to 
+create an "urban slope" environment for DLG models.
+    </en>
+  </description>
+  <changelog>
+    <change>
+      <date>2015-12-28</date>
+      <author>Luca G.</author>
+      <en>Created.</en>
+    </change>
+    <change>
+      <date>2016-03-28</date>
+      <author>Luca G.</author>
+      <en>Objects in scenery cast shadows</en>
+    </change>
+  </changelog>
+  
+  <!-- Player position. You may specify multiple <position>s. -->
+  <views>
+    <position name="default" north="0" east="350" height="6" />
+  </views>
+  
+  <!-- Starting position for the model. -->
+  <start>
+    <position name="runway" north="200" east="-100" height="0" />
+    <position name="field" north="0" east="0" height="0" />
+    <position name="woods" north="0" east="350" height="0" />
+    <position name="table" north="8" east="-63" height="2.5" />
+    <position name="border table" north="6" east="-63" height="2.5" />
+    <position name="front table" north="8" east="-58" height="0" />
+  </start>
+  
+  <!-- Default settings -->
+  <default>
+    <wind velocity="8" direction="45" />
+  </default>
+  
+  <!-- Preview -->
+  <preview filename="textures/simple_woods_preview.jpg" />
+
+  <!-- A sky box. -->
+  <sky type="box" size="10">
+    <descr_short >
+       <en>Little cloudy (Box) </en>
+    </descr_short>
+    <textures>
+      <north filename="textures/skybox_n.rgb" />
+      <south filename="textures/skybox_s.rgb" />
+      <west  filename="textures/skybox_w.rgb" />
+      <east  filename="textures/skybox_e.rgb" />
+      <up    filename="textures/skybox_u.rgb" />
+      <down  filename="" />
+    </textures>
+    <sun fUse_lensFlare="1">
+      <position azimuth="210" elevation="25" />
+    </sun>    
+    <haze density="0.3">
+      <color r="0.85" g="0.90" b="0.95" />
+    </haze>    
+  </sky>
+  <!-- A sky dome, original style, textured -->
+  <sky type="original" texture="textures/clouds.rgb" radius="8000" >
+    <descr_short >
+       <en>Dome, textured</en>
+    </descr_short>
+    <sun>
+      <position azimuth="180" elevation="55" />
+    </sun>    
+    <haze density="0.3">
+      <color r="0.9" g="0.9" b="0.9" />
+    </haze>    
+  </sky>
+  <!-- A sky dome, original style, untextured -->
+  <sky type="original" radius="8000" >
+    <descr_short >
+       <en>Dome, untextured</en>
+    </descr_short>
+    <sun fUse_lensFlare="1">
+      <position azimuth="180" elevation="55" />
+    </sun>    
+    <haze density="0.3">
+      <color r="0.9" g="0.9" b="0.9" />
+    </haze>    
+  </sky>
+
+  <!-- Scenery graphics. -->
+  <scene type="model-based">
+    <!-- You *must* specify absolute north, east and height coordinates. 
+         The object's orientation is specified in heading/pitch/roll format. 
+         To save (texture) memory, you can specify multiple instances
+         of one object. The corresponding 3D model and all associated
+         textures will only be loaded once and drawn at multiple
+         locations.
+      -->
+    <object filename="small.ac" terrain="1">
+      <instance north="0" east="0" height="0" h="180" />
+    </object>
+    <object filename="hut.ac" terrain="1" shadow="1">
+      <instance above_ground="1" north="-45.0" east="-180" height="0" h="180" />
+    </object>
+    <object filename="outhouse.ac" terrain="1" shadow="1">
+      <!-- Yes, we have three of them! Just in case... ;) -->
+      <instance above_ground="1" north="34.0" east="-160" height="0" />
+      <instance above_ground="1" north="27.0" east="-160" height="0" />
+      <instance above_ground="1" north="20.0" east="-160" height="0" />
+    </object>
+    <object filename="freqboard.ac" terrain="1" shadow="1">
+      <instance above_ground="1" north="0.0" east="-160" height="0" h="90" p="0" r="0" />
+    </object>
+    <object filename="table.ac" terrain="1" shadow="1">
+      <instance above_ground="1" north="8" east="-63" height="0" />
+    </object>
+    <!-- A small woods: distribute population before defining collision box -->
+    <!-- A small woods: hi-res front line -->
+    <object filename="populus_nigra_H.ac" terrain="0" translucent="0" cutout="1">
+      <population 
+        above_ground="1"
+        north="-450" east="500" height="0"
+        n1="51" d1_north="900" d1_east="0" d1_noise="3" 
+        n2="1" d2_north="0" d2_east="0" d2_noise="3"  
+        s_noise="0.03" sx_noise="0.03" sz_noise="0.03"
+      />
+    </object>
+    <!-- A small woods: lo-res rear lines -->
+    <object filename="populus_nigra_L.ac" terrain="0" translucent="0" cutout="1">
+      <population 
+        above_ground="1"
+        north="-450" east="530" height="0"
+        n1="51" d1_north="900" d1_east="0" d1_noise="3" 
+        n2="6" d2_north="0" d2_east="150" d2_noise="3"  
+        s_noise="0.03" sx_noise="0.03" sz_noise="0.03"
+      />
+    </object>
+    <!-- A small woods: collision box and ground shadow -->
+    <object filename="woods_terrain.ac">
+      <instance above_ground="1" north="0" east="0" height="0" h="180" />
+    </object>
+  </scene>
+  
+</crrcsimSceneryFile>
+

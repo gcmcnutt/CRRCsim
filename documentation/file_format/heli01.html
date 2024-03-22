@@ -1,0 +1,199 @@
+<html>
+  <head>
+    <style type="text/css">
+    .fragment {
+       font-family: monospace
+}
+PRE.fragment {
+	border: 1px solid #CCCCCC;
+	background-color: #f5f5f5;
+	margin-top: 4px;
+	margin-bottom: 4px;
+	margin-left: 2px;
+	margin-right: 8px;
+	padding-left: 6px;
+	padding-right: 6px;
+	padding-top: 4px;
+	padding-bottom: 4px;
+}
+    </style>
+  </head>
+  
+  <body>
+
+  <h1>Helicopter parameters in xml, helicopter model version 1</h1>
+
+  <p>
+  Also see <a href="airplane02.html">airplane model, version 2</a>.
+  </p>
+
+  <h2>0 About this document</h2>
+  
+    <p>
+      This document should not provide examples. Please take a look at the files 
+      you got when downloading/installing CRRCSim.
+      <tt>heli.xml</tt> should provide an example for every parameter which
+      can be defined.         
+    </p>
+    <p>
+      You need to know basics about xml files: they are structured text. Whitespace and line breaks do not
+      matter in most places. Just take a look at the examples and you will understand.
+    </p>
+    <p>
+      The files can be edited using a text editor. There are lots of them. Use something like notepad, vi,
+      emacs, joe...
+    </p>
+    
+    <h3>0.1 Changes</h3>
+      
+      <table border="1">
+        <tr><td>16.09.2008</td><td>J. W. Wulf</td>
+          <td>
+            First version.
+          </td>
+        </tr>
+        <tr><td>02.10.2008</td><td>J. W. Wulf</td>
+          <td>
+            Explained new parameters.
+          </td>
+        </tr>
+      </table>
+    
+  
+  <h2>1 General information</h2>
+
+    <p>
+      The file format and its structure is very similar to the one used for
+      fixed wing airplanes, see <a href="index.html">its description</a>.
+      Because of this, not every part of the file will be explained in this
+      document. To understand it, you need to read 'General information' and
+      'Units' of the former document at least.
+    </p>
+
+    <h3>1.1 Axis mapping</h3>
+      throttle controls climb<br>
+      rudder   controls yaw<br>
+      aileron  controls roll<br>
+      elevator controls pitch<br>
+
+  <h2>2 Ground effect: section <tt>GroundEffect</tt></h2>
+  
+    <p>
+      <tt>GroundEffect.dist.mul</tt> is a value bigger than zero which tells
+      how much stronger disturbances are near ground.
+    </p>
+  
+  <h2>3 Center of gravity: section <tt>CG</tt></h2>
+      <p>
+        Position of center of gravity in body axes with regard to coordinates used by 
+        <tt>wheels</tt> and the 3D graphics file.<br>
+        Unit is feet (<tt>units="0"</tt>) or meters (<tt>units="1"</tt>).
+        x positive forward, y positive right, z positive down. Example:
+        <div class="fragment"><pre class="fragment">
+          &lt;CG units="0" x="-0.2234252" y="0" z="-0.043131893" /&gt;
+        </pre></div>
+      </p>
+      <p>
+        This section and values do not have to exist, it is optional. 
+        However, it gives you the following advantage:
+        There is no need to create the 3D model (and the points in the <tt>wheels</tt> section)
+        around the center of gravity. You can use any reference 
+        point and give the position of the CG using your coordinates in this section.
+      </p>
+      <p>
+        This also makes it possible to change the location of the CG without changing the 3D model and 
+        <tt>wheels</tt>.
+      </p>
+      <p>
+        You can visually check the position of the CG using test mode, as the airplane rotates
+        around the center of gravity (given that throttle=0).
+      </p>
+
+  <h2>4 Configuration: section <tt>config</tt></h2>
+
+    There can be more than one configuration for an helicopter, so there may be several
+    <tt>config</tt> sections. Because of this, each <tt>config</tt> needs a description.
+    See <a href="index.html">airplane file format</a>.
+
+    <h3>4.1 Subsection <tt>mass_inertia</tt></h3>
+      <p>
+        This is the same as described <a href="index.html">here</a>.
+      </p>
+
+    <h3>4.2 Subsection <tt>aero</tt></h3>
+      <p>
+        Set <tt>aero.coaxial="1"</tt> if the helicopter is of coaxial type.
+        In this case some parameters are automatically set to
+        zero and the main rotor does not create a yaw moment.
+      </p>
+      <p>
+        There are subsections <tt>yaw</tt>, <tt>roll</tt> and <tt>pitch</tt>,
+        which are similar.<br>
+        Every one of those subsections has an attribute <tt>ctrl</tt>,
+        which states rotational velocity around that axis at full stick
+        input in radians/s (so 2*3.1416 means one revolution per second).<br>
+        There is an attribute called <tt>damp</tt> which dampens rotation around
+        that axis -- generally higher values make the heli easier to fly.
+        Damping of <tt>roll</tt> and <tt>pitch</tt> axis is fixed, but
+        <tt>yaw</tt> axis is different: damping is <tt>yaw.damp</tt> with
+        zero stick input and decreases to
+        <tt>yaw.damp * yaw.damp_min_rel</tt> at full stick input.<br>
+        The attribute <tt>dist</tt> describes disturbances around that axis;
+        bigger values meaning more disturbance.
+      </p>
+      <p>
+        If you describe a helicopter with a 'heading hold' or 'heading lock'
+        gyro, add an attribute <tt>yaw.HeadingHold</tt> with a value greater
+        than zero, which describes the gain of the heading hold controller.
+      </p>
+      <p>
+        The whole <tt>pitch</tt> subsection can be omitted; values will be
+        taken from the <tt>roll</tt> subsection in this case.
+      </p>
+      <p>
+        <tt>yaw.off</tt>: yaw offset for non-coaxial helicopters without
+        heading hold.<br>
+        <tt>yaw.cp_to_yaw</tt>: mixes collective pitch/throttle to yaw<br>
+        <tt>yaw.moment_mul</tt>: set it to zero to not simulate main rotor
+        torque, set it to one to simulate it realistically, or set it to
+        anything in between.
+      </p>
+      <p>
+        <tt>roll.ForwardToRoll</tt>: when flying forward/sidewards/any
+        direction, there is a
+        90°-coupling caused by the difference in lift of the rotor. It is
+        automatically set to zero for coaxial type.
+      </p>
+      <p>
+        <tt>cp.ctrl</tt>: control throw for collective pitch type.<br>
+        <tt>cp.off</tt>: pitch offset for collective pitch type, throttle
+        offset for fixed pitch type.<br>
+        <tt>cp.auto_off</tt>: Is assumed to be <tt>1</tt> if not defined. If
+        it is equal to one, cp.off will automatically be set so that the
+        heli will lift from ground as your command more pitch or throttle
+        than neutral stick. So you only need to set <tt>cp.off</tt> in case
+        you don't like this automatic setting.<br>
+      </p>
+      <p>
+        <tt>power.automagic.F</tt> (in case of fixed type) is similar to
+        pitch control throw in case of collective pitch type.
+      </p>
+      <p>
+        <tt>speed.damp</tt>: higher values make the model easier to fly
+      </p>
+      <p>
+        <tt>yaw.vane</tt> and <tt>pitch.vane</tt> are set to bigger than
+        zero to simulate the weather vane effect caused by horizontal and
+        vertical stabilizers at the tail.
+      </p>
+
+    <h3>4.3 Power system: section <tt>power</tt></h3>
+      <p>
+        Only the main rotor is modelled.
+        This section only differs from the airplane-style power section by the
+        optional attribute <tt>fixed_pitch</tt> which is defined to "1" if 
+        this helicopter is a fixed pitch (in contrast to collective pitch) type.
+      </p>
+
+  </body>
+</html>

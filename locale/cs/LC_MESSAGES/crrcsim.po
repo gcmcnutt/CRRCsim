@@ -1,0 +1,939 @@
+# Czech translation of CRRCSim
+# This file can be distributed under the same license as the CRRCSim package.
+# Martin Proks <martin.proks@gmail.com>
+#
+#
+# Some technical notes:
+#
+# There is one 'iracional' translation of a text 'iso8859-15' into a text 'iso8859-2'.
+# This is not I/O message, it keep information what appropriate national font
+# crrcsim should use for this catalogue. Crrcsim does not support UTF-8 font,
+# crrcsim supports just iso (8-bit single-byte) fonts...
+#
+#
+# I have problem with translation of some spetific terms like: SAL, Zoom, LapTime, RunTime, ...
+# There is no short and good equivalent in the czech language. I decide to left
+# the original EN terms.
+#
+#
+# The .po catalogue is human readable and editable file format. It is necessary to
+# convert it into a computer format by msgfmt tool. I.E.:
+#
+# msgfmt -c -o crrcsim.mo crrcsim.po
+#
+# see also: gettext, msgfmt, msginit, xgettext, bindtextdomain(), textdomain()
+#
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: crrcsim\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2012-06-11 17:04+0100\n"
+"PO-Revision-Date: 2012-06-15 14:21+0100\n"
+"Last-Translator: JLienard <joel.lienard@laposte.net>\n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: cs\n"
+"X-Poedit-Basepath: ../../../src\n"
+"X-Poedit-SearchPath-0: .\n"
+
+#: SimStateHandler.cpp:146
+msgid "Resuming."
+msgstr "Spuštěno."
+
+#: SimStateHandler.cpp:169
+msgid ""
+"Simulation paused.\n"
+"Press <p> again to resume."
+msgstr ""
+"Simulace zastavena.\n"
+"Stiskni <p> pro spuštění."
+
+#: SimStateHandler.cpp:207
+msgid "Simulation reset."
+msgstr "Simulace restartována."
+
+#: SimStateHandler.cpp:235
+msgid "Plane crashed."
+msgstr "Letoun havaroval."
+
+#: crrc_keyboard.cpp:115
+msgid "Training mode is ON, thermals are visible."
+msgstr "Režim trénování termiky ZAPNUT, termika zobrazena."
+
+#: crrc_keyboard.cpp:120
+msgid "Training mode is OFF."
+msgstr "Režim trénování termiky VYPNUT."
+
+#: crrc_keyboard.cpp:249
+msgid "Reloading parameters"
+msgstr "Znovunahrávání parametrů"
+
+#: crrc_keyboard.cpp:253
+msgid "Reloading parameters: error"
+msgstr "Znovunahrávání parametrů: chyba"
+
+#: crrc_main.cpp:319
+msgid "Failed to initialize selected input method.\n"
+msgstr "Při iniciaci ovladače modelu došlo k chybě.\n"
+
+#: crrc_main.cpp:322
+msgid "Reverting to mouse input."
+msgstr "Přepínám na ovládání modelu myší."
+
+#: crrc_main.cpp:636
+msgid "iso8859-15"
+msgstr "iso8859-2"
+
+#: mouse_kbd.cpp:205
+msgid "No Joysticks found\n"
+msgstr "Joystik nebyl nalezen.\n"
+
+#: mouse_kbd.cpp:242
+msgid "nothing"
+msgstr "nic"
+
+#: mouse_kbd.cpp:243
+msgid "Aileron"
+msgstr "Křidélka"
+
+#: mouse_kbd.cpp:244
+msgid "Elevator"
+msgstr "Výškovka"
+
+#: mouse_kbd.cpp:245
+msgid "Rudder"
+msgstr "Směrovka"
+
+#: mouse_kbd.cpp:246
+msgid "Throttle"
+msgstr "Plyn"
+
+#: mouse_kbd.cpp:247
+msgid "Flap"
+msgstr "Klapky"
+
+#: mouse_kbd.cpp:248
+msgid "Spoiler"
+msgstr "Spoiler"
+
+#: mouse_kbd.cpp:249
+msgid "Retract"
+msgstr "Zasunout (podvozek)"
+
+#: mouse_kbd.cpp:250
+msgid "Pitch"
+msgstr "Naklopení"
+
+#: mouse_kbd.cpp:275
+#: mouse_kbd.cpp:325
+msgid "Keyboard"
+msgstr "Klávesnice"
+
+#: mouse_kbd.cpp:276
+#: mouse_kbd.cpp:326
+msgid "Mouse"
+msgstr "Myš"
+
+#: mouse_kbd.cpp:277
+msgid "Joystick"
+msgstr "Joystik"
+
+#: mouse_kbd.cpp:278
+msgid "RCTran"
+msgstr "RCTran"
+
+#: mouse_kbd.cpp:279
+msgid "Audio"
+msgstr "Zvuk"
+
+#: mouse_kbd.cpp:280
+msgid "Parallel"
+msgstr "Paralelní"
+
+#: mouse_kbd.cpp:305
+msgid "Nothing"
+msgstr "Nic"
+
+#: mouse_kbd.cpp:306
+msgid "Resume"
+msgstr "Spuštěno"
+
+#: mouse_kbd.cpp:307
+msgid "Pause"
+msgstr "Pausa"
+
+#: mouse_kbd.cpp:308
+msgid "Reset"
+msgstr "Reset"
+
+#: mouse_kbd.cpp:309
+msgid "Inc Throttle"
+msgstr "Přidat plyn"
+
+#: mouse_kbd.cpp:310
+msgid "Dec Throttle"
+msgstr "Ubrat plyn"
+
+#: mouse_kbd.cpp:311
+msgid "Zoom In"
+msgstr "Zoom Menší (šíře pohledu)"
+
+#: mouse_kbd.cpp:312
+msgid "Zoom Out"
+msgstr "Zoom Větší (šíře pohledu)"
+
+#: mouse_kbd.cpp:340
+msgid "Mixer"
+msgstr "Mixér"
+
+#: mod_video/airplane_vis.cpp:325
+msgid "Loaded model "
+msgstr "Použitý model "
+
+#: mod_video/crrc_graphics.cpp:1316
+msgid "CRRCsim successfully started!"
+msgstr "CRRCsim spuštěn!"
+
+#: mod_video/crrc_graphics.cpp:1317
+msgid "Press <ESC> to show the setup menu."
+msgstr "Pro zobrazení lišty menu zmáčkni <ESC>."
+
+#: mod_mode/F3F/handlerF3F.cpp:251
+msgid "- Lap  RunTime  TurnTime  LostMeters -"
+msgstr "- Lap  RunTime  TurnTime  LostMeters -"
+
+#: mod_mode/F3F/handlerF3F.cpp:258
+msgid "Run started: "
+msgstr "Kolo odstartováno: "
+
+#: mod_mode/F3F/handlerF3F.cpp:278
+msgid "Run finished: "
+msgstr "Kolo ukončeno: "
+
+#: GUI/crrc_scaleinput.cpp:86
+msgid "Name of new preset"
+msgstr "Název nastavení"
+
+#: GUI/crrc_scaleinput.cpp:90
+msgid "Save as new preset"
+msgstr "Ulož nastavení"
+
+#: GUI/crrc_scaleinput.cpp:100
+msgid "Hit tab or return after editing a value. Also see documentation/options.txt"
+msgstr "Po změně hodnoty stiskněte TAB nebo ENTER. Více: dokumentation/options.txt"
+
+#: GUI/crrc_scaleinput.cpp:161
+#: GUI/crrc_scaleinput.cpp:322
+msgid "Enable"
+msgstr "Zapne"
+
+#: GUI/crrc_scaleinput.cpp:162
+msgid "Source"
+msgstr "Zdroj"
+
+#: GUI/crrc_scaleinput.cpp:163
+msgid "Mixing rate"
+msgstr "Poměr mixů"
+
+#: GUI/crrc_scaleinput.cpp:164
+msgid "Destination"
+msgstr "Cíl"
+
+#: GUI/crrc_scaleinput.cpp:222
+msgid "-Travel"
+msgstr "-Dráha"
+
+#: GUI/crrc_scaleinput.cpp:233
+msgid "+Travel"
+msgstr "+Dráha"
+
+#: GUI/crrc_scaleinput.cpp:287
+msgid "Trim/Offset"
+msgstr "Trim/nula"
+
+#: GUI/crrc_scaleinput.cpp:288
+msgid "Normal rate"
+msgstr "Normální výchylky"
+
+#: GUI/crrc_scaleinput.cpp:289
+msgid "Slow rate"
+msgstr "Pomalý rozsah"
+
+#: GUI/crrc_scaleinput.cpp:290
+msgid "Exp"
+msgstr "Exp"
+
+#: GUI/crrc_scaleinput.cpp:342
+msgid "Load Preset"
+msgstr "Nahraj nastavení"
+
+#: GUI/crrc_gui_viewwind.cpp:72
+msgid "Mode 1 (geom based)"
+msgstr "Mod 1 (základem geometrie)"
+
+#: GUI/crrc_gui_viewwind.cpp:73
+msgid "Mode 2 (CFD based)"
+msgstr "Mod 2 (základem CFD)"
+
+#: GUI/crrc_gui_viewwind.cpp:77
+msgid "In-plane velocity"
+msgstr "Rychlost v ose letounu"
+
+#: GUI/crrc_gui_viewwind.cpp:78
+msgid "Vertical velocity"
+msgstr "Vertikální rychlost"
+
+#: GUI/crrc_gui_viewwind.cpp:102
+msgid "Vert. offset"
+msgstr "Vert. odsazení"
+
+#: GUI/crrc_gui_viewwind.cpp:117
+msgid "Horiz. offset"
+msgstr "Horiz. odsazení"
+
+#: GUI/crrc_gui_viewwind.cpp:132
+msgid "Zoom width"
+msgstr "Pohled - šířka"
+
+#: GUI/crrc_gui_viewwind.cpp:147
+msgid "Position (left<->right)"
+msgstr "Poloha (levá<->pravá)"
+
+#: GUI/crrc_gui_viewwind.cpp:162
+msgid "Direction (degrees)"
+msgstr "Směr (stupně)"
+
+#: GUI/crrc_gui_viewwind.cpp:178
+msgid "Color mode"
+msgstr "Barevný režim"
+
+#: GUI/crrc_gui_viewwind.cpp:191
+msgid "Wind mode"
+msgstr "Režim větru"
+
+#: GUI/crrc_gui_main.cpp:120
+msgid "Exit"
+msgstr "Konec"
+
+#: GUI/crrc_gui_main.cpp:120
+msgid "Save this Flight's Log as.."
+msgstr "Uložit záznam tohoto letu jako..."
+
+#: GUI/crrc_gui_main.cpp:120
+msgid "Save Settings"
+msgstr "Uložit nastavení"
+
+#: GUI/crrc_gui_main.cpp:124
+msgid "Inspect Wind"
+msgstr "Kontrola větru"
+
+#: GUI/crrc_gui_main.cpp:125
+msgid "Reset Zoom"
+msgstr "Zoom resetovat (šíře pohledu)"
+
+#: GUI/crrc_gui_main.cpp:125
+msgid "Zoom -"
+msgstr "Zoom - (šíře pohledu)"
+
+#: GUI/crrc_gui_main.cpp:126
+msgid "Zoom +"
+msgstr "Zoom + (šíře pohledu)"
+
+#: GUI/crrc_gui_main.cpp:126
+msgid "Toggle Verbosity"
+msgstr "Zobrazení pomocných dat"
+
+#: GUI/crrc_gui_main.cpp:127
+msgid "Toggle HUD Compass"
+msgstr "Přepnout HUD kompas"
+
+#: GUI/crrc_gui_main.cpp:128
+msgid "Toggle Test Mode"
+msgstr "Režim kontroly ovládání"
+
+#: GUI/crrc_gui_main.cpp:129
+msgid "Toggle Training Mode"
+msgstr "Režim tréningu termiky"
+
+#: GUI/crrc_gui_main.cpp:130
+msgid "Toggle Fullscreen"
+msgstr "Celo-Obrazový režim"
+
+#: GUI/crrc_gui_main.cpp:141
+msgid "Restart"
+msgstr "Restart"
+
+#: GUI/crrc_gui_main.cpp:146
+msgid "Controls"
+msgstr "Ovládání"
+
+#: GUI/crrc_gui_main.cpp:147
+msgid "Video"
+msgstr "Obraz"
+
+#: GUI/crrc_gui_main.cpp:147
+msgid "Wind, Thermals"
+msgstr "Vítr, Termika"
+
+#: GUI/crrc_gui_main.cpp:148
+msgid "Launch"
+msgstr "Start modelu"
+
+#: GUI/crrc_gui_main.cpp:148
+msgid "Location"
+msgstr "Krajina / letiště"
+
+#: GUI/crrc_gui_main.cpp:149
+msgid "Airplane"
+msgstr "Model"
+
+#: GUI/crrc_gui_main.cpp:161
+msgid "About"
+msgstr "O programu"
+
+#: GUI/crrc_gui_main.cpp:161
+msgid "Keys"
+msgstr "Klávesy"
+
+#: GUI/crrc_gui_main.cpp:161
+#: GUI/crrc_gui_main.cpp:176
+msgid "Help"
+msgstr "Nápověda"
+
+#: GUI/crrc_gui_main.cpp:165
+msgid "Remove all Robots"
+msgstr "Smazat všechny záznamy"
+
+#: GUI/crrc_gui_main.cpp:165
+msgid "Load Robot"
+msgstr "Nahrát záznam"
+
+#: GUI/crrc_gui_main.cpp:170
+msgid "File"
+msgstr "Soubor"
+
+#: GUI/crrc_gui_main.cpp:171
+msgid "View"
+msgstr "Pohled"
+
+#: GUI/crrc_gui_main.cpp:172
+msgid "Simulation"
+msgstr "Simulace"
+
+#: GUI/crrc_gui_main.cpp:173
+msgid "Options"
+msgstr "Možnosti"
+
+#: GUI/crrc_gui_main.cpp:174
+msgid "Game"
+msgstr "Hra"
+
+#: GUI/crrc_gui_main.cpp:175
+msgid "Robots"
+msgstr "Záznamy"
+
+#: GUI/crrc_gui_main.cpp:269
+msgid "Press <ESC> to hide menu and resume simulation."
+msgstr "<ESC> - skrýt menu a spustit simulaci"
+
+#: GUI/crrc_gui_main.cpp:650
+msgid "Configuration has changed, save?"
+msgstr "Konfigurace byla změněna, uložit?"
+
+#: GUI/crrc_gui_main.cpp:653
+msgid "Yes"
+msgstr "Ano"
+
+#: GUI/crrc_gui_main.cpp:654
+msgid "No"
+msgstr "Ne"
+
+#: GUI/crrc_gui_main.cpp:744
+msgid ""
+"See http://crrcsim.sourceforge.net/ for more information.\n"
+"\n"
+"With your copy of CRRCSim you also received documentation\n"
+"in a subdirectory named \"documentation\". Take a look at \"index.html\"."
+msgstr ""
+"Navštivte http://crrcsim.sourceforge.net/ pro dalsi informace.\n"
+"\n"
+"S Vaší kopií CRRCSim jste take obdrželi dokumentaci\n"
+"v podadresáři nazvaném \"documentation\". Věnujte prosím pozornost souboru \"index.html\"."
+
+#: GUI/crrc_gui_main.cpp:751
+msgid "Key mapping:\n"
+msgstr "Nastavení kláves:\n"
+
+#: GUI/crrc_gui_main.cpp:753
+msgid "show/hide menu\n"
+msgstr "zobraz/skryj menu\n"
+
+#: GUI/crrc_gui_main.cpp:754
+msgid "quit\n"
+msgstr "odejít\n"
+
+#: GUI/crrc_gui_main.cpp:755
+msgid "restarts after crash\n"
+msgstr "restarty po havárii\n"
+
+#: GUI/crrc_gui_main.cpp:756
+msgid "pause/resume simulation\n"
+msgstr "pauza/obnovení simulace\n"
+
+#: GUI/crrc_gui_main.cpp:757
+msgid "reload model configuration\n"
+msgstr "znovunahrát nastavení modelu\n"
+
+#: GUI/crrc_gui_main.cpp:758
+msgid "toggle control input debugging mode\n"
+msgstr "přepne vstupní ovládání do/z ladicího režimu\n"
+
+#: GUI/crrc_gui_main.cpp:759
+msgid "toggle training mode which displays the location of the thermals\n"
+msgstr "přepnutí trénovacího režimu se zobrazením polohy stoupáků\n"
+
+#: GUI/crrc_gui_main.cpp:760
+msgid "toggle verbosity level (0..3) to display control inputs/FOV/FPS\n"
+msgstr "přepnutí úrovně hlášek (0..3) pro zobrazení kontrolního vstupu/FOV/FPS\n"
+
+#: GUI/crrc_gui_main.cpp:761
+msgid "toggle HUD compass visualisation mode\n"
+msgstr "přepnutí zobrazovacího režimu HUD kompasu\n"
+
+#: GUI/crrc_gui_main.cpp:762
+msgid "toggle landing gear (if function is not mapped to a controller)\n"
+msgstr "zasunutí/vysunutí podvozku (pokud není namapováno na \"vysílači\")\n"
+
+#: GUI/crrc_gui_main.cpp:763
+msgid "toggle spoiler/airbrake (if function is not mapped to a controller)\n"
+msgstr "zasunutí/vysunutí spoileru/vzd.brzd (pokud není namapováno na \"vysílači\")\n"
+
+#: GUI/crrc_gui_main.cpp:764
+msgid "increase throttle (if you aren't using JOYSTICK or better)\n"
+msgstr "přidat \"plyn\" (pokud nepoužíváte JOYSTIK nebo vysílač)\n"
+
+#: GUI/crrc_gui_main.cpp:765
+msgid "decrease throttle (if you aren't using JOYSTICK or better)\n"
+msgstr "ubrat \"plyn\" (pokud nepoužíváte JOYSTIK nebo vysílač)\n"
+
+#: GUI/crrc_gui_main.cpp:766
+msgid "left/right arrow "
+msgstr "v levo/v pravo šipka "
+
+#: GUI/crrc_gui_main.cpp:766
+msgid "rudder\n"
+msgstr "směrovka\n"
+
+#: GUI/crrc_gui_main.cpp:767
+msgid "up/down arrow    "
+msgstr "na horu/dolů šipka "
+
+#: GUI/crrc_gui_main.cpp:767
+msgid "elevator\n"
+msgstr "výškovka\n"
+
+#: GUI/crrc_gui_main.cpp:768
+msgid "zoom in (assuming zoom.control is KEYBOARD)\n"
+msgstr "zúži pohled (předpoklad ovládání šíře pohledu je KLÁVESNICE)\n"
+
+#: GUI/crrc_gui_main.cpp:769
+msgid "zoom out (assuming zoom.control is KEYBOARD)\n"
+msgstr "rozšiř pohled (předpoklad ovládání šíře pohledu je KLÁVESNICE)\n"
+
+#: GUI/crrc_gui_main.cpp:804
+msgid "Please save your configuration and restart CRRCSim!"
+msgstr "Uložte prosím konfiguraci CRRCSimu a restartujte jej!"
+
+#: GUI/crrc_joy.cpp:59
+msgid "Hit a button, then choose a function and bind..."
+msgstr "Stiskni tlačítko, pak zvol funkci pro přiřazení..."
+
+#: GUI/crrc_joy.cpp:68
+msgid "Press some button!"
+msgstr "Stiskni jakékoli tlačítko!"
+
+#: GUI/crrc_joy.cpp:73
+msgid "Bind Button"
+msgstr "Přiřaď funkci"
+
+#: GUI/crrc_joy.cpp:131
+msgid "Please press button first!"
+msgstr "Prosím nejdříve stiskni tlačítko!"
+
+#: GUI/crrc_joy.cpp:145
+msgid "Button "
+msgstr "Tlačítko "
+
+#: GUI/crrc_f3f.cpp:147
+msgid "Sounds file directory"
+msgstr "Adresář se soubory zvuku"
+
+#: GUI/crrc_f3f.cpp:160
+msgid "Extend bases to the top"
+msgstr "Rozsirene baze na horu"
+
+#: GUI/crrc_f3f.cpp:170
+msgid "Start on the left"
+msgstr "Start v levo"
+
+#: GUI/crrc_f3f.cpp:180
+msgid "Security_line position [ft]"
+msgstr "Poloha bezpečnostní čáry [ft]"
+
+#: GUI/crrc_f3f.cpp:193
+msgid "Distance between bases [ft]"
+msgstr "Vzdálenost mezi bázemi [ft]"
+
+#: GUI/crrc_f3f.cpp:206
+msgid "Orientation [degrees]"
+msgstr "Orientace [stupně]"
+
+#: GUI/crrc_f3f.cpp:219
+msgid "Center position Nord [ft]"
+msgstr "Střední poloha Sever [ft]"
+
+#: GUI/crrc_f3f.cpp:232
+msgid "Center position East [ft]"
+msgstr "Střední poloha Východ [ft]"
+
+#: GUI/crrc_f3f.cpp:262
+msgid "Enable F3F mode"
+msgstr "F3F režim Povolen"
+
+#: GUI/crrc_windthermal.cpp:95
+msgid "Velocity [ft/s]"
+msgstr "Rychlost [ft/s]"
+
+#: GUI/crrc_windthermal.cpp:106
+msgid "Direction"
+msgstr "Směr"
+
+#: GUI/crrc_windthermal.cpp:142
+msgid "Strength mean [ft/s]"
+msgstr "Síla stoupáků [ft/s]"
+
+#: GUI/crrc_windthermal.cpp:153
+msgid "Strength sigma"
+msgstr "Variace v síle stoupáků"
+
+#: GUI/crrc_windthermal.cpp:164
+msgid "Radius mean [ft]"
+msgstr "Poloměr stoupáků [ft]"
+
+#: GUI/crrc_windthermal.cpp:175
+msgid "Radius sigma"
+msgstr "Variace poloměrů"
+
+#: GUI/crrc_windthermal.cpp:186
+msgid "Lifetime mean [seconds]"
+msgstr "Výdrž stoupáků [vteřiny]"
+
+#: GUI/crrc_windthermal.cpp:197
+msgid "Lifetime sigma"
+msgstr "Variace výdrže"
+
+#: GUI/crrc_windthermal.cpp:208
+msgid "Density [1/sq foot]"
+msgstr "Hustota/četnost [1/čtvereční stopa]"
+
+#: GUI/crrc_calibmap.cpp:131
+msgid "Inv"
+msgstr "Inv"
+
+#: GUI/crrc_calibmap.cpp:155
+msgid "Radio type"
+msgstr "Typ vysílače"
+
+#: GUI/crrc_calibmap.cpp:202
+#: GUI/crrc_calibmap.cpp:392
+msgid "Calibrate"
+msgstr "Kalibrovat"
+
+#: GUI/crrc_calibmap.cpp:398
+msgid "Next"
+msgstr "Další"
+
+#: GUI/crrc_calibmap.cpp:399
+msgid "Move controls to all extents!"
+msgstr ""
+"Pohněte všemi pákami\n"
+"do mezních poloh!"
+
+#: GUI/crrc_calibmap.cpp:404
+msgid "Finish"
+msgstr "Hotovo"
+
+#: GUI/crrc_calibmap.cpp:405
+msgid "Now center all controls!"
+msgstr "Všechny páky do středu!"
+
+#: GUI/crrc_dialog.cpp:109
+msgid "OK"
+msgstr "ANO"
+
+#: GUI/crrc_dialog.cpp:120
+msgid "Cancel"
+msgstr "Odchod"
+
+#: GUI/crrc_audio.cpp:52
+msgid "Off"
+msgstr "Vypnuto"
+
+#: GUI/crrc_audio.cpp:52
+msgid "On"
+msgstr "Zapnuto"
+
+#: GUI/crrc_audio.cpp:52
+msgid "Always on"
+msgstr "Vždy zapnuto"
+
+#: GUI/crrc_audio.cpp:66
+msgid "Sample Rate"
+msgstr "Frekvenční rozsah"
+
+#: GUI/crrc_audio.cpp:90
+msgid "Engine sound"
+msgstr "Zvuk motoru"
+
+#: GUI/crrc_audio.cpp:100
+msgid "Variometer volume"
+msgstr "Hlasitost vária"
+
+#: GUI/crrc_audio.cpp:113
+msgid "Model volume"
+msgstr "Hlasitost modelu"
+
+#: GUI/crrc_setrecordname.cpp:64
+msgid ""
+"Both filename and description become effective when the flight log is finally closed (on flight reset, change of airplane/location, exit).\n"
+"Without a name, the log will not be saved!\n"
+"Your best F3F runs are named (and therefore saved) automatically.\n"
+"Replay flight logs using 'Robots | Load Robot'."
+msgstr ""
+"Jméno souboru a popis záznamu letu se zapíší až když je letový záznam uzavřen (při resetu letu, změně letounu/krajiny, ukončení programu).\n"
+"Bez jména souboru se záznam neuloží!\n"
+"Vaše nejlepší F3F kola jsou pojmenována (a tedy i uložena) automaticky.\n"
+"Přehrátí záznamu je možné pomocí menu 'Záznamy | Nahrát záznam'."
+
+#: GUI/crrc_setrecordname.cpp:75
+msgid "Filename:"
+msgstr "Jméno souboru se záznamem letu:"
+
+#: GUI/crrc_setrecordname.cpp:87
+msgid "Description:"
+msgstr "Popis záznamu letu:"
+
+#: GUI/crrc_loadrobot.cpp:71
+msgid "Load as demo, replacing user input"
+msgstr "Nahrát jako záznam, vypnout ovládání"
+
+#: GUI/crrc_loadrobot.cpp:81
+msgid ""
+"In case you check the box above, this robot will replace your manually controlled airplane.\n"
+"Load an airplane to regain manual control."
+msgstr ""
+"V případě že zaškrtnete čtvereček výse, tento záznam převezme ovládání vašeho modelu.\n"
+"Znovu nahrajte model pro převzetí ručního ovládání."
+
+#: GUI/crrc_loadrobot.cpp:93
+msgid "Select file:"
+msgstr "Vyberte soubor:"
+
+#: GUI/crrc_loadrobot.cpp:107
+msgid "This is a short description of the selected record."
+msgstr "Toto je krátký popis zvoleného záznamu."
+
+#: GUI/crrc_ctrldev.cpp:69
+msgid "Input Method"
+msgstr "Ovládání Modelu"
+
+#: GUI/crrc_ctrldev.cpp:89
+msgid "Device"
+msgstr "Zařízení"
+
+#: GUI/crrc_ctrldev.cpp:102
+msgid "Baudrate / Sync"
+msgstr "Datový tok/Synchronizace"
+
+#: GUI/crrc_planesel.cpp:116
+msgid "Load launch default"
+msgstr "Nahrát výchozí odhoz"
+
+#: GUI/crrc_planesel.cpp:128
+msgid "Select graphics:"
+msgstr "Zvolte grafiku:"
+
+#: GUI/crrc_planesel.cpp:141
+msgid "Select config:"
+msgstr "Zvolte nastavení:"
+
+#: GUI/crrc_planesel.cpp:150
+msgid "Select airplane:"
+msgstr "Zvolte model:"
+
+#: GUI/crrc_planesel.cpp:159
+msgid "Preview:"
+msgstr "Náhled:"
+
+#: GUI/crrc_planesel.cpp:170
+msgid "Select category:"
+msgstr "Zvolte kategorii:"
+
+#: GUI/crrc_planesel.cpp:580
+msgid "File: "
+msgstr "Soubor: "
+
+#: GUI/crrc_mousebutton.cpp:54
+msgid "Left"
+msgstr "Levé"
+
+#: GUI/crrc_mousebutton.cpp:63
+msgid "Middle"
+msgstr "Střední"
+
+#: GUI/crrc_mousebutton.cpp:72
+msgid "Right"
+msgstr "Pravé"
+
+#: GUI/crrc_mousebutton.cpp:81
+msgid "Wheel up"
+msgstr "Kolečko nahoru"
+
+#: GUI/crrc_mousebutton.cpp:90
+msgid "Wheel down"
+msgstr "Kolečko dolů"
+
+#: GUI/crrc_video.cpp:86
+msgid "Resolution"
+msgstr "Rozlišení"
+
+#: GUI/crrc_video.cpp:97
+msgid "Fullscreen"
+msgstr "Celá obrazovka"
+
+#: GUI/crrc_video.cpp:113
+msgid "Autozoom"
+msgstr "Autozoom (Šíře pohledu)"
+
+#: GUI/crrc_video.cpp:129
+msgid "FPS limit"
+msgstr "FPS limit (snímků za vteřinu)"
+
+#: GUI/crrc_video.cpp:144
+msgid "Skybox fix"
+msgstr "Skybox fix"
+
+#: GUI/crrc_video.cpp:157
+msgid "Sloppy camera"
+msgstr "\"Lína\" kamera"
+
+#: GUI/crrc_ctrlgen.cpp:109
+msgid "Configure..."
+msgstr "Nastavení..."
+
+#: GUI/crrc_ctrlgen.cpp:118
+msgid "Mixer..."
+msgstr "Mixér..."
+
+#: GUI/crrc_ctrlgen.cpp:127
+msgid "Buttons..."
+msgstr "Tlačítka..."
+
+#: GUI/crrc_ctrlgen.cpp:136
+msgid "Input Method..."
+msgstr "Ovládání modelu..."
+
+#: GUI/crrc_ctrlgen.cpp:149
+msgid "Zoom Control"
+msgstr "Šíře pohledu"
+
+#: GUI/crrc_ctrlgen.cpp:180
+msgid "Input Method: "
+msgstr "Ovládání Modelu: "
+
+#: GUI/crrc_launch.cpp:136
+msgid "Launch from start"
+msgstr "Start dle krajiny/letiště"
+
+#: GUI/crrc_launch.cpp:147
+msgid "Relative right position"
+msgstr "Relativní poloha v pravo"
+
+#: GUI/crrc_launch.cpp:160
+msgid "Relative front position"
+msgstr "Relativní poloha v předu"
+
+#: GUI/crrc_launch.cpp:173
+msgid "Launch from player"
+msgstr "Start u hráče"
+
+#: GUI/crrc_launch.cpp:185
+msgid "Vertical angle [rad]"
+msgstr "Vertikální úhel [rad]"
+
+#: GUI/crrc_launch.cpp:198
+msgid "Simulate SAL"
+msgstr "Simulace SAL"
+
+#: GUI/crrc_launch.cpp:206
+msgid "Relative velocity"
+msgstr "Relativní rychlost"
+
+#: GUI/crrc_launch.cpp:224
+msgid "Altitude [ft]"
+msgstr "Výška [ft]"
+
+#: GUI/crrc_location.cpp:171
+msgid "Select location:"
+msgstr "Vyberte krajinu/letiště:"
+
+#: GUI/crrc_location.cpp:190
+msgid "Select sky or resolution:"
+msgstr "Vyberte oblohu/rozlišení:"
+
+#: GUI/crrc_location.cpp:293
+msgid "No description available."
+msgstr "Žádný popis není k dispozici."
+
+#: mod_landscape/crrc_scenery.cpp:63
+msgid "Scenery loading..."
+msgstr "Nahrávání krajiny..."
+
+#: mod_mode/F3F/handlerF3F.h:216
+msgid "- Lap: %d -- Lap time: %d.%d s -"
+msgstr "- Lap: %d -- Lap time: %d.%d s -"
+
+#: mod_mode/F3F/handlerF3F.h:217
+msgid "- Time: %d.%d s - Penalties: %d - Lost: %d m - Turns: %d.%d s"
+msgstr "- Čas: %d.%d s - Trestné: %d - Ztráta: %d m - Otoček: %d.%d s"
+
+#: mod_mode/F3F/handlerF3F.h:218
+msgid "- Penalty: %d -"
+msgstr "- Trestné: %d -"
+
+#: mod_mode/F3F/handlerF3F.h:219
+msgid "- Lost: %d m -"
+msgstr "- Ztráta: %d m -"
+
+#: mod_mode/F3F/handlerF3F.h:220
+msgid "- Turn: %d.%d s -"
+msgstr "- Otočka: %d.%d s -"
+
+#: mod_mode/F3F/handlerF3F.h:222
+msgid "- Time: %d.%d s -"
+msgstr "- Čas: %d.%d s -"
+
+#: mod_mode/F3F/handlerF3F.h:226
+msgid ">>> Start on the left pylon, still %d.%d s <<<"
+msgstr ">>> Start na levém pylonu, zbývá %d.%d s <<<"
+
+#: mod_mode/F3F/handlerF3F.h:228
+msgid ">>> Start on the right pylon, still %d.%d s <<<"
+msgstr ">>> Start na pravém pylonu, zbývá %d.%d s <<<"
+
+#~ msgid "Dual-rate enable"
+#~ msgstr "Dvojité výchylky povolit"
+

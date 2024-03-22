@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+<CRRCSim_airplane version="3">
+  <name>
+    <en>K2</en>
+  </name>
+  <categories>
+    <category>Gliders</category>
+    <category>F3J</category>
+    <category>F3F</category>
+  </categories>
+  <description>
+    <en>
+FVK K2
+http://www.fvk.de/K2.html
+High-performance F3J glider
+      
+This file now contains three configurations which previously 
+have been separate files.
+    </en>
+  </description>
+  <changelog>
+    <change>
+      <date>Unknown</date>
+      <author>CRRCSim 0.9.5</author>
+      <en>Automatically converted from .air file.</en>
+    </change>
+    <change>
+      <date>Please write date.</date>
+      <author>Please write your name and email.</author>
+      <en>Please write down what you changed.</en>
+    </change>
+    <change>
+      <date>2009-02-25</date>
+      <author>Jens W. Wulf</author>
+      <en>Added launch default</en>
+    </change>
+    <change>
+      <date>2010-05-14</date>
+      <author>J. Reucker</author>
+      <en>Added max_force to springs</en>
+    </change>
+    <change>
+      <date>2011-08-11</date>
+      <author>Jens W. Wulf</author>
+      <en>Merged with k2-f3f and k2-f3f2 (file format extension needed) and added sound
+          to the basic k2</en>
+    </change>
+    <change>
+      <date>2012-01-26</date>
+      <author>L. Gasparini</author>
+      <en>Increased |CL_min| for F3F 2 version from -0.15 to -0.5</en>
+    </change>
+  </changelog>
+  <aero version="1" units="0">
+    <ref chord="0.666667" span="10.4167" area="6.94444" speed="19.685" />
+    <misc Alpha_0="0.0174533" eta_loc="0.3" CG_arm="0.5" span_eff="0.95" />
+    <m Cm_0="-0.00527352" Cm_a="-1.03352" Cm_q="-16.7705" Cm_de="-0.99337" />
+    <lift CL_0="0.36457" CL_max="1.1" CL_min="-0.6" CL_a="5.74825" CL_q="8.56521"
+       CL_de="0.23891" CL_drop="0" CL_CD0="0" />
+    <drag CD_prof="0.022" Uexp_CD="-0.5" CD_stall="0.05" CD_CLsq="0.01" CD_AIsq="0"
+       CD_ELsq="0" />
+    <Y CY_b="-0.17718" CY_p="-0.18546" CY_r="0.120094" CY_dr="0.13265"
+       CY_da="0.07707" />
+    <l Cl_b="-0.124373" Cl_p="-0.630555" Cl_r="0.0935016" Cl_dr="0.0133121"
+       Cl_da="0.240002" />
+    <n Cn_b="0.0321649" Cn_p="-0.0439536" Cn_r="-0.0250904" Cn_dr="-0.0381016"
+       Cn_da="-0.000436442" />
+  </aero>
+  <config version="1">
+    <descr_long>
+      <en>Automatically converted from k2.air.</en>
+    </descr_long>
+    <descr_short>
+      <en>default</en>
+    </descr_short>
+    <mass_inertia version="1" units="0" Mass="0.163156" I_xx="0.553428"
+       I_yy="0.139447" I_zz="0.688787" I_xz="0.00919712" />
+    <sound version="1">
+      <sample filename="glider.wav" type="2" pitchfactor="1" maxvolume="1.0" />
+    </sound>
+  </config>
+  
+  <config version="1">
+    <descr_long>
+      <en>Automatically converted from k2-f3f.air.</en>
+    </descr_long>
+    <descr_short>
+      <en>K2 F3F, ballasted Version of K2</en>
+    </descr_short>
+    <mass_inertia version="1" units="0" Mass="0.42" I_xx="0.553428" I_yy="0.139447"
+       I_zz="0.688787" I_xz="0.00919712" />
+    <sound version="1">
+      <sample filename="glider.wav" type="2" pitchfactor="1" maxvolume="1.0" />
+    </sound>
+    <aero version="1" units="0">
+      <ref chord="0.666667" span="10.4167" area="6.94444" speed="19.685" />
+      <misc Alpha_0="0.0174533" eta_loc="0.3" CG_arm="0.5" span_eff="0.95" />
+      <m Cm_0="-0.00527352" Cm_a="-1.03352" Cm_q="-16.7705" Cm_de="-1.5" />
+      <lift CL_0="0.36457" CL_max="0.9" CL_min="-0.6" CL_a="5.74825" CL_q="8.56521"
+         CL_de="0.23891" CL_drop="0" CL_CD0="0.05" />
+      <drag CD_prof="0.022" Uexp_CD="-0.5" CD_stall="0" CD_CLsq="0.01" CD_AIsq="0.02"
+         CD_ELsq="0.01" />
+      <Y CY_b="-0.17718" CY_p="-0.18546" CY_r="0.120094" CY_dr="0.16" CY_da="0.115605" />
+      <l Cl_b="-0.124373" Cl_p="-0.630555" Cl_r="0.0935016" Cl_dr="0.03"
+         Cl_da="0.360003" />
+      <n Cn_b="0.0321649" Cn_p="-0.0439536" Cn_r="-0.0250904" Cn_dr="-0.03"
+         Cn_da="-0.000654663" />
+    </aero>
+  </config>
+  
+  <config version="1">
+    <descr_long>
+      <en>Automatically converted from k2-f3f2.air.</en>
+    </descr_long>
+    <descr_short>
+      <en>K2 F3F 2</en>
+    </descr_short>
+    <mass_inertia version="1" units="0" Mass="0.185" I_xx="0.553428" I_yy="0.139447"
+       I_zz="0.688787" I_xz="0.00919712" />
+    <sound version="1">
+      <sample filename="glider.wav" type="2" pitchfactor="1" maxvolume="1.0" />
+    </sound>
+    <aero version="1" units="0">
+      <ref chord="0.666667" span="10.4167" area="6.94444" speed="19.685" />
+      <misc Alpha_0="-0.035" eta_loc="0.4" CG_arm="0.5" span_eff="0.95" />
+      <m Cm_0="-0.06" Cm_a="-4" Cm_q="-16.7705" Cm_de="-0.99337" />
+      <lift CL_0="0.25" CL_max="0.9" CL_min="-0.5" CL_a="5.74825" CL_q="8.56521"
+         CL_de="0.23891" CL_drop="0.2" CL_CD0="0" />
+      <drag CD_prof="0.022" Uexp_CD="-0.5" CD_stall="0.5" CD_CLsq="0.01" CD_AIsq="0.01"
+         CD_ELsq="0" />
+      <Y CY_b="-0.17718" CY_p="-0.18546" CY_r="0.120094" CY_dr="0.13265"
+         CY_da="0.115605" />
+      <l Cl_b="-0.124373" Cl_p="-0.630555" Cl_r="0.0935016" Cl_dr="0.0133121"
+         Cl_da="0.360003" />
+      <n Cn_b="0.0321649" Cn_p="-0.0439536" Cn_r="-0.0250904" Cn_dr="-0.0381016"
+         Cn_da="-0.000654663" />
+    </aero>
+  </config>
+  
+  <graphics version="1" model="k2.ac">
+    <descr_long>
+      <en>Automatically converted from k2.air.</en>
+    </descr_long>
+    <descr_short>
+      <en>default</en>
+    </descr_short>
+  </graphics>
+  <wheels version="1" units="0">
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.3714" y="5.1666002" z="-0.45249999" />
+      <spring constant="60" damping="0.2" max_force="28.0" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.57969999" y="5.1666002" z="-0.45249999" />
+      <spring constant="60" damping="0.2" max_force="28.0" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.3714" y="-5.1666002" z="-0.45249999" />
+      <spring constant="60" damping="0.2" max_force="28.0" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.57969999" y="-5.1666002" z="-0.45249999" />
+      <spring constant="60" damping="0.2" max_force="28.0" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="0.2744" y="2" z="-0.1041" />
+      <spring constant="60" damping="0.2" max_force="28.0" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="0.2744" y="-2" z="-0.1041" />
+      <spring constant="60" damping="0.2" max_force="28.0" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="1.0829999" y="0" z="0.125" />
+      <spring constant="60" damping="0.2" max_force="28.0" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-3.5" y="0.75" z="-0.87300003" />
+      <spring constant="60" damping="0.2" max_force="28.0" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-3.5" y="-0.75" z="-0.87300003" />
+      <spring constant="60" damping="0.2" max_force="28.0" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="0.29519999" y="0" z="0.20829999" />
+      <spring constant="60" damping="0.2" max_force="28.0" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-0.49630001" y="0" z="0.19329999" />
+      <spring constant="60" damping="0.2" max_force="28.0" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="0.57969999" y="0" z="0.1875" />
+      <spring constant="60" damping="0.2" max_force="28.0" />
+    </wheel>
+    <wheel percent_brake="1" caster_angle_rad="0">
+      <pos x="-3.5" y="0" z="0.15317" />
+      <spring constant="60" damping="0.2" max_force="28.0" />
+    </wheel>
+  </wheels>
+  <launch>
+    <preset name_en="glider default (hand)" altitude="6" velocity_rel="1" angle="0" sal="0" rel_to_player="1" rel_front="0" rel_right="2" />
+  </launch>  
+</CRRCSim_airplane>
