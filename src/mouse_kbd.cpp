@@ -265,6 +265,7 @@ TInputDev::TInputDev()//constructor
     lInputMethodStrings[T_TX_Interface::eIM_rctran2]  = "RCTran2";
     lInputMethodStrings[T_TX_Interface::eIM_serpic]   = "FMSPIC";
     lInputMethodStrings[T_TX_Interface::eIM_mnav]     = "MNAV";
+    lInputMethodStrings[T_TX_Interface::eIM_autoc]    = "AUTOC";
     lInputMethodStrings[T_TX_Interface::eIM_zhenhua]  = "ZhenHua";
     lInputMethodStrings[T_TX_Interface::eIM_CT6A]     = "CT6A";
     int size;
@@ -282,6 +283,7 @@ TInputDev::TInputDev()//constructor
     lInputMethodStrings[T_TX_Interface::eIM_rctran2]  = "RCTran2";
     lInputMethodStrings[T_TX_Interface::eIM_serpic]   = "FMSPIC";
     lInputMethodStrings[T_TX_Interface::eIM_mnav]     = "MNAV";
+    lInputMethodStrings[T_TX_Interface::eIM_autoc]    = "AUTOC";
     lInputMethodStrings[T_TX_Interface::eIM_zhenhua]  = "ZhenHua";
     lInputMethodStrings[T_TX_Interface::eIM_CT6A]     = "CT6A";
     int size;     

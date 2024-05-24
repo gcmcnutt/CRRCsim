@@ -252,6 +252,7 @@ AC_CONFIG_FILES([Makefile
                  documentation/howto_create_models/Makefile
                  documentation/input_method/Makefile
                  documentation/input_method/MNAV/Makefile
+                 documentation/input_method/AUTOC/Makefile
                  documentation/input_method/PARALLEL_1_to_3/Makefile
                  documentation/input_method/SERIAL2/Makefile
                  documentation/input_method/RCTRAN/Makefile

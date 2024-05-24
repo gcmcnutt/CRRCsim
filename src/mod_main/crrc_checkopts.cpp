@@ -63,7 +63,7 @@ static void crrc_usage(char *progname)
   fprintf(stderr,  "         -d <value>     : wind direction in deg (0-360)\n");
   fprintf(stderr,  "         -f             : use fullscreen\n");
   fprintf(stderr,  "         -g <string>    : specify config file\n");
-  fprintf(stderr,  "         -i <string>    : input method : KEYBOARD|MOUSE|JOYSTICK|RCTRAN|SERIAL2|PARALLEL|AUDIO|MNAV|ZHENHUA\n");
+  fprintf(stderr,  "         -i <string>    : input method : KEYBOARD|MOUSE|JOYSTICK|RCTRAN|SERIAL2|PARALLEL|AUDIO|MNAV|AUTOC|ZHENHUA\n");
   fprintf(stderr,  "         -m <string>    : mouse x motion : AILERON|RUDDER\n");
   fprintf(stderr,  "         -s <on/off>    : sound on/off\n");
   fprintf(stderr,  "         -u <on/off>    : user interface on/off\n");

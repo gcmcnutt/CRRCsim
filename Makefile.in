@@ -161,6 +161,7 @@ am_crrcsim_OBJECTS = crrcsim-handlerF3A.$(OBJEXT) \
 	crrcsim-robot.$(OBJEXT) crrcsim-robotfile.$(OBJEXT) \
 	crrcsim-inputdev_audio.$(OBJEXT) \
 	crrcsim-inputdev_mnav.$(OBJEXT) crrcsim-mnav.$(OBJEXT) \
+	crrcsim-inputdev_autoc.$(OBJEXT) crrcsim-autoc.$(OBJEXT) \
 	crrcsim-inputdev_parallel.$(OBJEXT) \
 	crrcsim-inputdev_PPM.$(OBJEXT) \
 	crrcsim-inputdev_rctran.$(OBJEXT) \
@@ -238,7 +239,8 @@ am__depfiles_remade = ./$(DEPDIR)/crrcsim-CTime.Po \
 	./$(DEPDIR)/crrcsim-aircraft.Po \
 	./$(DEPDIR)/crrcsim-airplane_vis.Po \
 	./$(DEPDIR)/crrcsim-airtoxml.Po \
-	./$(DEPDIR)/crrcsim-atmos_62.Po ./$(DEPDIR)/crrcsim-battery.Po \
+	./$(DEPDIR)/crrcsim-atmos_62.Po ./$(DEPDIR)/crrcsim-autoc.Po \
+	./$(DEPDIR)/crrcsim-battery.Po \
 	./$(DEPDIR)/crrcsim-bufferedchardevice.Po \
 	./$(DEPDIR)/crrcsim-chardevicebase.Po \
 	./$(DEPDIR)/crrcsim-chardevicec.Po \
@@ -313,6 +315,7 @@ am__depfiles_remade = ./$(DEPDIR)/crrcsim-CTime.Po \
 	./$(DEPDIR)/crrcsim-inputdev.Po \
 	./$(DEPDIR)/crrcsim-inputdev_PPM.Po \
 	./$(DEPDIR)/crrcsim-inputdev_audio.Po \
+	./$(DEPDIR)/crrcsim-inputdev_autoc.Po \
 	./$(DEPDIR)/crrcsim-inputdev_ct6a.Po \
 	./$(DEPDIR)/crrcsim-inputdev_mnav.Po \
 	./$(DEPDIR)/crrcsim-inputdev_parallel.Po \
@@ -433,7 +436,7 @@ am__define_uniq_tagged_files = \
   done | $(am__uniquify_input)`
 DIST_SUBDIRS = $(SUBDIRS)
 am__DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/crrc_config.h.in \
-	AUTHORS COPYING INSTALL NEWS README compile config.guess \
+	AUTHORS COPYING INSTALL NEWS README.md compile config.guess \
 	config.sub depcomp install-sh missing
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 distdir = $(PACKAGE)-$(VERSION)
@@ -763,6 +766,10 @@ crrcsim_SOURCES = \
        src/mod_inputdev/inputdev_mnav/mnav.h \
        src/mod_inputdev/inputdev_mnav/inputdev_mnav.cpp \
        src/mod_inputdev/inputdev_mnav/mnav.cpp \
+       src/mod_inputdev/inputdev_autoc/inputdev_autoc.h \
+       src/mod_inputdev/inputdev_autoc/autoc.h \
+       src/mod_inputdev/inputdev_autoc/inputdev_autoc.cpp \
+       src/mod_inputdev/inputdev_autoc/autoc.cpp \
        src/mod_inputdev/inputdev_parallel/inputdev_parallel.h \
        src/mod_inputdev/inputdev_parallel/inputdev_parallel.cpp \
        src/mod_inputdev/inputdev_PPM/inputdev_PPM.h \
@@ -1065,6 +1072,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crrcsim-airplane_vis.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crrcsim-airtoxml.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crrcsim-atmos_62.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crrcsim-autoc.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crrcsim-battery.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crrcsim-bufferedchardevice.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crrcsim-chardevicebase.Po@am__quote@ # am--include-marker
@@ -1144,6 +1152,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crrcsim-inputdev.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crrcsim-inputdev_PPM.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crrcsim-inputdev_audio.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crrcsim-inputdev_autoc.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crrcsim-inputdev_ct6a.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crrcsim-inputdev_mnav.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crrcsim-inputdev_parallel.Po@am__quote@ # am--include-marker
@@ -2296,6 +2305,34 @@ crrcsim-mnav.obj: src/mod_inputdev/inputdev_mnav/mnav.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/mod_inputdev/inputdev_mnav/mnav.cpp' object='crrcsim-mnav.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(crrcsim_CXXFLAGS) $(CXXFLAGS) -c -o crrcsim-mnav.obj `if test -f 'src/mod_inputdev/inputdev_mnav/mnav.cpp'; then $(CYGPATH_W) 'src/mod_inputdev/inputdev_mnav/mnav.cpp'; else $(CYGPATH_W) '$(srcdir)/src/mod_inputdev/inputdev_mnav/mnav.cpp'; fi`
+
+crrcsim-inputdev_autoc.o: src/mod_inputdev/inputdev_autoc/inputdev_autoc.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(crrcsim_CXXFLAGS) $(CXXFLAGS) -MT crrcsim-inputdev_autoc.o -MD -MP -MF $(DEPDIR)/crrcsim-inputdev_autoc.Tpo -c -o crrcsim-inputdev_autoc.o `test -f 'src/mod_inputdev/inputdev_autoc/inputdev_autoc.cpp' || echo '$(srcdir)/'`src/mod_inputdev/inputdev_autoc/inputdev_autoc.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/crrcsim-inputdev_autoc.Tpo $(DEPDIR)/crrcsim-inputdev_autoc.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/mod_inputdev/inputdev_autoc/inputdev_autoc.cpp' object='crrcsim-inputdev_autoc.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(crrcsim_CXXFLAGS) $(CXXFLAGS) -c -o crrcsim-inputdev_autoc.o `test -f 'src/mod_inputdev/inputdev_autoc/inputdev_autoc.cpp' || echo '$(srcdir)/'`src/mod_inputdev/inputdev_autoc/inputdev_autoc.cpp
+
+crrcsim-inputdev_autoc.obj: src/mod_inputdev/inputdev_autoc/inputdev_autoc.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(crrcsim_CXXFLAGS) $(CXXFLAGS) -MT crrcsim-inputdev_autoc.obj -MD -MP -MF $(DEPDIR)/crrcsim-inputdev_autoc.Tpo -c -o crrcsim-inputdev_autoc.obj `if test -f 'src/mod_inputdev/inputdev_autoc/inputdev_autoc.cpp'; then $(CYGPATH_W) 'src/mod_inputdev/inputdev_autoc/inputdev_autoc.cpp'; else $(CYGPATH_W) '$(srcdir)/src/mod_inputdev/inputdev_autoc/inputdev_autoc.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/crrcsim-inputdev_autoc.Tpo $(DEPDIR)/crrcsim-inputdev_autoc.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/mod_inputdev/inputdev_autoc/inputdev_autoc.cpp' object='crrcsim-inputdev_autoc.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(crrcsim_CXXFLAGS) $(CXXFLAGS) -c -o crrcsim-inputdev_autoc.obj `if test -f 'src/mod_inputdev/inputdev_autoc/inputdev_autoc.cpp'; then $(CYGPATH_W) 'src/mod_inputdev/inputdev_autoc/inputdev_autoc.cpp'; else $(CYGPATH_W) '$(srcdir)/src/mod_inputdev/inputdev_autoc/inputdev_autoc.cpp'; fi`
+
+crrcsim-autoc.o: src/mod_inputdev/inputdev_autoc/autoc.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(crrcsim_CXXFLAGS) $(CXXFLAGS) -MT crrcsim-autoc.o -MD -MP -MF $(DEPDIR)/crrcsim-autoc.Tpo -c -o crrcsim-autoc.o `test -f 'src/mod_inputdev/inputdev_autoc/autoc.cpp' || echo '$(srcdir)/'`src/mod_inputdev/inputdev_autoc/autoc.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/crrcsim-autoc.Tpo $(DEPDIR)/crrcsim-autoc.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/mod_inputdev/inputdev_autoc/autoc.cpp' object='crrcsim-autoc.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(crrcsim_CXXFLAGS) $(CXXFLAGS) -c -o crrcsim-autoc.o `test -f 'src/mod_inputdev/inputdev_autoc/autoc.cpp' || echo '$(srcdir)/'`src/mod_inputdev/inputdev_autoc/autoc.cpp
+
+crrcsim-autoc.obj: src/mod_inputdev/inputdev_autoc/autoc.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(crrcsim_CXXFLAGS) $(CXXFLAGS) -MT crrcsim-autoc.obj -MD -MP -MF $(DEPDIR)/crrcsim-autoc.Tpo -c -o crrcsim-autoc.obj `if test -f 'src/mod_inputdev/inputdev_autoc/autoc.cpp'; then $(CYGPATH_W) 'src/mod_inputdev/inputdev_autoc/autoc.cpp'; else $(CYGPATH_W) '$(srcdir)/src/mod_inputdev/inputdev_autoc/autoc.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/crrcsim-autoc.Tpo $(DEPDIR)/crrcsim-autoc.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/mod_inputdev/inputdev_autoc/autoc.cpp' object='crrcsim-autoc.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(crrcsim_CXXFLAGS) $(CXXFLAGS) -c -o crrcsim-autoc.obj `if test -f 'src/mod_inputdev/inputdev_autoc/autoc.cpp'; then $(CYGPATH_W) 'src/mod_inputdev/inputdev_autoc/autoc.cpp'; else $(CYGPATH_W) '$(srcdir)/src/mod_inputdev/inputdev_autoc/autoc.cpp'; fi`
 
 crrcsim-inputdev_parallel.o: src/mod_inputdev/inputdev_parallel/inputdev_parallel.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(crrcsim_CXXFLAGS) $(CXXFLAGS) -MT crrcsim-inputdev_parallel.o -MD -MP -MF $(DEPDIR)/crrcsim-inputdev_parallel.Tpo -c -o crrcsim-inputdev_parallel.o `test -f 'src/mod_inputdev/inputdev_parallel/inputdev_parallel.cpp' || echo '$(srcdir)/'`src/mod_inputdev/inputdev_parallel/inputdev_parallel.cpp
@@ -3607,6 +3644,7 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/crrcsim-airplane_vis.Po
 	-rm -f ./$(DEPDIR)/crrcsim-airtoxml.Po
 	-rm -f ./$(DEPDIR)/crrcsim-atmos_62.Po
+	-rm -f ./$(DEPDIR)/crrcsim-autoc.Po
 	-rm -f ./$(DEPDIR)/crrcsim-battery.Po
 	-rm -f ./$(DEPDIR)/crrcsim-bufferedchardevice.Po
 	-rm -f ./$(DEPDIR)/crrcsim-chardevicebase.Po
@@ -3686,6 +3724,7 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/crrcsim-inputdev.Po
 	-rm -f ./$(DEPDIR)/crrcsim-inputdev_PPM.Po
 	-rm -f ./$(DEPDIR)/crrcsim-inputdev_audio.Po
+	-rm -f ./$(DEPDIR)/crrcsim-inputdev_autoc.Po
 	-rm -f ./$(DEPDIR)/crrcsim-inputdev_ct6a.Po
 	-rm -f ./$(DEPDIR)/crrcsim-inputdev_mnav.Po
 	-rm -f ./$(DEPDIR)/crrcsim-inputdev_parallel.Po
@@ -3799,6 +3838,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/crrcsim-airplane_vis.Po
 	-rm -f ./$(DEPDIR)/crrcsim-airtoxml.Po
 	-rm -f ./$(DEPDIR)/crrcsim-atmos_62.Po
+	-rm -f ./$(DEPDIR)/crrcsim-autoc.Po
 	-rm -f ./$(DEPDIR)/crrcsim-battery.Po
 	-rm -f ./$(DEPDIR)/crrcsim-bufferedchardevice.Po
 	-rm -f ./$(DEPDIR)/crrcsim-chardevicebase.Po
@@ -3878,6 +3918,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/crrcsim-inputdev.Po
 	-rm -f ./$(DEPDIR)/crrcsim-inputdev_PPM.Po
 	-rm -f ./$(DEPDIR)/crrcsim-inputdev_audio.Po
+	-rm -f ./$(DEPDIR)/crrcsim-inputdev_autoc.Po
 	-rm -f ./$(DEPDIR)/crrcsim-inputdev_ct6a.Po
 	-rm -f ./$(DEPDIR)/crrcsim-inputdev_mnav.Po
 	-rm -f ./$(DEPDIR)/crrcsim-inputdev_parallel.Po
