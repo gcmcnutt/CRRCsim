@@ -168,9 +168,7 @@ crrcsim_SOURCES = \
        src/mod_inputdev/inputdev_mnav/inputdev_mnav.cpp \
        src/mod_inputdev/inputdev_mnav/mnav.cpp \
        src/mod_inputdev/inputdev_autoc/inputdev_autoc.h \
-       src/mod_inputdev/inputdev_autoc/autoc.h \
        src/mod_inputdev/inputdev_autoc/inputdev_autoc.cpp \
-       src/mod_inputdev/inputdev_autoc/autoc.cpp \
        src/mod_inputdev/inputdev_parallel/inputdev_parallel.h \
        src/mod_inputdev/inputdev_parallel/inputdev_parallel.cpp \
        src/mod_inputdev/inputdev_PPM/inputdev_PPM.h \

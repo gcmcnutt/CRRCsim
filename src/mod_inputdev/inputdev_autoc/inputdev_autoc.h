@@ -24,7 +24,6 @@
 #ifndef TX_INTERFACE_AUTOC_H
 #define TX_INTERFACE_AUTOC_H
 
-#include "autoc.h"
 #include "../inputdev.h"
 #include "../../mod_misc/SimpleXMLTransfer.h"
 
@@ -56,10 +55,6 @@ class T_TX_InterfaceAUTOC : public T_TX_Interface
    void getInputData(TSimInputs* inputs);
    
   private:
-   AUTOC*              input;
-   uint16_t           cnt_cmd[3];
-   uint8_t            reverse;
-   
    std::string        device;
 };
 
