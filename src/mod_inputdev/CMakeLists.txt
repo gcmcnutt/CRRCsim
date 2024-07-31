@@ -6,7 +6,7 @@ set(MOD_INPUTDEV_SRCS
   inputdev_mnav/mnav.cpp
   inputdev_autoc/inputdev_autoc.cpp
   inputdev_autoc/inputdev_autoc.h
-  inputdev_autoc/autoc.cpp
+  inputdev_autoc/inputdev_autoc.cpp
   inputdev_parallel/inputdev_parallel.cpp
   inputdev_PPM/inputdev_PPM.cpp
   inputdev_rctran/inputdev_rctran.cpp
