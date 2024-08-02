@@ -27,6 +27,19 @@
 #include "../inputdev.h"
 #include "../../mod_misc/SimpleXMLTransfer.h"
 
+#include "minisim.h"
+
+#include <stdio.h>
+#include <iostream>
+#include <cmath>
+#include <array>
+
+using namespace std;
+using boost::asio::ip::tcp;
+
+#define FEET_TO_METERS 0.3048
+#define INPUT_UPDATE_INTERVAL_MSEC 200
+
 class T_TX_InterfaceAUTOC : public T_TX_Interface
 {
   public:
@@ -55,7 +68,18 @@ class T_TX_InterfaceAUTOC : public T_TX_Interface
    void getInputData(TSimInputs* inputs);
    
   private:
-   std::string        device;
+   unsigned short int callbackPort;
+   tcp::socket *socket_;
+
+   unsigned long lastUpdateTimeMsec = 0;
+   double pitchCommand = 0;
+   double rollCommand = 0;
+   double throttleCommand = 0;
+
+   // home point for this sim run
+   double offsetX = 0;
+   double offsetY = 0;
+   double offsetZ = 0;
 };
 
 #endif

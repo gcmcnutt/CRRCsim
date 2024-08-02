@@ -20,6 +20,9 @@ INCLUDE (CheckSymbolExists)
 INCLUDE (CheckLibraryExists)
 INCLUDE (CheckCXXSourceCompiles)
 
+find_package(Eigen3 REQUIRED)
+find_package(Boost REQUIRED COMPONENTS thread system serialization)
+
 # uncomment to get verbose output
 #set (CMAKE_VERBOSE_MAKEFILE ON)
 
@@ -250,13 +253,16 @@ set (CRRCSIM_LIBS
   ${PLIB_LIBRARIES}
   )
 
-include_directories(${CRRCSIM_INCDIRS})
+include_directories(${CRRCSIM_INCDIRS}
+  ${EIGEN3_INCLUDE_DIR}
+  /home/gmcnutt/GP/autoc
+)
 
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in ${CMAKE_BINARY_DIR}/crrc_config.h)
 
 add_executable (crrcsim WIN32 ${CRRCSIM_SRCS})
 
-target_link_libraries ( crrcsim ${CRRCSIM_LIBS} )
+target_link_libraries ( crrcsim ${CRRCSIM_LIBS} Eigen3::Eigen ${Boost_LIBRARIES})
 
 
 message("")

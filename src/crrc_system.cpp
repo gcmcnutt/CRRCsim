@@ -154,11 +154,11 @@ void SystemMessage(const char * msg, SM_TYPE type)
   MessageBox(NULL, msg, "CRRCsim system message", MB_OK | icon);
 
   #elif defined linux
-  char *buf = new char[64 + strlen(msg)];
-  snprintf(buf, 63 + strlen(msg), "xmessage -center -buttons OK:1 \"%s\"", msg);
-  if (system(buf))
-    std::cerr << msg << "\n";
-  delete[] buf;
+  // char *buf = new char[64 + strlen(msg)];
+  // snprintf(buf, 63 + strlen(msg), "xmessage -center -buttons OK:1 \"%s\"", msg);
+  // if (system(buf))
+  //   std::cerr << msg << "\n";
+  // delete[] buf;
 
   #elif defined MACOSX
 

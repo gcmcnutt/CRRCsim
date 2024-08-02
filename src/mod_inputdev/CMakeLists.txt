@@ -28,6 +28,8 @@ set (MOD_INPUTDEV_INCDIRS )
     
 include_directories(
   ${MOD_INPUTDEV_EXT_INCDIRS}
+  ${EIGEN3_INCLUDE_DIR}
+  /home/gmcnutt/GP/autoc
 )
 
 link_directories      ( ${MOD_INPUTDEV_LINKDIRS} )
