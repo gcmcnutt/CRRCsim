@@ -262,6 +262,13 @@ CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in ${CMAKE_BINARY_DIR}
 
 add_executable (crrcsim WIN32 ${CRRCSIM_SRCS})
 
+option(USE_SANITIZER "Build with Address Sanitizer" OFF)
+if(USE_SANITIZER)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
+endif()
+
 target_link_libraries ( crrcsim ${CRRCSIM_LIBS} Eigen3::Eigen ${Boost_LIBRARIES})
 
 

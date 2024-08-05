@@ -75,11 +75,6 @@ class T_TX_InterfaceAUTOC : public T_TX_Interface
    double pitchCommand = 0;
    double rollCommand = 0;
    double throttleCommand = 0;
-
-   // home point for this sim run
-   double offsetX = 0;
-   double offsetY = 0;
-   double offsetZ = 0;
 };
 
 #endif

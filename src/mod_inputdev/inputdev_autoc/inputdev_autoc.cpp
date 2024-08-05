@@ -69,10 +69,11 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
   printf("void T_TX_InterfaceAUTOC::getInputData(TSimInputs* inputs)\n");
 #endif
   // occasionally ask for a model update?
-  unsigned long simTimeMsec = Global::Simulation->getGameTimeSinceReset();
-  if (simTimeMsec > lastUpdateTimeMsec + INPUT_UPDATE_INTERVAL_MSEC)
+  unsigned long gameTimeMsec = Global::Simulation->getGameTimeSinceReset();
+  unsigned long simTimeMsec = Global::Simulation->getSimulationTimeSinceReset();
+  if (gameTimeMsec > lastUpdateTimeMsec + INPUT_UPDATE_INTERVAL_MSEC)
   {
-    lastUpdateTimeMsec = simTimeMsec;
+    lastUpdateTimeMsec = gameTimeMsec;
 
     // convert crrcsim state to AircraftState
     double v = Global::aircraft->getFDM()->getVRelAirmass() * FEET_TO_METERS;
@@ -90,9 +91,9 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     Eigen::Quaterniond q = yawAngle * pitchAngle * rollAngle;
 
     // position
-    Eigen::Vector3d p{(Global::aircraft->getPos().r[0] - offsetX) * FEET_TO_METERS,
-                      (Global::aircraft->getPos().r[1] - offsetY) * FEET_TO_METERS,
-                      (Global::aircraft->getPos().r[2] - offsetZ) * FEET_TO_METERS};
+    Eigen::Vector3d p{Global::aircraft->getPos().r[0] * FEET_TO_METERS,
+                      Global::aircraft->getPos().r[1] * FEET_TO_METERS,
+                      Global::aircraft->getPos().r[2] * FEET_TO_METERS};
     if (isnan(p[0]) || isnan(p[1]) || isnan(p[2]))
     {
       p = Eigen::Vector3d::Zero();
@@ -128,16 +129,12 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       // cfg->getCurLocCfgPtr(cfgfile)->setAttributeOverwrite("launch.rel_right", "0.0");
 
       // aircraft.aircraft_orientation = mainToSim.aircraftState.aircraft_orientation;
-      simTimeMsec = lastUpdateTimeMsec = 0;
+
+      lastUpdateTimeMsec = 0;
       simCrashed = false;
 
       // reset sim
       Global::Simulation->reset();
-
-      // extract the initial position offsets in crrcsim coordinate body
-      offsetX = 0; // Global::aircraft->getPos().r[0];
-      offsetY = 0; // Global::aircraft->getPos().r[1];
-      offsetZ = 0; // Global::aircraft->getPos().r[2];
 
       // char outbuf[1000];
       // sprintf(outbuf, "reset: %010ld % 8.2f %8.2f %8.2f\n", simTimeMsec, offsetX, offsetY, offsetZ);

@@ -1,14 +1,14 @@
 <?xml version="1.0" ?>
 <crrcsimConfig version="2">
-  <video enabled="1" color_depth="16" multisamples="1">
+  <video enabled="1" color_depth="8" multisamples="0">
     <skybox texture_offset="0.00000" />
     <fullscreen fUse="0" />
     <zoom field_of_view="35" autozoom="0.050000001" />
     <camera smart="0" sloppy="0" />
     <resolution>
-      <window x="640" y="480" />
+      <window x="320" y="240" />
     </resolution>
-    <textures fUse_textures="1" fUse_mipmaps="1" />
+    <textures fUse_textures="1" fUse_mipmaps="0" />
   </video>
   <launch altitude="30" velocity_rel="0.6" angle="0.22" sal="0" rel_to_player="0"
      rel_front="21" rel_right="0">
@@ -145,7 +145,7 @@
     <flightModel dt="0.003" />
     <display_mode fUse="0" />
   </simulation>
-  <airplane verbosity="5" graphics="0" config="0" file="models/Angel_S30E.xml"
+  <airplane verbosity="5" graphics="0" config="0" file="models/hb1.xml"
      use_default_launch="1" use_default_mixer="1" />
   <game>
     <f3a enabled="0" />
