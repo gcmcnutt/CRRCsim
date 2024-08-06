@@ -1,0 +1,74 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+
+
+
+
+        
+
+        
+
+
+        {
+            "name": "(gdb) Launch crrcsim",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/crrcsim",
+            "args": ["-g", "autoc_config.xml", "-p", "1234", "-i", "AUTOC"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [{"name": "DISPLAY", "value": ":0"}],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "preLaunchTask": "make", // Add this line
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "Core Dump Debug",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/crrcsim",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+              {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+              }
+            ],
+            "coreDumpPath": "${input:coreDumpPath}",
+            "miDebuggerPath": "/usr/bin/gdb"
+          }
+    ],
+    "inputs": [
+    {
+      "id": "programPath",
+      "type": "promptString",
+      "description": "Enter the path to the program executable",
+      "default": "${workspaceFolder}/your_program"
+    },
+    {
+      "id": "coreDumpPath",
+      "type": "promptString",
+      "description": "Enter the path to the core dump file",
+      "default": "/mnt/wslg/dumps/core.crrcsim.pid"
+    }
+  ]
+}

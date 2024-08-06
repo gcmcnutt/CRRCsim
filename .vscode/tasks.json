@@ -1,0 +1,21 @@
+{
+  "tasks": [
+    {
+      "label": "make",
+      "type": "shell",
+      "command": "make",
+      "options": {
+        "cwd": "${workspaceFolder}/build"
+      },
+      "group": {
+          "kind": "build",
+          "isDefault": true
+      },
+      "presentation": {
+          "reveal": "always"
+      },
+      "problemMatcher": []
+    }
+  ],
+  "version": "2.0.0"
+}
