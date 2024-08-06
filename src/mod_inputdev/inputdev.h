@@ -302,11 +302,12 @@ class T_TX_Interface
     /**
      * Input methods. Ordered like InputMethodStrings[]
      */
-    enum { NUM_INPUTMETHODS=12 };
+    enum { NUM_INPUTMETHODS=13 };
     enum {  eIM_keyboard = 0, eIM_mouse   = 1,  eIM_joystick = 2, 
             eIM_rctran   = 3, eIM_audio   = 4,  eIM_parallel = 5,  
             eIM_serial2  = 6, eIM_rctran2 = 7,  eIM_serpic   = 8,  
-            eIM_mnav     = 9, eIM_zhenhua = 10, eIM_CT6A     = 11 };
+            eIM_mnav     = 9, eIM_zhenhua = 10, eIM_CT6A     = 11,
+            eIM_autoc    = 12 };
     /**
      * Get input method
      */

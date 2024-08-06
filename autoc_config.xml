@@ -1,0 +1,154 @@
+<?xml version="1.0" ?>
+<crrcsimConfig version="2">
+  <video enabled="1" color_depth="8" multisamples="0">
+    <skybox texture_offset="0.00000" />
+    <fullscreen fUse="0" />
+    <zoom field_of_view="35" autozoom="0.050000001" />
+    <camera smart="0" sloppy="0" />
+    <resolution>
+      <window x="320" y="240" />
+    </resolution>
+    <textures fUse_textures="1" fUse_mipmaps="0" />
+  </video>
+  <launch altitude="30" velocity_rel="0.6" angle="0.22" sal="0" rel_to_player="0"
+     rel_front="21" rel_right="0">
+    <preset name_en="hand" altitude="10" velocity_rel="1" angle="0" rel_to_player="1"
+       rel_front="0" rel_right="2" />
+    <preset name_en="winch" altitude="300" velocity_rel="1" angle="0" sal="0" />
+    <preset name_en="throw" altitude="10" velocity_rel="2" angle="0" sal="0"
+       rel_to_player="1" rel_front="0" rel_right="2" />
+    <preset name_en="hlg" altitude="10" velocity_rel="5" angle="0.38" sal="0"
+       rel_to_player="1" rel_front="0" rel_right="2" />
+    <preset name_en="SAL" altitude="5" velocity_rel="7" angle="0.20" sal="1"
+       rel_to_player="1" rel_front="0" rel_right="2" />
+    <preset name_en="Cape Cod F3F" altitude="10" velocity_rel="1" angle="0" sal="0"
+       rel_to_player="1" rel_front="2.5" rel_right="-20" />
+    <preset name_en="motor" altitude="0" velocity_rel="0" angle="0" sal="0"
+       rel_to_player="1" rel_front="15" rel_right="0" />
+    <preset name_en="autoc" altitude="30" velocity_rel="0.6" angle="0.22" sal="0"
+       rel_to_player="0" rel_front="21" rel_right="0" />
+  </launch>
+  <presets>
+    <thermal>
+      <thermal strength_mean="5" strength_sigma="1" radius_mean="70"
+         radius_sigma="10" density="2.4e-06" lifetime_mean="240" lifetime_sigma="60"
+         name_en="Default (v3)">
+        <v3 vRefExp="2" dz_m="50" height_m="600">
+          <inside>
+            <upper r_m="30" sl_r="0.8" sl_dz_r="0.2" />
+            <lower r_m="20" sl_r="0.8" sl_dz_r="0.2" />
+          </inside>
+          <outside>
+            <upper r_m="65" sl_r="0" sl_dz_r="0.7" />
+            <lower r_m="65" sl_r="0" sl_dz_r="0.7" />
+          </outside>
+        </v3>
+      </thermal>
+      <thermal name_en="F3F, heli (no thermals)" strength_mean="0" strength_sigma="0"
+         radius_mean="0" radius_sigma="0" lifetime_mean="0" lifetime_sigma="0" density="0" />
+    </thermal>
+    <wind>
+      <wind name_en="Dynamic soaring Cape Cod" velocity="13" direction="90"
+         turbulence="1" />
+      <wind name_en="Soaring slow Cape Cod" velocity="10" direction="270"
+         turbulence="1" />
+      <wind name_en="Soaring ruff Cape Cod" velocity="18" direction="270"
+         turbulence="1" />
+      <wind name_en="F3F competition at Cape Cod" velocity="30" direction="270"
+         turbulence="1" />
+      <wind name_en="Heli (no wind)" velocity="0" direction="180" turbulence="0" />
+    </wind>
+  </presets>
+  <location name="scenery/davis-orig.xml" sky="0" />
+  <locations>
+    <location name="scenery/davis-orig.xml">
+      <sky nUse="0" />
+      <thermal strength_mean="5" strength_sigma="1" radius_mean="70"
+         radius_sigma="10" density="2.4e-06" lifetime_mean="240" lifetime_sigma="60">
+        <v3 vRefExp="2" dz_m="50" height_m="600">
+          <inside>
+            <upper r_m="30" sl_r="0.8" sl_dz_r="0.2" />
+            <lower r_m="20" sl_r="0.8" sl_dz_r="0.2" />
+          </inside>
+          <outside>
+            <upper r_m="65" sl_r="0" sl_dz_r="0.7" />
+            <lower r_m="65" sl_r="0" sl_dz_r="0.7" />
+          </outside>
+        </v3>
+      </thermal>
+      <start position="field" />
+      <wind velocity="3" direction="180" turbulence="1" />
+    </location>
+  </locations>
+  <inputMethod method="Mouse">
+    <mouse>
+      <bindings radio_type="Custom">
+        <buttons l="RESUME" m="RESET" r="PAUSE" up="INCTHROTTLE" down="DECTHROTTLE" />
+        <axes>
+          <aileron axis="0" polarity="1" />
+          <elevator axis="1" polarity="-1" />
+          <rudder axis="-1" polarity="1" />
+          <throttle axis="-1" polarity="1" />
+          <flap axis="-1" polarity="1" />
+          <spoiler axis="-1" polarity="1" />
+          <retract axis="-1" polarity="1" />
+          <pitch axis="-1" polarity="1" />
+        </axes>
+      </bindings>
+      <mixer enabled="1" dr_enabled="1">
+        <aileron mtravel="-0.5" ptravel="0.5" trim="0" nrate="1" srate="0.80000001"
+           exp="0.5" />
+        <elevator mtravel="-0.5" ptravel="0.5" trim="0" nrate="1" srate="1"
+           exp="0.25" />
+        <rudder mtravel="-0.5" ptravel="0.5" trim="0" nrate="1" srate="1" exp="0.5" />
+        <throttle trim="0" nrate="1" srate="1" exp="0" mtravel="-0.5" ptravel="0.5" />
+        <flap nrate="1" srate="1" exp="0" trim="0" mtravel="0" ptravel="0" />
+        <spoiler trim="0" nrate="1" srate="1" exp="0" mtravel="-0.5" ptravel="0.5" />
+        <retract trim="0" nrate="1" srate="1" exp="0" mtravel="-0.5" ptravel="0.5" />
+        <pitch trim="0" nrate="1" srate="1" exp="0" mtravel="-0.5" ptravel="0.5" />
+        <mixer1 enabled="0" src="0" dst="0" val="0" />
+        <mixer2 enabled="0" src="0" dst="0" val="0" />
+        <mixer3 enabled="0" src="0" dst="0" val="0" />
+        <mixer4 enabled="0" src="0" dst="0" val="0" />
+      </mixer>
+    </mouse>
+    <joystick number="0">
+      <bindings>
+        <buttons>
+          <button bind="NOTHING" />
+          <button bind="NOTHING" />
+          <button bind="NOTHING" />
+          <button bind="NOTHING" />
+          <button bind="NOTHING" />
+          <button bind="NOTHING" />
+          <button bind="NOTHING" />
+          <button bind="NOTHING" />
+          <button bind="NOTHING" />
+          <button bind="NOTHING" />
+        </buttons>
+      </bindings>
+    </joystick>
+  </inputMethod>
+  <zoom control="KEYBOARD" />
+  <sound enabled="0" samplerate="48000">
+    <model vol="1" />
+    <variometer vol="0" />
+    <throttle mode="1" />
+  </sound>
+  <training_mode fUse="0" />
+  <wind_mode fUse="2" />
+  <nVerbosity level="0" />
+  <HUDCompass fUse="0" />
+  <windVectors fUse="0" />
+  <modelViewWindow fUse="2" />
+  <simulation slowMotion="0" slowTimeScale="2">
+    <flightModel dt="0.003" />
+    <display_mode fUse="0" />
+  </simulation>
+  <airplane verbosity="5" graphics="0" config="0" file="models/hb1.xml"
+     use_default_launch="1" use_default_mixer="1" />
+  <game>
+    <f3a enabled="0" />
+    <f3f enabled="0" />
+  </game>
+</crrcsimConfig>

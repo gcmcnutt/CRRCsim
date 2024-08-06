@@ -43,7 +43,7 @@ extern int    optind;
 static void crrc_version_info();
 static void crrc_usage(char *progname);
 
-#define OPTION_STRING "b:c:d:fg:hi:j:l:m:s:u:vVw:x:y:"
+#define OPTION_STRING "b:c:d:fg:hi:j:l:m:p:s:u:vVw:x:y:"
 
 /**
  * Print usage information and exit
@@ -63,8 +63,9 @@ static void crrc_usage(char *progname)
   fprintf(stderr,  "         -d <value>     : wind direction in deg (0-360)\n");
   fprintf(stderr,  "         -f             : use fullscreen\n");
   fprintf(stderr,  "         -g <string>    : specify config file\n");
-  fprintf(stderr,  "         -i <string>    : input method : KEYBOARD|MOUSE|JOYSTICK|RCTRAN|SERIAL2|PARALLEL|AUDIO|MNAV|ZHENHUA\n");
+  fprintf(stderr,  "         -i <string>    : input method : KEYBOARD|MOUSE|JOYSTICK|RCTRAN|SERIAL2|PARALLEL|AUDIO|MNAV|AUTOC|ZHENHUA\n");
   fprintf(stderr,  "         -m <string>    : mouse x motion : AILERON|RUDDER\n");
+  fprintf(stderr,  "         -p <value>     : port number for remote control\n");
   fprintf(stderr,  "         -s <on/off>    : sound on/off\n");
   fprintf(stderr,  "         -u <on/off>    : user interface on/off\n");
   fprintf(stderr,  "         -w <value>     : wind velocity in ft/sec\n");
@@ -152,6 +153,9 @@ int crrc_checkopts (int                argc,
           Global::inputDev->mouse_bind_x = T_AxisMapper::AILERON;
         else if (strcasecmp(optarg,"RUDDER")==0)
           Global::inputDev->mouse_bind_x = T_AxisMapper::RUDDER;
+        break;
+      case 'p':
+        cfg->callback_port = atoi(optarg);
         break;
       case 's':
         if      (strcasecmp(optarg,"ON")==0)
