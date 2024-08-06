@@ -191,6 +191,7 @@ class T_Config
   public:
    T_Thermal*    thermal;
    T_Wind*       wind;
+   unsigned short int callback_port;
      
    /**
     * path of configuration file crrcsim.xml

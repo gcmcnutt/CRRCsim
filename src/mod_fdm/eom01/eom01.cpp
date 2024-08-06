@@ -389,12 +389,12 @@ void EOM01::ls_accel(CRRCMath::Vector3 v_F,
   if (isfinite(v_F.length()) == 0)
   {
     v_F = CRRCMath::Vector3();
-    std::cerr << "warning: used BSOD workaround\n";
+    // std::cerr << "warning: used BSOD workaround\n";
   }
   if (isfinite(v_M_cg.length()) == 0)
   {
     v_M_cg = CRRCMath::Vector3();
-    std::cerr << "warning: used BSOD workaround\n";
+    // std::cerr << "warning: used BSOD workaround\n";
   }
   
 #if (EOM_TEST == 2)
