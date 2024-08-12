@@ -26,6 +26,34 @@
 #include "../../SimStateHandler.h"
 #include "../../mod_fdm/fdm.h"
 #include "inputdev_autoc.h"
+#include <chrono>
+#include <stdio.h>
+
+using namespace std::chrono;
+
+char *get_iso8601_timestamp(char *buf, size_t len)
+{
+  auto now = system_clock::now();
+
+  // Get the time since the epoch
+  auto now_ms = duration_cast<milliseconds>(now.time_since_epoch());
+
+  // Extract seconds and milliseconds
+  auto sec = duration_cast<seconds>(now_ms);
+  auto ms = now_ms - sec;
+
+  auto itt = std::chrono::system_clock::to_time_t(now);
+
+  std::strftime(buf, len, "%FT%T", std::gmtime(&itt));
+
+  char ms_str[5]; // ".mmm"
+  std::snprintf(ms_str, sizeof(ms_str), ".%03ld", ms.count());
+
+  std::strcat(buf, ms_str);
+  std::strcat(buf, "Z");
+
+  return buf;
+}
 
 T_TX_InterfaceAUTOC::T_TX_InterfaceAUTOC()
 {
@@ -69,11 +97,27 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
   printf("void T_TX_InterfaceAUTOC::getInputData(TSimInputs* inputs)\n");
 #endif
   // occasionally ask for a model update?
-  unsigned long gameTimeMsec = Global::Simulation->getGameTimeSinceReset();
   unsigned long simTimeMsec = Global::Simulation->getSimulationTimeSinceReset();
-  if (gameTimeMsec > lastUpdateTimeMsec + INPUT_UPDATE_INTERVAL_MSEC)
+
+  buffer.push_back(simTimeMsec);
+  if (simTimeMsec > lastUpdateTimeMsec + INPUT_UPDATE_INTERVAL_MSEC || ++cycleCounter > CYCLE_COUNTER_OVERFLOW)
   {
-    lastUpdateTimeMsec = gameTimeMsec;
+#ifdef DETAILED_LOGGING
+    char tbuf[100];
+    printf("%s: updater: cycleCount[%ld] -> resetting. crash[%d] simTimeMsec[%ld] lastUpdateTimeMsec[%ld]\n",
+           get_iso8601_timestamp(tbuf, sizeof(tbuf)), cycleCounter, Global::Simulation->getState(), simTimeMsec, lastUpdateTimeMsec);
+
+    // dump out the buffer time steps
+    printf("  buffer: ");
+    for (auto &t : buffer)
+    {
+      printf("%ld ", t);
+    }
+    printf("\n");
+#endif
+
+    lastUpdateTimeMsec = simTimeMsec;
+    cycleCounter = 0;
 
     // convert crrcsim state to AircraftState
     double v = Global::aircraft->getFDM()->getVRelAirmass() * FEET_TO_METERS;
@@ -104,6 +148,14 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     AircraftState aircraftState{v, q, p,
                                 pitchCommand, rollCommand, throttleCommand,
                                 simTimeMsec, simCrashed};
+
+#ifdef DETAILED_LOGGING
+    printf("%s: sending aircraft state: %f %f %f %f %f %f %f %ld %d\n",
+           get_iso8601_timestamp(tbuf, sizeof(tbuf)),
+           aircraftState.dRelVel, aircraftState.position[0], aircraftState.position[1], aircraftState.position[2],
+           aircraftState.pitchCommand, aircraftState.rollCommand, aircraftState.throttleCommand,
+           simTimeMsec, Global::Simulation->getState());
+#endif
 
     // always send our state
     sendRPC(*socket_, aircraftState);
@@ -136,9 +188,13 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       // reset sim
       Global::Simulation->reset();
 
-      // char outbuf[1000];
-      // sprintf(outbuf, "reset: %010ld % 8.2f %8.2f %8.2f\n", simTimeMsec, offsetX, offsetY, offsetZ);
-      // cout << outbuf;
+#ifdef DETAILED_LOGGING
+      char outbuf[1000];
+      sprintf(outbuf, "%s: reset: %010ld % 8.2f %8.2f %8.2f\n", get_iso8601_timestamp(tbuf, sizeof(tbuf)),
+              simTimeMsec, Global::aircraft->getPos().r[0],
+              Global::aircraft->getPos().r[1], Global::aircraft->getPos().r[2]);
+      cout << outbuf;
+#endif
 
       // reset commands to default
       pitchCommand = 0;
@@ -160,7 +216,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     }
 
     // convert cached values to crrcsim scales and return
-    inputs->elevator = -pitchCommand / 2.0;          // from -1:1 to -0.5:0.5
+    inputs->elevator = -pitchCommand / 2.0;         // from -1:1 to -0.5:0.5
     inputs->aileron = rollCommand / 2.0;            // from -1:1 to -0.5:0.5
     inputs->throttle = throttleCommand / 2.0 + 0.5; // from -1:1 to 0:1
   }
