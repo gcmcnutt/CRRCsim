@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <crrcsimConfig version="2">
-  <video enabled="1" color_depth="8" multisamples="0" fps="10">
+  <video enabled="1" color_depth="8" multisamples="0" fps="30">
     <skybox texture_offset="0.00000" />
     <fullscreen fUse="0" />
     <zoom field_of_view="35" autozoom="0.050000001" />
@@ -10,7 +10,7 @@
     </resolution>
     <textures fUse_textures="1" fUse_mipmaps="0" />
   </video>
-  <launch altitude="30" velocity_rel="0.6" angle="0.22" sal="0" rel_to_player="0"
+  <launch altitude="60" velocity_rel="0.6" angle="0.22" sal="0" rel_to_player="0"
      rel_front="21" rel_right="0">
     <preset name_en="hand" altitude="10" velocity_rel="1" angle="0" rel_to_player="1"
        rel_front="0" rel_right="2" />
@@ -141,7 +141,7 @@
   <HUDCompass fUse="0" />
   <windVectors fUse="0" />
   <modelViewWindow fUse="2" />
-  <simulation slowMotion="0" slowTimeScale="2">
+  <simulation slowMotion="1" slowTimeScale="0.5">
     <flightModel dt="0.003" />
     <display_mode fUse="0" />
   </simulation>

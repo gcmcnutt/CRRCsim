@@ -34,11 +34,17 @@
 #include <cmath>
 #include <array>
 
+#include <boost/circular_buffer.hpp>
+
 using namespace std;
 using boost::asio::ip::tcp;
 
 #define FEET_TO_METERS 0.3048
 #define INPUT_UPDATE_INTERVAL_MSEC 200
+#define SIM_FPS 30.0
+
+// a few cycles after the last update, we assume crash, no flght updates, etc
+#define CYCLE_COUNTER_OVERFLOW (SIM_FPS * INPUT_UPDATE_INTERVAL_MSEC / 1000)
 
 class T_TX_InterfaceAUTOC : public T_TX_Interface
 {
@@ -72,9 +78,12 @@ class T_TX_InterfaceAUTOC : public T_TX_Interface
    tcp::socket *socket_;
 
    unsigned long lastUpdateTimeMsec = 0;
+   unsigned long cycleCounter = 0;
    double pitchCommand = 0;
    double rollCommand = 0;
    double throttleCommand = 0;
+
+   boost::circular_buffer<unsigned long> buffer{15};
 };
 
 #endif
