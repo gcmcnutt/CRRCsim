@@ -68,10 +68,10 @@ void SolveFourthOrder::solve()
   //   n4*x^4+n3*x^3+n2*x^2+n1*x+n0=0
   // Die Ableitung ist
   //   4*n4*x^3 + 3*n3*x^2 + 2*n2*x + n1
-  // Ich interessiere mich zunächst für die Extrempunkte der Funktion
+  // Ich interessiere mich zunï¿½chst fï¿½r die Extrempunkte der Funktion
   // (Nullstellen der Ableitung).
   //
-  // Näheres dazu siehe Bronstein S. 131 und S.132 (alt).
+  // Nï¿½heres dazu siehe Bronstein S. 131 und S.132 (alt).
   xi[0] = 0;
   xi[1] = 1;
 
@@ -147,21 +147,21 @@ void SolveFourthOrder::solve()
       //yb = yi[cnt];
 
       // Bisektionsverfahren
-      // Newton funktioniert hier nicht zuverlässig! Wenn man ihn an einer Stelle
-      // mit kleiner Steigung startet, kann es sein, dass er hinter dem nächsten
-      // Extrempunkt weitermacht, also gar nicht mehr im gewünschten Intervall.
-      // Grenze für Abweichung evtl. kleiner machen, wenn Lösung nicht gefunden wird.
+      // Newton funktioniert hier nicht zuverlï¿½ssig! Wenn man ihn an einer Stelle
+      // mit kleiner Steigung startet, kann es sein, dass er hinter dem nï¿½chsten
+      // Extrempunkt weitermacht, also gar nicht mehr im gewï¿½nschten Intervall.
+      // Grenze fï¿½r Abweichung evtl. kleiner machen, wenn Lï¿½sung nicht gefunden wird.
       while (fabs(xa-xb) > prec)
       {
         xneu = (xa+xb)/2;
-        // Die folgende Zeile kann zu einem Fehler führen, siehe Email von Jan R. am 29.04.2006.
-        // Eigentlich darf das nicht passieren, denn hier kann nur pow(x, y) einen Fehler auslösen,
+        // Die folgende Zeile kann zu einem Fehler fï¿½hren, siehe Email von Jan R. am 29.04.2006.
+        // Eigentlich darf das nicht passieren, denn hier kann nur pow(x, y) einen Fehler auslï¿½sen,
         // und das auch nur, wenn x<0 und y keine ganze Zahl. Um diesem Fall vorzubeugen, wird 
         // die normale Multiplikation benutzt.
         // yneu = n4*pow(xneu, 4)+n3*pow(xneu, 3)+n2*sqr(xneu)+n1*xneu+n0;
         yneu = n4*pow4(xneu)+n3*pow3(xneu)+n2*sqr(xneu)+n1*xneu+n0;
 
-        if (sign(yneu) == sign(ya))
+        if (yneu == 0 || sign(yneu) == sign(ya))
         {
           xa = xneu;
           ya = yneu;
@@ -175,7 +175,7 @@ void SolveFourthOrder::solve()
         loopcnt++;
       }
 
-      // Ergebnis überprüfen:
+      // Ergebnis ï¿½berprï¿½fen:
       if (xneu>=0 && xneu<=1)
       {
         flttype ell_a    = xneu * ell_p1;
