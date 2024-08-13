@@ -126,6 +126,7 @@ void SolveFourthOrder::solve()
 
   // Using a high initial precision increases average loopcnt, but decreases max loopcnt.
   // Use something in the range 1.0E-5 .. 1.0E-7
+  #define MAX_LOOP 100
   flttype      prec       = 1.0E-5;
   bool         fSolved    = false;
   unsigned int cnt        = 1;
@@ -151,7 +152,7 @@ void SolveFourthOrder::solve()
       // mit kleiner Steigung startet, kann es sein, dass er hinter dem n�chsten
       // Extrempunkt weitermacht, also gar nicht mehr im gew�nschten Intervall.
       // Grenze f�r Abweichung evtl. kleiner machen, wenn L�sung nicht gefunden wird.
-      while (fabs(xa-xb) > prec)
+      while (loopcnt < MAX_LOOP && fabs(xa-xb) > prec)
       {
         xneu = (xa+xb)/2;
         // Die folgende Zeile kann zu einem Fehler f�hren, siehe Email von Jan R. am 29.04.2006.
@@ -161,7 +162,7 @@ void SolveFourthOrder::solve()
         // yneu = n4*pow(xneu, 4)+n3*pow(xneu, 3)+n2*sqr(xneu)+n1*xneu+n0;
         yneu = n4*pow4(xneu)+n3*pow3(xneu)+n2*sqr(xneu)+n1*xneu+n0;
 
-        if (yneu == 0 || sign(yneu) == sign(ya))
+        if (sign(yneu) == sign(ya))
         {
           xa = xneu;
           ya = yneu;
