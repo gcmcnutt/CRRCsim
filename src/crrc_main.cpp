@@ -269,6 +269,9 @@ void initialize_flight_model()
 
 void Init_mod_windfield()
 {
+  // clear any prior windfield
+  clear_wind_field();
+  
   initialize_wind_field(cfg->getCurLocCfgPtr(cfgfile));
 
   // Check if we're using the standard slope windfield
