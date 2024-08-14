@@ -255,7 +255,7 @@ set (CRRCSIM_LIBS
 
 include_directories(${CRRCSIM_INCDIRS}
   ${EIGEN3_INCLUDE_DIR}
-  /home/gmcnutt/GP/autoc
+  $ENV{HOME}/GP/autoc
 )
 
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in ${CMAKE_BINARY_DIR}/crrc_config.h)

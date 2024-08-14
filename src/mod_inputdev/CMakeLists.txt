@@ -7,7 +7,6 @@ set(MOD_INPUTDEV_SRCS
   inputdev_autoc/inputdev_autoc.cpp
   inputdev_autoc/inputdev_autoc.h
   inputdev_autoc/inputdev_autoc.cpp
-  inputdev_parallel/inputdev_parallel.cpp
   inputdev_PPM/inputdev_PPM.cpp
   inputdev_rctran/inputdev_rctran.cpp
   inputdev_rctran2/inputdev_rctran2.cpp
@@ -29,7 +28,7 @@ set (MOD_INPUTDEV_INCDIRS )
 include_directories(
   ${MOD_INPUTDEV_EXT_INCDIRS}
   ${EIGEN3_INCLUDE_DIR}
-  /home/gmcnutt/GP/autoc
+  $ENV{HOME}/GP/autoc
 )
 
 link_directories      ( ${MOD_INPUTDEV_LINKDIRS} )
