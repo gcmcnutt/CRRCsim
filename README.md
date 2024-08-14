@@ -3,3 +3,10 @@ Brought over from https://sourceforge.net/projects/crrcsim/files/crrcsim/crrcsim
 
 
 Please look into the subdirectory documentation for documentation...
+
+-- for installing for autoc
+
+libsdl1.2-dev
+libplib-dev
+sudo apt install linux-headers-generic
+

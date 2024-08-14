@@ -388,6 +388,7 @@ std::string reconfigureInputMethod(bool boRevertToMouse)
       return(input_method_failed(Global::TXInterface->getErrMsg(), boRevertToMouse));
   }
 #endif
+#ifdef AN_X86
   else if (method.compare(
       strU(Global::inputDev->InputMethodStrings[T_TX_Interface::eIM_parallel]))  == 0)
   {
@@ -396,6 +397,7 @@ std::string reconfigureInputMethod(bool boRevertToMouse)
     if (Global::TXInterface->init(cfgfile))
       return(input_method_failed(Global::TXInterface->getErrMsg(), boRevertToMouse));
   }
+#endif
   else if (method.compare(
       strU(Global::inputDev->InputMethodStrings[T_TX_Interface::eIM_serial2])) == 0)
   {
