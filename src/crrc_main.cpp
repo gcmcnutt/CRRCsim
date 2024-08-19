@@ -928,7 +928,7 @@ int main(int argc,char **argv)
           std::string drate = "OFF";
           std::string mixers = "";
           
-          if (Global::TXInterface->mixer->enabled)
+          if (Global::TXInterface->mixer != 0 && Global::TXInterface->mixer->enabled)
           {
             if (Global::TXInterface->mixer->dr_enabled)
               drate = "ON";

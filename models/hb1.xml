@@ -51,8 +51,8 @@ HB1 derived from the famous Zagi XS from Trick R/C
       <automagic F="2.668932" V="12.501971">
         <battery throttle_min="0">
           <automagic T="420" />
-          <shaft J="0" brake="1">
-            <propeller D="0.24384" H="0.170688" J="0" n_fold="5" />
+          <shaft J="0" brake="0">
+            <propeller D="0.127" H="0.114" J="0" n_fold="5" />
             <engine>
               <automagic omega_p="2827" eta_opt="0.78" eta="0.7" />
             </engine>

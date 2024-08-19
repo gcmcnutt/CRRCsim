@@ -137,7 +137,7 @@
   </sound>
   <training_mode fUse="0" />
   <wind_mode fUse="2" />
-  <nVerbosity level="0" />
+  <nVerbosity level="1" />
   <HUDCompass fUse="0" />
   <windVectors fUse="0" />
   <modelViewWindow fUse="2" />
