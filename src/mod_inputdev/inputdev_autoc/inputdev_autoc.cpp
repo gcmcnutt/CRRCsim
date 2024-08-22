@@ -103,17 +103,19 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
   if (simTimeMsec > lastUpdateTimeMsec + INPUT_UPDATE_INTERVAL_MSEC || ++cycleCounter > CYCLE_COUNTER_OVERFLOW)
   {
 #ifdef DETAILED_LOGGING
-    char tbuf[100];
-    printf("%s: updater: cycleCount[%ld] -> resetting. crash[%d] simTimeMsec[%ld] lastUpdateTimeMsec[%ld]\n",
-           get_iso8601_timestamp(tbuf, sizeof(tbuf)), cycleCounter, Global::Simulation->getState(), simTimeMsec, lastUpdateTimeMsec);
-
-    // dump out the buffer time steps
-    printf("  buffer: ");
-    for (auto &t : buffer)
     {
-      printf("%ld ", t);
+      char tbuf[100];
+      printf("%s: updater: cycleCount[%ld] crash[%d] simTimeMsec[%ld] lastUpdateTimeMsec[%ld]\n",
+             get_iso8601_timestamp(tbuf, sizeof(tbuf)), cycleCounter, Global::Simulation->getState(), simTimeMsec, lastUpdateTimeMsec);
+
+      // dump out the buffer time steps
+      printf("  buffer: ");
+      for (auto &t : buffer)
+      {
+        printf("%ld ", t);
+      }
+      printf("\n");
     }
-    printf("\n");
 #endif
 
     lastUpdateTimeMsec = simTimeMsec;
@@ -128,11 +130,11 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 
     // Create a rotation object from Euler angles
     Eigen::AngleAxisd rollAngle(Global::aircraft->getFDM()->getPhi(), Eigen::Vector3d::UnitX());
-    Eigen::AngleAxisd pitchAngle(Global::aircraft->getFDM()->getTheta(), Eigen::Vector3d::UnitY());
+    Eigen::AngleAxisd pitchAngle(-Global::aircraft->getFDM()->getTheta(), Eigen::Vector3d::UnitY());
     Eigen::AngleAxisd yawAngle(Global::aircraft->getFDM()->getPsi(), Eigen::Vector3d::UnitZ());
 
     // Combine rotations
-    Eigen::Quaterniond q = yawAngle * pitchAngle * rollAngle;
+    Eigen::Quaterniond q = rollAngle * pitchAngle * yawAngle;
 
     // position
     Eigen::Vector3d p{Global::aircraft->getPos().r[0] * FEET_TO_METERS,
@@ -150,11 +152,15 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
                                 simTimeMsec, simCrashed};
 
 #ifdef DETAILED_LOGGING
-    printf("%s: sending aircraft state: %f %f %f %f %f %f %f %ld %d\n",
-           get_iso8601_timestamp(tbuf, sizeof(tbuf)),
-           aircraftState.dRelVel, aircraftState.position[0], aircraftState.position[1], aircraftState.position[2],
-           aircraftState.pitchCommand, aircraftState.rollCommand, aircraftState.throttleCommand,
-           simTimeMsec, Global::Simulation->getState());
+    {
+      char tbuf[100];
+      printf("%s: state: v:%f posX:%f posY:%f posZ:%f rAng:%f pAng:%f yAng:%f pCmd:%f rCmd:%f tCmd:%f %ld %d\n",
+             get_iso8601_timestamp(tbuf, sizeof(tbuf)),
+             aircraftState.getRelVel(), aircraftState.getPosition()[0], aircraftState.getPosition()[1], aircraftState.getPosition()[2],
+             rollAngle.angle(), pitchAngle.angle(), yawAngle.angle(),
+             aircraftState.getPitchCommand(), aircraftState.getRollCommand(), aircraftState.getThrottleCommand(),
+             simTimeMsec, Global::Simulation->getState());
+    }
 #endif
 
     // always send our state
@@ -189,11 +195,12 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       Global::Simulation->reset();
 
 #ifdef DETAILED_LOGGING
-      char outbuf[1000];
-      sprintf(outbuf, "%s: reset: %010ld % 8.2f %8.2f %8.2f\n", get_iso8601_timestamp(tbuf, sizeof(tbuf)),
-              simTimeMsec, Global::aircraft->getPos().r[0],
-              Global::aircraft->getPos().r[1], Global::aircraft->getPos().r[2]);
-      cout << outbuf;
+      {
+        char tbuf[100];
+        printf("%s: reset: %010ld % 8.2f %8.2f %8.2f\n", get_iso8601_timestamp(tbuf, sizeof(tbuf)),
+               simTimeMsec, Global::aircraft->getPos().r[0],
+               Global::aircraft->getPos().r[1], Global::aircraft->getPos().r[2]);
+      }
 #endif
 
       // reset commands to default
@@ -212,11 +219,19 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       rollCommand = mainToSim.controlSignal.rollCommand;
       throttleCommand = mainToSim.controlSignal.throttleCommand;
 
+#ifdef DETAILED_LOGGING
+      {
+        char tbuf[1000];
+        printf("%s: control: p:% 8.2f r:%8.2f t:%8.2f\n", get_iso8601_timestamp(tbuf, sizeof(tbuf)),
+               pitchCommand, rollCommand, throttleCommand);
+      }
+#endif
+
       break;
     }
 
     // convert cached values to crrcsim scales and return
-    inputs->elevator = -pitchCommand / 2.0;         // from -1:1 to -0.5:0.5
+    inputs->elevator = -pitchCommand / 2.0;         // invert from -1:1 to -0.5:0.5
     inputs->aileron = rollCommand / 2.0;            // from -1:1 to -0.5:0.5
     inputs->throttle = throttleCommand / 2.0 + 0.5; // from -1:1 to 0:1
   }

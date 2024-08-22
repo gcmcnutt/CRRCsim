@@ -39,6 +39,8 @@
 using namespace std;
 using boost::asio::ip::tcp;
 
+// #define DETAILED_LOGGING 1
+
 #define FEET_TO_METERS 0.3048
 #define INPUT_UPDATE_INTERVAL_MSEC 200
 #define SIM_FPS 30.0
@@ -48,42 +50,42 @@ using boost::asio::ip::tcp;
 
 class T_TX_InterfaceAUTOC : public T_TX_Interface
 {
-  public:
-   T_TX_InterfaceAUTOC();
-   virtual ~T_TX_InterfaceAUTOC();
-   
-   /**
-    * Get input method
-    */
-   virtual int inputMethod() { return(T_TX_Interface::eIM_autoc); };
-   
-   /**
-    * Initialize interface. Read further config data from a file, if necessary.
-    */
-   int init(SimpleXMLTransfer* config);
-   
-   /**
-    * Write configuration back
-    */
-   virtual void putBackIntoCfg(SimpleXMLTransfer* config);
-      
-   /**
-    * Set current input data. If some value is not available, the value 
-    * is not overwritten.
-    */
-   void getInputData(TSimInputs* inputs);
-   
-  private:
-   unsigned short int callbackPort;
-   tcp::socket *socket_;
+public:
+  T_TX_InterfaceAUTOC();
+  virtual ~T_TX_InterfaceAUTOC();
 
-   unsigned long lastUpdateTimeMsec = 0;
-   unsigned long cycleCounter = 0;
-   double pitchCommand = 0;
-   double rollCommand = 0;
-   double throttleCommand = 0;
+  /**
+   * Get input method
+   */
+  virtual int inputMethod() { return (T_TX_Interface::eIM_autoc); };
 
-   boost::circular_buffer<unsigned long> buffer{15};
+  /**
+   * Initialize interface. Read further config data from a file, if necessary.
+   */
+  int init(SimpleXMLTransfer *config);
+
+  /**
+   * Write configuration back
+   */
+  virtual void putBackIntoCfg(SimpleXMLTransfer *config);
+
+  /**
+   * Set current input data. If some value is not available, the value
+   * is not overwritten.
+   */
+  void getInputData(TSimInputs *inputs);
+
+private:
+  unsigned short int callbackPort;
+  tcp::socket *socket_;
+
+  unsigned long lastUpdateTimeMsec = 0;
+  unsigned long cycleCounter = 0;
+  double pitchCommand = 0;
+  double rollCommand = 0;
+  double throttleCommand = 0;
+
+  boost::circular_buffer<unsigned long> buffer{15};
 };
 
 #endif
