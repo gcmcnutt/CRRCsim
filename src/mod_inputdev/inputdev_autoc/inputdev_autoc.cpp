@@ -130,11 +130,11 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 
     // Create a rotation object from Euler angles
     Eigen::AngleAxisd rollAngle(Global::aircraft->getFDM()->getPhi(), Eigen::Vector3d::UnitX());
-    Eigen::AngleAxisd pitchAngle(-Global::aircraft->getFDM()->getTheta(), Eigen::Vector3d::UnitY());
+    Eigen::AngleAxisd pitchAngle(Global::aircraft->getFDM()->getTheta(), Eigen::Vector3d::UnitY());
     Eigen::AngleAxisd yawAngle(Global::aircraft->getFDM()->getPsi(), Eigen::Vector3d::UnitZ());
 
     // Combine rotations
-    Eigen::Quaterniond q = rollAngle * pitchAngle * yawAngle;
+    Eigen::Quaterniond q = yawAngle * pitchAngle * rollAngle;
 
     // position
     Eigen::Vector3d p{Global::aircraft->getPos().r[0] * FEET_TO_METERS,
