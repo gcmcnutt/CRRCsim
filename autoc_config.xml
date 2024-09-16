@@ -97,10 +97,10 @@
       </bindings>
       <mixer enabled="1" dr_enabled="1">
         <aileron mtravel="-0.5" ptravel="0.5" trim="0" nrate="1" srate="0.80000001"
-           exp="0.5" />
+           exp="0.0" />
         <elevator mtravel="-0.5" ptravel="0.5" trim="0" nrate="1" srate="1"
-           exp="0.25" />
-        <rudder mtravel="-0.5" ptravel="0.5" trim="0" nrate="1" srate="1" exp="0.5" />
+           exp="0.0" />
+        <rudder mtravel="-0.5" ptravel="0.5" trim="0" nrate="1" srate="1" exp="0.0" />
         <throttle trim="0" nrate="1" srate="1" exp="0" mtravel="-0.5" ptravel="0.5" />
         <flap nrate="1" srate="1" exp="0" trim="0" mtravel="0" ptravel="0" />
         <spoiler trim="0" nrate="1" srate="1" exp="0" mtravel="-0.5" ptravel="0.5" />
