@@ -30,6 +30,14 @@
 #include <stdio.h>
 
 using namespace std::chrono;
+using namespace std;
+using boost::asio::ip::tcp;
+
+boost::iostreams::stream<boost::iostreams::array_source> charArrayToIstream(const std::vector<char> &charArray)
+{
+  return boost::iostreams::stream<boost::iostreams::array_source>(
+      boost::iostreams::array_source(charArray.data(), charArray.size()));
+}
 
 char *get_iso8601_timestamp(char *buf, size_t len)
 {
@@ -105,7 +113,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 #ifdef DETAILED_LOGGING
     {
       char tbuf[100];
-      printf("%s: updater: cycleCount[%ld] crash[%d] simTimeMsec[%ld] lastUpdateTimeMsec[%ld]\n",
+      printf("%s: updater: cycleCount[%ld] simState[%d] simTimeMsec[%ld] lastUpdateTimeMsec[%ld]\n",
              get_iso8601_timestamp(tbuf, sizeof(tbuf)), cycleCounter, Global::Simulation->getState(), simTimeMsec, lastUpdateTimeMsec);
 
       // dump out the buffer time steps
@@ -120,6 +128,96 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 
     lastUpdateTimeMsec = simTimeMsec;
     cycleCounter = 0;
+
+    // initialize the GP once
+    if (!gpInitialized)
+    {
+      gpInitialized = true;
+
+      // Create the adf function/terminal set and print it out.
+      createNodeSet(adfNs);
+
+      // partial registration ( TODO may be easier just to load all in clients )
+      GPRegisterClass(new GPContainer());
+      GPRegisterClass(new GPNode());
+      GPRegisterClass(new GPNodeSet());
+      GPRegisterClass(new GPAdfNodeSet());
+      GPRegisterClass(new GPGene());
+      GPRegisterClass(new GP());
+
+      // manually add our classes for load operation
+      GPRegisterClass(new MyGene());
+      GPRegisterClass(new MyGP());
+    }
+
+    // reload from the GP code?
+    if (evalDataEmpty)
+    {
+      evalData = receiveRPC<EvalData>(*socket_);
+      Global::Simulation->reset();
+      lastUpdateTimeMsec = 0;
+      evalDataEmpty = false;
+      priorPathSelector = -1;
+      pathSelector = 0;
+      path = evalData.pathList.at(pathSelector);
+      evalResults.aircraftStateList.clear();
+      evalResults.crashReasonList.clear();
+      evalResults.pathList = evalData.pathList;
+
+      // hydrate the GP
+      boost::iostreams::stream<boost::iostreams::array_source> is = charArrayToIstream(evalData.gp);
+
+      if (gp)
+      {
+        delete gp;
+      }
+      gp = new MyGP();
+      gp->load(is);
+      gp->resolveNodeValues(adfNs);
+      return;
+    }
+
+    // ok, if we are on to a new path, reset the simulator
+    if (priorPathSelector != pathSelector)
+    {
+      priorPathSelector = pathSelector;
+
+      // reset sim
+      Global::Simulation->reset();
+      simCrashed = false;
+      lastUpdateTimeMsec = 0;
+      pathIndex = 0;
+
+#ifdef DETAILED_LOGGING
+      {
+        char tbuf[100];
+        printf("%s: reset: %ld % 8.2f %8.2f %8.2f\n", get_iso8601_timestamp(tbuf, sizeof(tbuf)),
+               simTimeMsec, Global::aircraft->getPos().r[0],
+               Global::aircraft->getPos().r[1], Global::aircraft->getPos().r[2]);
+      }
+#endif
+
+      // re-initialize aircraft state from incoming payload
+      // cfgfile->setAttributeOverwrite("launch.velocity_rel", std::to_string(mainToSim.aircraftState.dRelVel / FEET_TO_METERS));
+      // cfgfile->setAttributeOverwrite("launch.altitude", std::to_string(-mainToSim.aircraftState.position[2] / FEET_TO_METERS));
+      // cfgfile->setAttributeOverwrite("launch.angle", 0.0); // TODO we need real orientation applied
+
+      // aircraft.setPitchCommand(mainToSim.aircraftState.pitchCommand);
+      // aircraft.setRollCommand(mainToSim.aircraftState.rollCommand);
+      // aircraft.setThrottleCommand(mainToSim.aircraftState.throttleCommand);
+
+      // cfg->getCurLocCfgPtr(cfgfile)->setAttributeOverwrite("start.position", "");
+      // cfg->getCurLocCfgPtr(cfgfile)->setAttributeOverwrite("launch.rel_front", "0.0");
+      // cfg->getCurLocCfgPtr(cfgfile)->setAttributeOverwrite("launch.rel_right", "0.0");
+
+      // aircraft.aircraft_orientation = mainToSim.aircraftState.aircraft_orientation;
+
+      // reset commands to default
+      inputs->pitch = pitchCommand = 0;
+      inputs->aileron = rollCommand = 0;
+      inputs->throttle = throttleCommand = 0;
+      return;
+    }
 
     // convert crrcsim state to AircraftState
     double v = Global::aircraft->getFDM()->getVRelAirmass() * FEET_TO_METERS;
@@ -145,11 +243,114 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       p = Eigen::Vector3d::Zero();
     }
 
-    bool simCrashed = (Global::Simulation->getState() == STATE_CRASHED);
+    // search for location of next timestamp
+    double timeDistance = SIM_RABBIT_VELOCITY * simTimeMsec / 1000.0;
+    while (pathIndex < path.size() - 2 && (path.at(pathIndex).distanceFromStart < timeDistance))
+    {
+      pathIndex++;
+    }
 
-    AircraftState aircraftState{v, q, p,
-                                pitchCommand, rollCommand, throttleCommand,
-                                simTimeMsec, simCrashed};
+    // convert sim state to AircraftState
+    aircraftState = {pathIndex, v, q, p,
+                     pitchCommand, rollCommand, throttleCommand,
+                     simTimeMsec};
+
+    CrashReason crashReason = CrashReason::None;
+
+    // out of bounds?
+    double distanceFromOrigin = std::sqrt(aircraftState.getPosition()[0] * aircraftState.getPosition()[0] +
+                                          aircraftState.getPosition()[1] * aircraftState.getPosition()[1]);
+    if (aircraftState.getPosition()[2] < (SIM_MIN_ELEVATION - SIM_PATH_RADIUS_LIMIT) || // too high
+        aircraftState.getPosition()[2] > (SIM_MIN_ELEVATION) ||                         // too low
+        distanceFromOrigin > SIM_PATH_RADIUS_LIMIT)
+    { // too far
+      crashReason = CrashReason::Eval;
+    }
+
+    // sim crashed?
+    if (Global::Simulation->getState() == STATE_CRASHED)
+    {
+      crashReason = CrashReason::Sim;
+    }
+
+    if (simTimeMsec > SIM_TOTAL_TIME_MSEC)
+    {
+      crashReason = CrashReason::Time;
+    }
+
+    if (pathIndex >= path.size() - 3)
+    {
+      crashReason = CrashReason::Distance;
+    }
+
+    // crashed or out of time or off the end of the list
+    if (crashReason != CrashReason::None)
+    {
+      std::cout << "sim: " << crashReasonToString(crashReason) << " time: " << simTimeMsec << " idx: " << pathIndex << " size: " << path.size() << std::endl;
+
+      // save the crash state
+      evalResults.crashReasonList.push_back(crashReason);
+
+      // save the results list
+      std::vector<AircraftState> aircraftStatesCopy = aircraftStates;
+      evalResults.aircraftStateList.push_back(aircraftStatesCopy);
+      aircraftStates.clear();
+
+      // prepare for the next path if any
+      if (++pathSelector < evalData.pathList.size())
+      {
+        path = evalData.pathList.at(pathSelector);
+      }
+      else
+      {
+        // send the results back
+        evalResults.dump(std::cout);
+        sendRPC(*socket_, evalResults);
+        evalDataEmpty = true;
+      }
+      return;
+    }
+
+    // approximate pitch/roll/throttle to achieve goal
+
+    // *** ROLL: Calculate the vector from craft to target in world frame
+    Eigen::Vector3d craftToTarget = path.at(aircraftState.getThisPathIndex()).start - aircraftState.getPosition();
+
+    // Transform the craft-to-target vector to body frame
+    Eigen::Vector3d target_local = aircraftState.getOrientation().inverse() * craftToTarget;
+
+    // Project the craft-to-target vector onto the body YZ plane
+    Eigen::Vector3d projectedVector(0, target_local.y(), target_local.z());
+
+    // Calculate the angle between the projected vector and the body Z-axis
+    double rollEstimate = std::atan2(projectedVector.y(), -projectedVector.z());
+
+    // *** PITCH: Calculate the vector from craft to target in world frame if it did rotate
+    Eigen::Quaterniond rollRotation(Eigen::AngleAxisd(rollEstimate, Eigen::Vector3d::UnitX()));
+    Eigen::Quaterniond virtualOrientation = aircraftState.getOrientation() * rollRotation;
+
+    // Transform target vector to new virtual orientation
+    Eigen::Vector3d newLocalTargetVector = virtualOrientation.inverse() * craftToTarget;
+
+    // Calculate pitch angle
+    double pitchEstimate = std::atan2(-newLocalTargetVector.z(), newLocalTargetVector.x());
+
+    // // now try to determine if pitch up or pitch down makes more sense
+    // if (std::abs(pitchEstimate) > M_PI / 2) {
+    //   pitchEstimate = (pitchEstimate > 0) ? pitchEstimate - M_PI : pitchEstimate + M_PI;
+    //   rollEstimate = -rollEstimate;
+    // }
+
+    // range is -1:1
+    aircraftState.setRollCommand(rollEstimate / M_PI);
+    aircraftState.setPitchCommand(pitchEstimate / M_PI);
+
+    // Throttle estimate range is -1:1
+    {
+      double distance = (path.at(aircraftState.getThisPathIndex()).start - aircraftState.getPosition()).norm();
+      double throttleEstimate = std::clamp((distance - 10) / aircraftState.getRelVel(), -1.0, 1.0);
+      aircraftState.setThrottleCommand(throttleEstimate);
+    }
 
 #ifdef DETAILED_LOGGING
     {
@@ -163,72 +364,24 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     }
 #endif
 
-    // always send our state
-    sendRPC(*socket_, aircraftState);
+    // evaluate the current state
+    gp->NthMyGene(0)->evaluate(path, *gp, 0);
 
-    // ok what does main say to do
-    MainToSim mainToSim = receiveRPC<MainToSim>(*socket_);
+    // capture the computed outputs
+    pitchCommand = aircraftState.getPitchCommand();
+    rollCommand = aircraftState.getRollCommand();
+    throttleCommand = aircraftState.getThrottleCommand();
 
-    switch (mainToSim.controlType)
+    // save the state for results
+    aircraftStates.push_back(aircraftState);
+
+#ifdef DETAILED_LOGGING
     {
-    // here we get a reset from the main controller, just update local state (reset, etc)
-    case ControlType::AIRCRAFT_STATE:
-      // re-initialize aircraft state from incoming payload
-      // cfgfile->setAttributeOverwrite("launch.velocity_rel", std::to_string(mainToSim.aircraftState.dRelVel / FEET_TO_METERS));
-      // cfgfile->setAttributeOverwrite("launch.altitude", std::to_string(-mainToSim.aircraftState.position[2] / FEET_TO_METERS));
-      // cfgfile->setAttributeOverwrite("launch.angle", 0.0); // TODO we need real orientation applied
-
-      // aircraft.setPitchCommand(mainToSim.aircraftState.pitchCommand);
-      // aircraft.setRollCommand(mainToSim.aircraftState.rollCommand);
-      // aircraft.setThrottleCommand(mainToSim.aircraftState.throttleCommand);
-
-      // cfg->getCurLocCfgPtr(cfgfile)->setAttributeOverwrite("start.position", "");
-      // cfg->getCurLocCfgPtr(cfgfile)->setAttributeOverwrite("launch.rel_front", "0.0");
-      // cfg->getCurLocCfgPtr(cfgfile)->setAttributeOverwrite("launch.rel_right", "0.0");
-
-      // aircraft.aircraft_orientation = mainToSim.aircraftState.aircraft_orientation;
-
-      lastUpdateTimeMsec = 0;
-      simCrashed = false;
-
-      // reset sim
-      Global::Simulation->reset();
-
-#ifdef DETAILED_LOGGING
-      {
-        char tbuf[100];
-        printf("%s: reset: %010ld % 8.2f %8.2f %8.2f\n", get_iso8601_timestamp(tbuf, sizeof(tbuf)),
-               simTimeMsec, Global::aircraft->getPos().r[0],
-               Global::aircraft->getPos().r[1], Global::aircraft->getPos().r[2]);
-      }
-#endif
-
-      // reset commands to default
-      pitchCommand = 0;
-      rollCommand = 0;
-      throttleCommand = 0;
-
-      break;
-
-    // here we receive some control signals, simulate
-    case ControlType::CONTROL_SIGNAL:
-      // update controls
-
-      // cache control commands
-      pitchCommand = mainToSim.controlSignal.pitchCommand;
-      rollCommand = mainToSim.controlSignal.rollCommand;
-      throttleCommand = mainToSim.controlSignal.throttleCommand;
-
-#ifdef DETAILED_LOGGING
-      {
-        char tbuf[1000];
-        printf("%s: control: p:% 8.2f r:%8.2f t:%8.2f\n", get_iso8601_timestamp(tbuf, sizeof(tbuf)),
-               pitchCommand, rollCommand, throttleCommand);
-      }
-#endif
-
-      break;
+      char tbuf[1000];
+      printf("%s: control: p:% 8.2f r:%8.2f t:%8.2f\n", get_iso8601_timestamp(tbuf, sizeof(tbuf)),
+             pitchCommand, rollCommand, throttleCommand);
     }
+#endif
 
     // convert cached values to crrcsim scales and return
     inputs->elevator = -pitchCommand / 2.0;         // invert from -1:1 to -0.5:0.5

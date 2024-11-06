@@ -27,7 +27,9 @@
 #include "../inputdev.h"
 #include "../../mod_misc/SimpleXMLTransfer.h"
 
+#include "gp.h"
 #include "minisim.h"
+#include "autoc.h"
 
 #include <stdio.h>
 #include <iostream>
@@ -39,7 +41,7 @@
 using namespace std;
 using boost::asio::ip::tcp;
 
-// #define DETAILED_LOGGING 1
+#define DETAILED_LOGGING 1
 
 #define FEET_TO_METERS 0.3048
 #define INPUT_UPDATE_INTERVAL_MSEC 200
@@ -81,11 +83,30 @@ private:
 
   unsigned long lastUpdateTimeMsec = 0;
   unsigned long cycleCounter = 0;
+  bool simCrashed = false;
+  bool gpInitialized = false;
+
   double pitchCommand = 0;
   double rollCommand = 0;
   double throttleCommand = 0;
 
+  // diagnostics
   boost::circular_buffer<unsigned long> buffer{15};
+
+  // here's the work to do and results
+  bool evalDataEmpty = true;
+  int priorPathSelector = -1;
+  int pathSelector = 0;
+  int pathIndex = 0;
+  EvalData evalData;
+  EvalResults evalResults;
+  std::vector<AircraftState> aircraftStates;
+
+  // work in progress
+  MyGP *gp = nullptr;
+  GPAdfNodeSet adfNs;
+  AircraftState aircraftState;
+  std::vector<Path> path;
 };
 
 #endif
