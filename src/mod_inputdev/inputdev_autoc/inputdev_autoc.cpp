@@ -126,6 +126,21 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     }
 #endif
 
+    // ok, if we have seen some large jump in simTimeMsec (computer pause, etc), let's restart this run
+    if (simTimeMsec > lastUpdateTimeMsec + SIM_MAX_INTERVAL_MSEC) {
+#ifdef DETAILED_LOGGING
+      {
+        char tbuf[100];
+        printf("%s: simTimeJump: %ld  resetting...\n", get_iso8601_timestamp(tbuf, sizeof(tbuf)), simTimeMsec);
+      }
+
+      priorPathSelector = -1;
+      lastUpdateTimeMsec = simTimeMsec;
+      cycleCounter = 0;
+      return;
+#endif
+    }
+
     lastUpdateTimeMsec = simTimeMsec;
     cycleCounter = 0;
 
@@ -163,6 +178,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       evalResults.aircraftStateList.clear();
       evalResults.crashReasonList.clear();
       evalResults.pathList = evalData.pathList;
+      aircraftStates.clear();
 
       // hydrate the GP
       boost::iostreams::stream<boost::iostreams::array_source> is = charArrayToIstream(evalData.gp);
@@ -187,6 +203,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       simCrashed = false;
       lastUpdateTimeMsec = 0;
       pathIndex = 0;
+      aircraftStates.clear();
 
 #ifdef DETAILED_LOGGING
       {
