@@ -6,7 +6,6 @@ set(MOD_INPUTDEV_SRCS
   inputdev_mnav/mnav.cpp
   inputdev_autoc/inputdev_autoc.cpp
   inputdev_autoc/inputdev_autoc.h
-  inputdev_autoc/inputdev_autoc.cpp
   inputdev_PPM/inputdev_PPM.cpp
   inputdev_rctran/inputdev_rctran.cpp
   inputdev_rctran2/inputdev_rctran2.cpp
@@ -19,6 +18,7 @@ set(MOD_INPUTDEV_SRCS
   inputdev_software/inputdev_software.cpp
   inputdev_zhenhua/inputdev_zhenhua.cpp
   inputdev_ct6a/inputdev_ct6a.cpp
+  $ENV{HOME}/GP/autoc/autoc-eval.cc
  )
 add_library(mod_inputdev ${MOD_INPUTDEV_SRCS})
 
@@ -29,6 +29,8 @@ include_directories(
   ${MOD_INPUTDEV_EXT_INCDIRS}
   ${EIGEN3_INCLUDE_DIR}
   $ENV{HOME}/GP/autoc
+  $ENV{HOME}/GP/include
 )
+add_compile_options(-Wno-write-strings)
 
 link_directories      ( ${MOD_INPUTDEV_LINKDIRS} )

@@ -179,7 +179,8 @@ endif (HAS_CGAL)
 #
 #
 
-set(CMAKE_CXX_FLAGS_DEBUG "-g3 -O0")
+set(CMAKE_CXX_FLAGS_DEBUG "-g3 -O0 -Wno-write-strings")
+set(CMAKE_EXE_LINKER_FLAGS "-no-pie")
 
 set(CRRCSIM_INCDIRS ${SDL_INCLUDE_DIR}
                     ${CMAKE_BINARY_DIR}
@@ -256,6 +257,7 @@ set (CRRCSIM_LIBS
 include_directories(${CRRCSIM_INCDIRS}
   ${EIGEN3_INCLUDE_DIR}
   $ENV{HOME}/GP/autoc
+  $ENV{HOME}/GP/include
 )
 
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in ${CMAKE_BINARY_DIR}/crrc_config.h)
@@ -269,8 +271,9 @@ if(USE_SANITIZER)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
 endif()
 
-target_link_libraries ( crrcsim ${CRRCSIM_LIBS} Eigen3::Eigen ${Boost_LIBRARIES})
+target_link_directories(crrcsim PUBLIC $ENV{HOME}/GP/lib)
 
+target_link_libraries (crrcsim ${CRRCSIM_LIBS} gp Eigen3::Eigen ${Boost_LIBRARIES})
 
 message("")
 message("Build options:")
