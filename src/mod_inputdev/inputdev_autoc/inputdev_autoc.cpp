@@ -33,6 +33,9 @@ using namespace std::chrono;
 using namespace std;
 using boost::asio::ip::tcp;
 
+void MyGP::evaluate() {}
+void MyGP::evalTask(WorkerContext& context) {}
+
 boost::iostreams::stream<boost::iostreams::array_source> charArrayToIstream(const std::vector<char> &charArray)
 {
   return boost::iostreams::stream<boost::iostreams::array_source>(
@@ -118,9 +121,11 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 
       // dump out the buffer time steps
       printf("  buffer: ");
+      unsigned long last = buffer[0];
       for (auto &t : buffer)
       {
-        printf("%ld ", t);
+        printf("%ld(%ld) ", t, t - last);
+        last = t;
       }
       printf("\n");
     }

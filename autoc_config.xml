@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <crrcsimConfig version="2">
-  <video enabled="1" color_depth="8" multisamples="0" fps="30">
+  <video enabled="1" color_depth="8" multisamples="0" fps="50">
     <skybox texture_offset="0.00000" />
     <fullscreen fUse="0" />
     <zoom field_of_view="35" autozoom="0.050000001" />
@@ -141,7 +141,7 @@
   <HUDCompass fUse="0" />
   <windVectors fUse="0" />
   <modelViewWindow fUse="2" />
-  <simulation slowMotion="1" slowTimeScale="0.5">
+  <simulation slowMotion="0" slowTimeScale="0.5">
     <flightModel dt="0.003" />
     <display_mode fUse="0" />
   </simulation>
