@@ -45,7 +45,7 @@ using boost::asio::ip::tcp;
 
 #define FEET_TO_METERS 0.3048
 #define INPUT_UPDATE_INTERVAL_MSEC 200
-#define SIM_FPS 30.0
+#define SIM_FPS 20.0
 
 // a few cycles after the last update, we assume crash, no flght updates, etc
 #define CYCLE_COUNTER_OVERFLOW (SIM_FPS * INPUT_UPDATE_INTERVAL_MSEC / 1000)
