@@ -183,6 +183,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       evalResults.aircraftStateList.clear();
       evalResults.crashReasonList.clear();
       evalResults.pathList = evalData.pathList;
+      evalResults.gp = evalData.gp;
       aircraftStates.clear();
 
       // hydrate the GP
