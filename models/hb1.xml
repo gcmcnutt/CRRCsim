@@ -21,6 +21,11 @@ HB1 derived from the famous Zagi XS from Trick R/C
       <author>gcmcnutt</author>
       <en>Modelling changes to HB1</en>
     </change>
+    <change>
+      <date>2024-11-22</date>
+      <author>gcmcnutt</author>
+      <en>The power unit should have a bit more power</en>
+    </change>
   </changelog>
   <aero version="1" units="0">
     <ref chord="0.708" span="2.5" area="1.77" speed="12.0" />
@@ -48,7 +53,7 @@ HB1 derived from the famous Zagi XS from Trick R/C
       <sample filename="electric.wav" type="1" pitchfactor="0.007" maxvolume="1" />
     </sound>
     <power units="1">
-      <automagic F="2.668932" V="12.501971">
+      <automagic F="5.668932" V="20.501971">
         <battery throttle_min="0">
           <automagic T="420" />
           <shaft J="0" brake="0">

@@ -104,7 +104,6 @@ private:
 
   // work in progress
   MyGP *gp = nullptr;
-  GPAdfNodeSet adfNs;
   AircraftState aircraftState;
   std::vector<Path> path;
 };
