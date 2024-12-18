@@ -41,7 +41,7 @@
 using namespace std;
 using boost::asio::ip::tcp;
 
-#define DETAILED_LOGGING 1
+// #define DETAILED_LOGGING 1
 
 #define FEET_TO_METERS 0.3048
 #define INPUT_UPDATE_INTERVAL_MSEC 200

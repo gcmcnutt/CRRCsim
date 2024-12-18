@@ -42,6 +42,7 @@ boost::iostreams::stream<boost::iostreams::array_source> charArrayToIstream(cons
       boost::iostreams::array_source(charArray.data(), charArray.size()));
 }
 
+#ifdef DETAILED_LOGGING
 char *get_iso8601_timestamp(char *buf, size_t len)
 {
   auto now = system_clock::now();
@@ -65,6 +66,7 @@ char *get_iso8601_timestamp(char *buf, size_t len)
 
   return buf;
 }
+#endif
 
 T_TX_InterfaceAUTOC::T_TX_InterfaceAUTOC()
 {
@@ -152,15 +154,15 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     // initialize the GP once
     if (!gpInitialized)
     {
-      gpInitialized = true;
-
       initializeSimGP();
+      gpInitialized = true;
     }
 
     // reload from the GP code?
     if (evalDataEmpty)
     {
       evalData = receiveRPC<EvalData>(*socket_);
+      
       Global::Simulation->reset();
       lastUpdateTimeMsec = 0;
       evalDataEmpty = false;
@@ -314,7 +316,9 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       else
       {
         // send the results back
+#ifdef DETAILED_LOGGING
         evalResults.dump(std::cout);
+#endif
         sendRPC(*socket_, evalResults);
         evalDataEmpty = true;
       }
