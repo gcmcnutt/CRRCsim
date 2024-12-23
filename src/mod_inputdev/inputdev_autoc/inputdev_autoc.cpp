@@ -244,7 +244,8 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     Eigen::AngleAxisd yawAngle(Global::aircraft->getFDM()->getPsi(), Eigen::Vector3d::UnitZ());
 
     // Combine rotations
-    Eigen::Quaterniond q = (yawAngle * pitchAngle * rollAngle).normalize();
+    Eigen::Quaterniond q = yawAngle * pitchAngle * rollAngle;
+    q.normalize();
 
     // position
     Eigen::Vector3d p{Global::aircraft->getPos().r[0] * FEET_TO_METERS,
