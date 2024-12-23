@@ -6,7 +6,7 @@
                 "${workspaceFolder}/**",
                 "/usr/include/SDL",
                 "/usr/include/eigen3",
-                "${env:HOME}/GP/autoc"
+                "${env:HOME}/GP/**"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",

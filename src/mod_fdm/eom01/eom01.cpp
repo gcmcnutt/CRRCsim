@@ -280,6 +280,7 @@ void EOM01::ls_step( SCALAR dt )
   
 /* Calculate Euler angles */
 
+#if 1
   Theta = asin( -1*LocalToBody.v[0][2] );
 
   if( LocalToBody.v[0][0] == 0 )
@@ -303,6 +304,7 @@ void EOM01::ls_step( SCALAR dt )
   Lat_geocentric       = Lat_geocentric    + dth*(Latitude_dot  + latitude_dot_past );
   Lon_geocentric       = Lon_geocentric    + dth*(Longitude_dot + longitude_dot_past);
   Radius_to_vehicle    = Radius_to_vehicle + dth*(Radius_dot    + radius_dot_past );
+#endif
 
 /* Save past values */
 
