@@ -273,8 +273,8 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     // out of bounds?
     double distanceFromOrigin = std::sqrt(aircraftState.getPosition()[0] * aircraftState.getPosition()[0] +
                                           aircraftState.getPosition()[1] * aircraftState.getPosition()[1]);
-    if (aircraftState.getPosition()[2] < (SIM_MIN_ELEVATION - SIM_PATH_RADIUS_LIMIT) || // too high
-        aircraftState.getPosition()[2] > (SIM_MIN_ELEVATION) ||                         // too low
+    if (aircraftState.getPosition()[2] < SIM_MAX_ELEVATION || // too high
+        aircraftState.getPosition()[2] > SIM_MIN_ELEVATION || // too low
         distanceFromOrigin > SIM_PATH_RADIUS_LIMIT)
     { // too far
       crashReason = CrashReason::Eval;
