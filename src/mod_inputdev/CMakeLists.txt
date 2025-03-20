@@ -32,5 +32,6 @@ include_directories(
   $ENV{HOME}/GP/include
 )
 add_compile_options(-Wno-write-strings)
+add_definitions(-DGP_BUILD)
 
 link_directories      ( ${MOD_INPUTDEV_LINKDIRS} )
