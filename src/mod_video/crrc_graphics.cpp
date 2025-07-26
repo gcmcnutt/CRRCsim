@@ -455,6 +455,10 @@ void initialize_scenegraph()
 
 void adjust_zoom(float field_of_view)
 {
+  // Skip OpenGL operations in headless mode
+  if (cfgfile->getInt("video.enabled", 1) == 0)
+    return;
+    
   float aspect = (GLfloat)window_xsize/(GLfloat)window_ysize;
   float near_dist = 1.0;
   float far_dist = 10000.0;
@@ -554,6 +558,7 @@ void oscillo()
  */
 CRRCMath::Vector3 FDM2Graphics(CRRCMath::Vector3 const& v)
 {
+  // This coordinate transformation works in both headless and video modes
   return CRRCMath::Vector3(v.r[1], -v.r[2], -v.r[0]);
 }
 
@@ -576,6 +581,10 @@ CRRCMath::Vector3 Graphics2FDM(CRRCMath::Vector3 const& v)
  */
 void display()
 {
+  // Skip all rendering in headless mode
+  if (cfgfile->getInt("video.enabled", 1) == 0)
+    return;
+    
   CRRCMath::Vector3 plane_pos = FDM2Graphics(Global::aircraft->getPos());
 
   // Prepare the current frame buffer and reset
@@ -1219,6 +1228,10 @@ void resize_window(int w, int h)
 
 void cleanup()
 {
+  // Skip cleanup in headless mode (console and sky weren't initialized)
+  if (cfgfile->getInt("video.enabled", 1) == 0)
+    return;
+    
   delete console;
   cleanup_sky();
 }
@@ -1299,6 +1312,10 @@ void drawSolidCube(GLfloat size)
 
 void InitSmartCamera()
 {
+  // Skip smart camera initialization in headless mode
+  if (cfgfile->getInt("video.enabled", 1) == 0)
+    return;
+    
   flSmartCam_time = 0.;
 
   CRRCMath::Vector3 plane_pos = FDM2Graphics(Global::aircraft->getPos());
@@ -1316,6 +1333,10 @@ void InitSmartCamera()
 
 void UpdateCamera(float flDeltaT)
 {
+  // Skip camera updates in headless mode
+  if (cfgfile->getInt("video.enabled", 1) == 0)
+    return;
+    
   double fieldOfViewRad = M_PI/180.0*zoom_get();
   
   double pi_two  = 2.*M_PI;

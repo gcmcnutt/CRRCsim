@@ -54,6 +54,7 @@ class CTime
     int frames;
     float fFPS;               ///< actual game speed in frame/s
     float dtMillis;           ///< integration time (Global::dt) in milliseconds
+    bool headlessMode;        ///< true for simulation-time-only mode (no real-time delays)
 };
 
 #endif  // C_TIME_H

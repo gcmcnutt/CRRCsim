@@ -232,10 +232,8 @@ int Aircraft::load(SimpleXMLTransfer *configfile, FDMEnviroment* fdmEnvironment,
     else
     {
       fdmInterface->loadAirplane(xml, fdmEnvironment, configfile);
-      if (configfile->getInt("video.enabled", 1))
-      {
-        model_ = new CRRCAirplaneV2(xml);
-      }
+      // Always create airplane model - needed for physics simulation regardless of video mode
+      model_ = new CRRCAirplaneV2(xml);
     }
 
     delete xml;

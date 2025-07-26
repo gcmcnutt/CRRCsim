@@ -290,8 +290,20 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       return;
     }
 
-    // convert crrcsim state to AircraftState
-    double v = Global::aircraft->getFDM()->getVRelAirmass() * FEET_TO_METERS;
+    // get actual velocity vector from FDM (in feet/s, convert to m/s) - ground speed
+    CRRCMath::Vector3 fdm_velocity = Global::aircraft->getFDM()->getVel();
+    Eigen::Vector3d velocity_vector{
+        fdm_velocity.r[0] * FEET_TO_METERS,  // North
+        fdm_velocity.r[1] * FEET_TO_METERS,  // East
+        fdm_velocity.r[2] * FEET_TO_METERS   // Down
+    };
+    if (isnan(velocity_vector[0]) || isnan(velocity_vector[1]) || isnan(velocity_vector[2]))
+    {
+      velocity_vector = Eigen::Vector3d::Zero();
+    }
+
+    // compute ground speed magnitude (consistent with velocity vector)
+    double v = velocity_vector.norm();
     if (isnan(v) || isinf(v))
     {
       v = 0.0;
@@ -338,8 +350,9 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       pathIndex++;
     }
 
+
     // convert sim state to AircraftState
-    aircraftState = {pathIndex, v, q, p,
+    aircraftState = {pathIndex, v, velocity_vector, q, p,
                      pitchCommand, rollCommand, throttleCommand,
                      simTimeMsec};
 
@@ -386,7 +399,9 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     // crashed or out of time or off the end of the list
     if (crashReason != CrashReason::None)
     {
+#ifdef DETAILED_LOGGING
       std::cout << "sim: " << crashReasonToString(crashReason) << " time: " << simTimeMsec << " idx: " << pathIndex << " size: " << path.size() << std::endl;
+#endif
 
       // save the crash state
       evalResults.crashReasonList.push_back(crashReason);

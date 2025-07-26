@@ -39,6 +39,7 @@ CTime::CTime(SimpleXMLTransfer *cfg)
     int speed;
     SimpleXMLTransfer *video = cfg->getChild("video", true);
     speed = video->attributeAsInt("fps", DEFAULT_GAME_SPEED);
+    headlessMode = (cfg->getInt("video.enabled", 1) == 0);
     setGameSpeed(speed);
   }
   catch (XMLException e)
@@ -47,6 +48,7 @@ CTime::CTime(SimpleXMLTransfer *cfg)
     std::cerr << "XMLException: " << e.what() << std::endl;
     std::cerr << "Falling back to desired framerate of ";
     std::cerr << DEFAULT_GAME_SPEED << " FPS" << std::endl;
+    headlessMode = false;
     setGameSpeed(DEFAULT_GAME_SPEED);
   }
 }
@@ -80,26 +82,44 @@ int CTime::update()
   Uint32 time;
   int nDeltaTicks;
   
-  // ensure we are not going too fast
-  while (1)
+  if (headlessMode)
   {
-    SDL_Delay(1);   // delay 1 milliseconds
-    time = Global::Simulation->getTotalTime();
-    nDeltaTicks = time - timer1;
-    if (nDeltaTicks >= cycleLength)
-      break;
+    // In headless mode, advance by fixed timestep without real-time delays
+    nDeltaTicks = cycleLength;
+    timer1 += nDeltaTicks;
+    
+    // Update FPS counter (simulated)
+    frames++;
+    if (frames >= gameSpeed) // Update every simulated second
+    {
+      fFPS = gameSpeed;  // Constant simulated FPS
+      frames = 0;
+    }
   }
-  
-  // update timing
-  timer1 += nDeltaTicks;
-
-  // keep track of frame count and wall clock time and update fps each second
-  frames++;
-  if (time - lastFPSTime > FPS_AVERAGING_TIME)
+  else
   {
-    fFPS = frames*1000./(time - lastFPSTime);
-    lastFPSTime = time;
-    frames = 0;
+    // Original real-time mode
+    // ensure we are not going too fast
+    while (1)
+    {
+      SDL_Delay(1);   // delay 1 milliseconds
+      time = Global::Simulation->getTotalTime();
+      nDeltaTicks = time - timer1;
+      if (nDeltaTicks >= cycleLength)
+        break;
+    }
+    
+    // update timing
+    timer1 += nDeltaTicks;
+
+    // keep track of frame count and wall clock time and update fps each second
+    frames++;
+    if (time - lastFPSTime > FPS_AVERAGING_TIME)
+    {
+      fFPS = frames*1000./(time - lastFPSTime);
+      lastFPSTime = time;
+      frames = 0;
+    }
   }
 
   // return the number of ticks (millisecond) to advance the game simulation

@@ -240,7 +240,9 @@ void initialize_flight_model()
     //printf ("START h: %.1f h0: %.1f h1: %.1f h2: %.1f \n",height,h0,h1,h2);
     }
   Altitude = Altitude + zlow + height; 
+#ifdef DETAILED_LOGGING
   printf ("START ALTITUDE : %.1f (%.1f+%.1f)\n",Altitude,zlow,height );////
+#endif
   Global::aircraft->getFDMInterface()->initAirplaneState(
                                  velocity_rel,
                                  phi,
@@ -727,10 +729,17 @@ int main(int argc,char **argv)
           printf("%s", msg.c_str());
 
         // ***** Video setup ****************************************************
-        if (cfgfile->getInt("video.enabled", 1))
+        bool videoEnabled = cfgfile->getInt("video.enabled", 1);
+        if (videoEnabled)
         {
           Video::setupScreen(0, 0, 0);
           Video::setWindowTitleString();
+        }
+        else
+        {
+#ifdef DETAILED_LOGGING
+          printf("Video disabled - running in headless mode\n");
+#endif
         }
         
         // ***** Sound **********************************************************
@@ -758,12 +767,32 @@ int main(int argc,char **argv)
           Global::soundserver = (CRRCAudioServer*)0;
 
         // ***** Video **********************************************************
-
-        Video::initialize_scenegraph();
-        // Temporarily empty scenery. 
-        // It allows to have a graphic context to display a message
-        // during the load of the configured scenery
-        Global::scenery = new SceneryNull();
+        if (videoEnabled)
+        {
+          Video::initialize_scenegraph();
+          // Temporarily empty scenery. 
+          // It allows to have a graphic context to display a message
+          // during the load of the configured scenery
+          Global::scenery = new SceneryNull();
+        }
+        else
+        {
+          // In headless mode, create minimal OpenGL context for PUI compatibility
+#ifdef DETAILED_LOGGING
+          printf("Initializing headless mode with minimal OpenGL context...\n");
+#endif
+          // Create minimal SDL OpenGL context to satisfy PUI requirements
+          SDL_Surface* screen = SDL_SetVideoMode(1, 1, 16, SDL_OPENGL);
+          if (!screen) {
+            fprintf(stderr, "Failed to create minimal OpenGL context for headless mode\n");
+            crrc_exit(CRRC_EXIT_FAILURE, "Failed to initialize headless OpenGL context");
+          }
+          
+          // Initialize PUI with proper OpenGL context
+          puInit();
+          puSetDefaultFonts(FONT_HELVETICA_14, FONT_HELVETICA_14);
+          Global::scenery = new SceneryNull();
+        }
 
         Init_mod_windfield();
 
@@ -829,7 +858,10 @@ int main(int argc,char **argv)
     //~ nVerbosity = 3;
     crrc_time = new CTime(cfgfile);
     
-    Video::initConsole();
+    if (cfgfile->getInt("video.enabled", 1))
+    {
+      Video::initConsole();
+    }
     
 #ifdef LOG_FRAMES
     FILE* fp = fopen("frames.dat", "w");
@@ -863,6 +895,18 @@ int main(int argc,char **argv)
     }  
         
     Global::Simulation->reset();
+    
+    // Validate aircraft is properly loaded before entering main loop
+    if (!Global::aircraft || !Global::aircraft->getModel() || !Global::aircraft->getFDM())
+    {
+      fprintf(stderr, "FATAL: Aircraft not properly loaded - cannot enter simulation loop\n");
+      fprintf(stderr, "  aircraft: %p\n", (void*)Global::aircraft);
+      if (Global::aircraft) {
+        fprintf(stderr, "  model: %p\n", (void*)Global::aircraft->getModel());
+        fprintf(stderr, "  fdm: %p\n", (void*)Global::aircraft->getFDM());
+      }
+      crrc_exit(CRRC_EXIT_FAILURE, "Aircraft initialization failed");
+    }
     
     Scheduler scheduler;
     EventHandler eventHandler(&scheduler);
@@ -964,8 +1008,10 @@ int main(int argc,char **argv)
           static int verbose_print_c = 0;
           if (++verbose_print_c >= 30)
           {
+#ifdef DETAILED_LOGGING
             Global::verboseString += "\n";
             std::cout << Global::verboseString;
+#endif
             verbose_print_c = 0;
           }
         }

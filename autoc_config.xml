@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <crrcsimConfig version="2">
-  <video enabled="1" color_depth="8" multisamples="0" fps="20">
+  <video enabled="0" color_depth="8" multisamples="0" fps="20">
     <skybox texture_offset="0.00000" />
     <fullscreen fUse="0" />
     <zoom field_of_view="35" autozoom="0.050000001" />

@@ -152,12 +152,14 @@ void T_Thermal::read(SimpleXMLTransfer* cfgfile,
   lifetime_sigma  = el->getDouble("lifetime_sigma");
 
   // show values:
+#ifdef DETAILED_LOGGING
   printf("Thermals: strength_mean=%f strength_sigma=%f radius_mean=%f radius_sigma=%f\n",
          strength_mean, strength_sigma,
          radius_mean, radius_sigma);
   printf("Thermals: density=%f lifetime_mean=%f lifetime_sigma=%f\n",
          density, 
-         lifetime_mean, lifetime_sigma);  
+         lifetime_mean, lifetime_sigma);
+#endif  
 }
 
 int T_Thermal::putBackIntoCfg(SimpleXMLTransfer* cfgfile)

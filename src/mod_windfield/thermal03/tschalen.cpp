@@ -97,7 +97,9 @@ void ThermikSchalen::init(SimpleXMLTransfer* cfg) /*{{{*/
   double h_m;
   double dz;
 
+#ifdef DETAILED_LOGGING
   std::cout << "--- void ThermikSchalen::init ---------------------------\n";
+#endif
   
   h_m = cfg->attributeAsDouble("height_m");
 
@@ -136,13 +138,17 @@ void ThermikSchalen::init(SimpleXMLTransfer* cfg) /*{{{*/
   inner.init();
   outer.init();
   
+#ifdef DETAILED_LOGGING
   std::cout << "  inner:\n";
   inner.showpara();
   std::cout << "\n  outer:\n";
   outer.showpara();
+#endif
   
   r_ref = -inner.ol_x;
+#ifdef DETAILED_LOGGING
   std::cout << "\n  r_ref = " << r_ref << "\n";
+#endif
   
   {
     flttype angle;
@@ -177,7 +183,9 @@ void ThermikSchalen::init(SimpleXMLTransfer* cfg) /*{{{*/
     }            
     trans(x, y);
     r_max = x;
+#ifdef DETAILED_LOGGING
     std::cout << "  r_max = " << r_max << "\n";
+#endif
   }
   
   vRefExp = cfg->attributeAsDouble("vRefExp");
@@ -283,11 +291,13 @@ void ThermikSchalen::init(SimpleXMLTransfer* cfg) /*{{{*/
   //   vref*pi*(rref/100)^2 = vl*pi*(rl/100)^2
   //   vl = vref*(rref/100)^2 / (rl/100)^2
   //   vl = vref*rref^2 / rl^2
+#ifdef DETAILED_LOGGING
   std::cout << "  Upwards velocity at lower end is " 
     << (0.5*(inner.ou_x+inner.ol_x)*0.5*(inner.ou_x+inner.ol_x) / (inner.ol_x*inner.ol_x))
     << " times upwards velocity at average height.\n";
   
   std::cout << "---------------------------------------------------------\n";
+#endif
 }
 /*}}}*/
 
@@ -331,7 +341,7 @@ void ThermikSchalen::vectorAt(flttype  x,  flttype  y,
       trans(x,  y);
       trans(x1, y1);
       
-      // Es gilt die Mantelfläche vom Kegelstumpf.
+      // Es gilt die Mantelflï¿½che vom Kegelstumpf.
       flttype l = sqrt((x-x1)*(x-x1) + (y-y1)*(y-y1));
       // pi wird hier und bei A_Ref weggelassen, somit stimmt es wieder.
       flttype A          = l * (x+x1);

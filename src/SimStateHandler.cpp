@@ -194,7 +194,16 @@ void SimStateHandler::reset()
   initialize_flight_model();
   Init_mod_windfield();
     
-  Global::aircraft->getModel()->reset(Global::aircraft->getFDM());
+  // Safely reset aircraft model if properly initialized
+  if (Global::aircraft && Global::aircraft->getModel() && Global::aircraft->getFDM())
+  {
+    Global::aircraft->getModel()->reset(Global::aircraft->getFDM());
+  }
+  else
+  {
+    fprintf(stderr, "Warning: Aircraft not properly initialized for reset\n");
+  }
+  
   Global::gameHandler->reset();
   Global::robots->Reset();
   Global::TXInterface->reset();

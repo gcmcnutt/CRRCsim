@@ -64,51 +64,65 @@ CRRCAirplaneV2::CRRCAirplaneV2()
 
 CRRCAirplaneV2::CRRCAirplaneV2(SimpleXMLTransfer* xml)
 {
+#ifdef DETAILED_LOGGING
   printf("CRRCAirplaneV2(xml)\n");
+#endif
 
   // initialize the airplane's sound
   initSound(xml);    
 
-  // initialize the visual representation
-  // first collect all relevant information from the model file
-  std::string s;      
-  s = XMLModelFile::getGraphics(xml)->getString("model");
-        
-  // Offset of center of gravity
-  CRRCMath::Vector3  pCG;         
-  pCG = CRRCMath::Vector3(0, 0, 0);
-  if (xml->indexOfChild("CG") >= 0)
+  // initialize the visual representation (only when video is enabled)
+  if (cfgfile->getInt("video.enabled", 1))
   {
-    SimpleXMLTransfer* i;
-    i = xml->getChild("CG");
-    pCG.r[0] = i->attributeAsDouble("x", 0);
-    pCG.r[1] = i->attributeAsDouble("y", 0);
-    pCG.r[2] = i->attributeAsDouble("z", 0);
+    // first collect all relevant information from the model file
+    std::string s;      
+    s = XMLModelFile::getGraphics(xml)->getString("model");
+          
+    // Offset of center of gravity
+    CRRCMath::Vector3  pCG;         
+    pCG = CRRCMath::Vector3(0, 0, 0);
+    if (xml->indexOfChild("CG") >= 0)
+    {
+      SimpleXMLTransfer* i;
+      i = xml->getChild("CG");
+      pCG.r[0] = i->attributeAsDouble("x", 0);
+      pCG.r[1] = i->attributeAsDouble("y", 0);
+      pCG.r[2] = i->attributeAsDouble("z", 0);
+      
+      if (i->attributeAsInt("units") == 1)
+        pCG *= M_TO_FT;
+    }
     
-    if (i->attributeAsInt("units") == 1)
-      pCG *= M_TO_FT;
-  }
-  
-  // plib automatically loads the texture file, but it does not know which directory to use.
-  // where is the object file?
-  std::string of = FileSysTools::getDataPath("objects/" + s);
-  // compile and set relative texture path
-  std::string tp = of.substr(0, of.length()-s.length()-1-7) + "textures";    
+    // plib automatically loads the texture file, but it does not know which directory to use.
+    // where is the object file?
+    std::string of = FileSysTools::getDataPath("objects/" + s);
+    // compile and set relative texture path
+    std::string tp = of.substr(0, of.length()-s.length()-1-7) + "textures";    
 
-  lVisID = Video::new_visualization(of, tp, pCG, xml);
-  
-  if (lVisID == INVALID_AIRPLANE_VISUALIZATION)
+    lVisID = Video::new_visualization(of, tp, pCG, xml);
+    
+    if (lVisID == INVALID_AIRPLANE_VISUALIZATION)
+    {
+      std::string msg = "Unable to open airplane model file \"";
+      msg += s;
+      msg += "\"\nspecified in \"";
+      msg += xml->getSourceDescr();
+      msg += "\"";
+      throw std::runtime_error(msg);
+    }
+
+    // get half (approxiamtely) of the airplane size from the graphical model
+    airplaneRadius = Video::get_radius(lVisID);
+  }
+  else
   {
-    std::string msg = "Unable to open airplane model file \"";
-    msg += s;
-    msg += "\"\nspecified in \"";
-    msg += xml->getSourceDescr();
-    msg += "\"";
-    throw std::runtime_error(msg);
+    // In headless mode, skip graphics loading and use default airplane radius
+#ifdef DETAILED_LOGGING
+    printf("Headless mode: skipping airplane graphics, using default radius\n");
+#endif
+    lVisID = INVALID_AIRPLANE_VISUALIZATION;
+    airplaneRadius = 1.0; // Default airplane radius for physics calculations
   }
-
-  // get half (approxiamtely) of the airplane size from the graphical model
-  airplaneRadius = Video::get_radius(lVisID);
 }
 
 
@@ -170,14 +184,18 @@ void CRRCAirplaneV2::initSound(SimpleXMLTransfer* xml)
       if (!FileSysTools::fileExists(soundfile))
         soundfile = FileSysTools::getDataPath("sounds/fan.wav");
     
+#ifdef DETAILED_LOGGING
       std::cout << "soundfile: " << soundfile << "\n";
       //~ std::cout << "max_thrust: " << max_thrust << "\n";
       std::cout << "soundserver: " << Global::soundserver << "\n";
+#endif
   
       // Only make noise if a sound file is available
       if (soundfile != "" && Global::soundserver != (CRRCAudioServer*)0)
       {        
+#ifdef DETAILED_LOGGING
         std::cout << "Using airplane sound " << soundfile << ", type " << sound_type << ", max vol " << dMaxVolume << std::endl;
+#endif
         
         if (sound_type == SOUND_TYPE_GLIDER)
         {

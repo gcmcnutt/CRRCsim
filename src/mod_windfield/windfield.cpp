@@ -359,7 +359,9 @@ void initialize_wind_field(SimpleXMLTransfer* el)
       }
     }
   }
+#ifdef DETAILED_LOGGING
   std::cout << "Using Thermal Simulation v" << ThermalVersion << "\n";
+#endif
 
   // calculate number of thermals in the grid
   {
