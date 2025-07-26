@@ -23,6 +23,9 @@ INCLUDE (CheckCXXSourceCompiles)
 find_package(Eigen3 REQUIRED)
 find_package(Boost REQUIRED COMPONENTS thread system serialization)
 
+# Add GP_BUILD definition for autoc integration
+add_definitions(-DGP_BUILD)
+
 # uncomment to get verbose output
 #set (CMAKE_VERBOSE_MAKEFILE ON)
 

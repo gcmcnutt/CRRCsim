@@ -28,6 +28,7 @@
 #include "../../mod_misc/SimpleXMLTransfer.h"
 
 #include "gp.h"
+#include "gp_bytecode.h"
 #include "minisim.h"
 #include "autoc.h"
 
@@ -104,6 +105,9 @@ private:
 
   // work in progress
   MyGP *gp = nullptr;
+  GPBytecodeInterpreter *interpreter = nullptr;
+  bool isGPTreeData = false;
+  bool isBytecodeData = false;
   AircraftState aircraftState;
   std::vector<Path> path;
 };

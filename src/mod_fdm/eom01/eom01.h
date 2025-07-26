@@ -81,6 +81,14 @@ public:
   virtual double getPsi();
   
   /**
+   * Returns native quaternion components (w, x, y, z) format
+   */
+  virtual double getQuatW() { return e_0; }
+  virtual double getQuatX() { return e_1; }
+  virtual double getQuatY() { return e_2; }
+  virtual double getQuatZ() { return e_3; }
+  
+  /**
    * returns velocity w.r.t. earth surface
    */
   virtual CRRCMath::Vector3 getVel();

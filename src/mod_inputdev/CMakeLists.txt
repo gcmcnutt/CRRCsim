@@ -19,6 +19,7 @@ set(MOD_INPUTDEV_SRCS
   inputdev_zhenhua/inputdev_zhenhua.cpp
   inputdev_ct6a/inputdev_ct6a.cpp
   $ENV{HOME}/GP/autoc/autoc-eval.cc
+  $ENV{HOME}/GP/autoc/gp_bytecode.cc
  )
 add_library(mod_inputdev ${MOD_INPUTDEV_SRCS})
 
