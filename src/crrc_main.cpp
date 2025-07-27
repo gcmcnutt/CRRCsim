@@ -257,6 +257,7 @@ void initialize_flight_model()
   
   Global::Simulation->resume();
   
+#ifdef DETAILED_LOGGING
   {
     SimpleXMLTransfer* header = Global::gameHandler->GetRecordHeader();
     SimpleXMLTransfer* config = Global::aircraft->GetLatestConfig();
@@ -264,7 +265,8 @@ void initialize_flight_model()
     header->setAttribute("airplane.graphics", config->getString("airplane.graphics", "0"));
     Global::recorder->Start(header);
     delete header;
-  }  
+  }
+#endif  
 }
 
 /*****************************************************************************/

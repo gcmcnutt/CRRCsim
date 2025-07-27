@@ -391,8 +391,10 @@ void Wheel::update( FDMEnviroment* env,
     /* emit a crash event */
     CrashEvent ev;
     EventDispatcher::getInstance()->raise(&ev);
+#ifdef DETAILED_LOGGING
     std::cout << "Hardpoint " << nID << ": max_force exceeded (";
     std::cout << -reaction_normal_force << " lbf > " << max_force << " lbf)" << std::endl;
+#endif
   }
 
   /* Calculate friction coefficients */

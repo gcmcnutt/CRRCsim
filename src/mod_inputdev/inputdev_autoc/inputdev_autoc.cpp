@@ -35,6 +35,9 @@ using namespace std::chrono;
 using namespace std;
 using boost::asio::ip::tcp;
 
+// Reference to the global aircraftState used by GP evaluation (from autoc-eval.cc)
+extern AircraftState aircraftState;
+
 void MyGP::evaluate() {}
 void MyGP::evalTask(WorkerContext& context) {}
 
@@ -531,6 +534,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 
     // evaluate the current state using appropriate method
     if (isGPTreeData) {
+      // Now using global aircraftState directly - no copying needed!
       gp->NthMyGene(0)->evaluate(path, *gp, 0);
     } else if (isBytecodeData) {
       // Use bytecode interpreter to evaluate and set control commands

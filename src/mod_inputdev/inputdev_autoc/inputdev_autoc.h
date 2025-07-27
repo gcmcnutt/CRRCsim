@@ -108,7 +108,6 @@ private:
   GPBytecodeInterpreter *interpreter = nullptr;
   bool isGPTreeData = false;
   bool isBytecodeData = false;
-  AircraftState aircraftState;
   std::vector<Path> path;
 };
 

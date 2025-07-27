@@ -77,7 +77,7 @@
         </v3>
       </thermal>
       <start position="field" />
-      <wind velocity="3" direction="180" turbulence="1" />
+      <wind velocity="0" direction="180" turbulence="0" />
     </location>
   </locations>
   <inputMethod method="Mouse">
