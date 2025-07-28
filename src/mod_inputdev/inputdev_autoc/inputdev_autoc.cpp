@@ -362,11 +362,10 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 #ifdef DETAILED_LOGGING
     {
       char tbuf[1000];
-      printf("%s: aircraft_conversion: crrcsim_pos_ft[%8.2f,%8.2f,%8.2f] -> autoc_pos_m[%8.2f,%8.2f,%8.2f] crrcsim_euler[%8.2f,%8.2f,%8.2f] v_ft=%8.2f->v_m=%8.2f\n",
+      printf("%s: aircraft_conversion: crrcsim_pos_ft[%8.2f,%8.2f,%8.2f] -> autoc_pos_m[%8.2f,%8.2f,%8.2f] v_ft=%8.2f->v_m=%8.2f\n",
              get_iso8601_timestamp(tbuf, sizeof(tbuf)),
              Global::aircraft->getPos().r[0], Global::aircraft->getPos().r[1], Global::aircraft->getPos().r[2],
              p[0], p[1], p[2],
-             rollAngle.angle() * 180.0/M_PI, pitchAngle.angle() * 180.0/M_PI, yawAngle.angle() * 180.0/M_PI,
              Global::aircraft->getFDM()->getVRelAirmass(), v);
     }
 #endif
@@ -500,6 +499,10 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     aircraftState.setPitchCommand(pitchCmd);
 
 #ifdef DETAILED_LOGGING
+    // Store baseline controller estimates for comparison
+    double baselineRoll = rollCmd;
+    double baselinePitch = pitchCmd;
+    
     {
       char tbuf[1000];
       printf("%s: control_calculation: rollEst_rad=%8.2f pitchEst_rad=%8.2f -> rollCmd=%8.2f pitchCmd=%8.2f\n",
@@ -523,10 +526,9 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 #ifdef DETAILED_LOGGING
     {
       char tbuf[100];
-      printf("%s: state: v:%f posX:%f posY:%f posZ:%f rAng:%f pAng:%f yAng:%f pCmd:%f rCmd:%f tCmd:%f %ld %d\n",
+      printf("%s: state: v:%f posX:%f posY:%f posZ:%f pCmd:%f rCmd:%f tCmd:%f %ld %d\n",
              get_iso8601_timestamp(tbuf, sizeof(tbuf)),
              aircraftState.getRelVel(), aircraftState.getPosition()[0], aircraftState.getPosition()[1], aircraftState.getPosition()[2],
-             rollAngle.angle(), pitchAngle.angle(), yawAngle.angle(),
              aircraftState.getPitchCommand(), aircraftState.getRollCommand(), aircraftState.getThrottleCommand(),
              simTimeMsec, Global::Simulation->getState());
     }
@@ -541,10 +543,39 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       interpreter->evaluate(aircraftState, path, 0.0);
     }
 
+#ifdef DETAILED_LOGGING
+    // Log key sensor values that GP can access for diagnostics
+    {
+      char tbuf[100];
+      // Calculate some key sensor values the GP would see
+      Eigen::Vector3d velocity_body = aircraftState.getOrientation().inverse() * aircraftState.getVelocity();
+      double alpha = std::atan2(-velocity_body.z(), velocity_body.x()); // GETALPHA
+      double beta = std::atan2(velocity_body.y(), velocity_body.x());   // GETBETA
+      double vel = aircraftState.getRelVel();                          // GETVEL
+      double dhome = (Eigen::Vector3d(0, 0, SIM_INITIAL_ALTITUDE) - aircraftState.getPosition()).norm(); // GETDHOME
+      
+      printf("%s: gp_sensors: vel=%8.2f alpha_deg=%8.2f beta_deg=%8.2f dhome=%8.2f velx=%8.2f vely=%8.2f velz=%8.2f\n",
+             get_iso8601_timestamp(tbuf, sizeof(tbuf)),
+             vel, alpha * 180.0/M_PI, beta * 180.0/M_PI, dhome,
+             aircraftState.getVelocity().x(), aircraftState.getVelocity().y(), aircraftState.getVelocity().z());
+    }
+#endif
+
     // capture the computed outputs
     pitchCommand = aircraftState.getPitchCommand();
     rollCommand = aircraftState.getRollCommand();
     throttleCommand = aircraftState.getThrottleCommand();
+
+#ifdef DETAILED_LOGGING
+    // Log the baseline vs GP-modified control commands
+    {
+      char tbuf[100];
+      printf("%s: control_comparison: baseline[roll=%8.2f pitch=%8.2f] -> gp_output[roll=%8.2f pitch=%8.2f throttle=%8.2f]\n",
+             get_iso8601_timestamp(tbuf, sizeof(tbuf)),
+             baselineRoll, baselinePitch,
+             rollCommand, pitchCommand, throttleCommand);
+    }
+#endif
 
     // save the state for results
     aircraftStates.push_back(aircraftState);
