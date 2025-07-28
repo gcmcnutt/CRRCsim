@@ -554,10 +554,16 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       double vel = aircraftState.getRelVel();                          // GETVEL
       double dhome = (Eigen::Vector3d(0, 0, SIM_INITIAL_ALTITUDE) - aircraftState.getPosition()).norm(); // GETDHOME
       
-      printf("%s: gp_sensors: vel=%8.2f alpha_deg=%8.2f beta_deg=%8.2f dhome=%8.2f velx=%8.2f vely=%8.2f velz=%8.2f\n",
+      // Calculate roll and pitch angles from quaternion for logging
+      Eigen::Vector3d euler = aircraftState.getOrientation().toRotationMatrix().eulerAngles(2, 1, 0);
+      double roll_rad = euler[2];   // Roll angle (rotation around X-axis)
+      double pitch_rad = euler[1];  // Pitch angle (rotation around Y-axis)
+      
+      printf("%s: gp_sensors: vel=%8.2f alpha_deg=%8.2f beta_deg=%8.2f dhome=%8.2f velx=%8.2f vely=%8.2f velz=%8.2f roll_rad=%8.4f pitch_rad=%8.4f\n",
              get_iso8601_timestamp(tbuf, sizeof(tbuf)),
              vel, alpha * 180.0/M_PI, beta * 180.0/M_PI, dhome,
-             aircraftState.getVelocity().x(), aircraftState.getVelocity().y(), aircraftState.getVelocity().z());
+             aircraftState.getVelocity().x(), aircraftState.getVelocity().y(), aircraftState.getVelocity().z(),
+             roll_rad, pitch_rad);
     }
 #endif
 
