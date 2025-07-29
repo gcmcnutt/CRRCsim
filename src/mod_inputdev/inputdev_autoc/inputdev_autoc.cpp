@@ -430,9 +430,11 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       return;
     }
 
+    // BASELINE CONTROLLER DISABLED FOR GP-ONLY LEARNING TEST
     // approximate pitch/roll/throttle to achieve goal
 
     // *** ROLL: Calculate the vector from craft to target in world frame
+    /* COMMENTED OUT - BASELINE CONTROLLER DISABLED
     Eigen::Vector3d craftToTarget = path.at(aircraftState.getThisPathIndex()).start - aircraftState.getPosition();
 
 #ifdef DETAILED_LOGGING
@@ -497,8 +499,13 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     double pitchCmd = std::clamp(pitchEstimate / M_PI, -1.0, 1.0);  // Clamp to prevent extreme values
     aircraftState.setRollCommand(rollCmd);
     aircraftState.setPitchCommand(pitchCmd);
+    END COMMENTED OUT SECTION */
+
+    // Controls persist from previous timestep - GP will make incremental adjustments
 
 #ifdef DETAILED_LOGGING
+    // BASELINE CONTROLLER LOGGING ALSO DISABLED
+    /* COMMENTED OUT - BASELINE CONTROLLER VARIABLES UNDEFINED
     // Store baseline controller estimates for comparison
     double baselineRoll = rollCmd;
     double baselinePitch = pitchCmd;
@@ -514,14 +521,18 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
              projectedVector.x(), projectedVector.y(), projectedVector.z(),
              projectedVector.y(), -projectedVector.z());
     }
+    END COMMENTED OUT SECTION */
 #endif
 
+    // THROTTLE BASELINE CONTROLLER ALSO DISABLED
+    /* COMMENTED OUT - BASELINE CONTROLLER DISABLED
     // Throttle estimate range is -1:1
     {
       double distance = (path.at(aircraftState.getThisPathIndex()).start - aircraftState.getPosition()).norm();
       double throttleEstimate = std::clamp((distance - 10) / aircraftState.getRelVel(), -1.0, 1.0);
       aircraftState.setThrottleCommand(throttleEstimate);
     }
+    END COMMENTED OUT SECTION */
 
 #ifdef DETAILED_LOGGING
     {
@@ -573,6 +584,8 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     throttleCommand = aircraftState.getThrottleCommand();
 
 #ifdef DETAILED_LOGGING
+    // BASELINE COMPARISON LOGGING ALSO DISABLED
+    /* COMMENTED OUT - BASELINE CONTROLLER VARIABLES UNDEFINED  
     // Log the baseline vs GP-modified control commands
     {
       char tbuf[100];
@@ -581,6 +594,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
              baselineRoll, baselinePitch,
              rollCommand, pitchCommand, throttleCommand);
     }
+    END COMMENTED OUT SECTION */
 #endif
 
     // save the state for results
