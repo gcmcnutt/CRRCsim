@@ -20,6 +20,8 @@ set(MOD_INPUTDEV_SRCS
   inputdev_ct6a/inputdev_ct6a.cpp
   $ENV{HOME}/GP/autoc/autoc-eval.cc
   $ENV{HOME}/GP/autoc/gp_bytecode.cc
+  $ENV{HOME}/GP/autoc/gp_evaluator_portable.cc
+  $ENV{HOME}/GP/autoc/gp_evaluator_desktop.cc
  )
 add_library(mod_inputdev ${MOD_INPUTDEV_SRCS})
 
