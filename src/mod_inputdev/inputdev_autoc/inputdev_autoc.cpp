@@ -261,6 +261,32 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       lastUpdateTimeMsec = 0;
       pathIndex = 0;
       aircraftStates.clear();
+      
+      // Record initial aircraft state at time 0 to match path start
+      // Get initial position and orientation after reset
+      Eigen::Vector3d initialPos{Global::aircraft->getPos().r[0] * FEET_TO_METERS,
+                                Global::aircraft->getPos().r[1] * FEET_TO_METERS,
+                                Global::aircraft->getPos().r[2] * FEET_TO_METERS};
+      
+      EOM01* eom01 = dynamic_cast<EOM01*>(Global::aircraft->getFDM());
+      Eigen::Quaterniond initialQuat;
+      if (eom01) {
+        initialQuat = Eigen::Quaterniond(eom01->getQuatW(), eom01->getQuatX(), eom01->getQuatY(), eom01->getQuatZ());
+      } else {
+        initialQuat = Eigen::Quaterniond::Identity();
+      }
+      initialQuat.normalize();
+      
+      CRRCMath::Vector3 fdm_velocity = Global::aircraft->getFDM()->getVel();
+      Eigen::Vector3d initialVel{
+          fdm_velocity.r[0] * FEET_TO_METERS,
+          fdm_velocity.r[1] * FEET_TO_METERS, 
+          fdm_velocity.r[2] * FEET_TO_METERS
+      };
+      double initialSpeed = initialVel.norm();
+      
+      AircraftState initialState{0, initialSpeed, initialVel, initialQuat, initialPos, 0.0, 0.0, 0.0, 0};
+      aircraftStates.push_back(initialState);
 
 #ifdef DETAILED_LOGGING
       {
@@ -346,9 +372,8 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       p = Eigen::Vector3d::Zero();
     }
 
-    // search for location of next timestamp
-    double timeDistance = SIM_RABBIT_VELOCITY * simTimeMsec / 1000.0;
-    while (pathIndex < path.size() - 2 && (path.at(pathIndex).distanceFromStart < timeDistance))
+    // search for location of next timestamp using time-based targeting
+    while (pathIndex < path.size() - 2 && (path.at(pathIndex).simTimeMsec < simTimeMsec))
     {
       pathIndex++;
     }
