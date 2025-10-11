@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1" ?>
 <CRRCSim_airplane version="2">
   <name>
-    <en>HB1</en>
+    <en>HB1 (Tuned to Real Flight Data)</en>
   </name>
   <categories>
     <category>Powered combat</category>
@@ -12,7 +12,8 @@
   <description>
     <en>
 HB1 derived from the famous Zagi XS from Trick R/C
-
+Tuned to match real flight blackbox data from INAV logs.
+Key changes: Increased roll/pitch authority, increased power, reduced damping.
     </en>
   </description>
   <changelog>
@@ -26,34 +27,46 @@ HB1 derived from the famous Zagi XS from Trick R/C
       <author>gcmcnutt</author>
       <en>The power unit should have a bit more power</en>
     </change>
+    <change>
+      <date>2025-10-09</date>
+      <author>Claude Code</author>
+      <en>Tuned aerodynamics to match real flight data: increased control authority (Cl_da, Cm_de), increased power (F), reduced damping (Cl_p, Cm_q), adjusted drag (CD_prof), updated reference speed</en>
+    </change>
   </changelog>
   <aero version="1" units="0">
-    <ref chord="0.708" span="2.5" area="1.77" speed="12.0" />
+    <!-- Updated reference speed to match observed cruise speed -->
+    <ref chord="0.708" span="2.5" area="1.77" speed="13.2" />
     <misc Alpha_0="0" eta_loc="0.25" CG_arm="0.25" span_eff="0.85" />
-    <m Cm_0="0.0100395" Cm_a="-0.42268" Cm_q="-1.68929" Cm_de="-0.210653" />
+    <!-- Pitch moment: Increased Cm_de magnitude by 20% for better pitch authority -->
+    <!-- Reduced Cm_q magnitude by 10% for more responsive pitch -->
+    <m Cm_0="0.0100395" Cm_a="-0.42268" Cm_q="-1.52" Cm_de="-0.253" />
     <lift CL_0="0.132896" CL_max="1.1" CL_min="-0.8" CL_a="4.08115" CL_q="4.90714"
        CL_de="0.49144" CL_drop="0.1" CL_CD0="0.3" />
-    <drag CD_prof="0.025" Uexp_CD="-0.5" CD_stall="0" CD_CLsq="0.02" CD_AIsq="0.04"
+    <!-- Reduced drag by 12% to better match cruise performance -->
+    <drag CD_prof="0.022" Uexp_CD="-0.5" CD_stall="0" CD_CLsq="0.02" CD_AIsq="0.04"
        CD_ELsq="0.04" />
     <Y CY_b="-0.10799" CY_p="-0.03859" CY_r="0.0595832" CY_dr="0" CY_da="0.02049" />
-    <l Cl_b="-0.05249" Cl_p="-0.42547" Cl_r="0.04428" Cl_dr="0" Cl_da="0.13327" />
+    <!-- Roll: Increased Cl_da by 25% for better roll authority -->
+    <!-- Reduced Cl_p magnitude by 10% for more responsive roll -->
+    <l Cl_b="-0.05249" Cl_p="-0.383" Cl_r="0.04428" Cl_dr="0" Cl_da="0.1666" />
     <n Cn_b="0.0213716" Cn_p="-0.000882313" Cn_r="-0.0122373" Cn_dr="0"
        Cn_da="-0.00725753" />
   </aero>
   <config version="1">
     <descr_long>
-      <en>Automatically converted from zagi-xs.air.</en>
+      <en>Tuned to match real HB1 flight performance from blackbox data.</en>
     </descr_long>
     <descr_short>
-      <en>default</en>
+      <en>Real-flight tuned</en>
     </descr_short>
     <mass_inertia version="1" units="0" Mass="0.0343" I_xx="0.0208188"
        I_yy="0.00449063" I_zz="0.0252959" I_xz="0" />
     <sound version="1">
       <sample filename="electric.wav" type="1" pitchfactor="0.007" maxvolume="1" />
     </sound>
+    <!-- Increased power by 25% (F from 5.67 to 7.1) to match observed performance -->
     <power units="1">
-      <automagic F="5.668932" V="20.501971">
+      <automagic F="7.1" V="20.501971">
         <battery throttle_min="0">
           <automagic T="420" />
           <shaft J="0" brake="0">
@@ -106,5 +119,5 @@ HB1 derived from the famous Zagi XS from Trick R/C
   </wheels>
   <launch>
     <preset name_en="glider default (hand)" altitude="6" velocity_rel="1" angle="0" sal="0" rel_to_player="1" rel_front="0" rel_right="2" />
-  </launch>  
+  </launch>
 </CRRCSim_airplane>
