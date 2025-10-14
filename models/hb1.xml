@@ -32,6 +32,11 @@ Key changes: Increased roll/pitch authority, increased power, reduced damping.
       <author>Claude Code</author>
       <en>Tuned aerodynamics to match real flight data: increased control authority (Cl_da, Cm_de), increased power (F), reduced damping (Cl_p, Cm_q), adjusted drag (CD_prof), updated reference speed</en>
     </change>
+    <change>
+      <date>2025-10-13</date>
+      <author>Claude Code</author>
+      <en>Correction: Reduced power (F 7.1→5.0) and increased drag (CD_prof 0.022→0.028) to fix 2x overspeed issue. Sim was 26 m/s vs real 13 m/s mean.</en>
+    </change>
   </changelog>
   <aero version="1" units="0">
     <!-- Updated reference speed to match observed cruise speed -->
@@ -42,8 +47,8 @@ Key changes: Increased roll/pitch authority, increased power, reduced damping.
     <m Cm_0="0.0100395" Cm_a="-0.42268" Cm_q="-1.52" Cm_de="-0.253" />
     <lift CL_0="0.132896" CL_max="1.1" CL_min="-0.8" CL_a="4.08115" CL_q="4.90714"
        CL_de="0.49144" CL_drop="0.1" CL_CD0="0.3" />
-    <!-- Reduced drag by 12% to better match cruise performance -->
-    <drag CD_prof="0.022" Uexp_CD="-0.5" CD_stall="0" CD_CLsq="0.02" CD_AIsq="0.04"
+    <!-- Corrected drag: increased by 27% to slow down cruise (was too fast at 26 m/s vs real 13 m/s) -->
+    <drag CD_prof="0.028" Uexp_CD="-0.5" CD_stall="0" CD_CLsq="0.02" CD_AIsq="0.04"
        CD_ELsq="0.04" />
     <Y CY_b="-0.10799" CY_p="-0.03859" CY_r="0.0595832" CY_dr="0" CY_da="0.02049" />
     <!-- Roll: Increased Cl_da by 25% for better roll authority -->
@@ -64,9 +69,9 @@ Key changes: Increased roll/pitch authority, increased power, reduced damping.
     <sound version="1">
       <sample filename="electric.wav" type="1" pitchfactor="0.007" maxvolume="1" />
     </sound>
-    <!-- Increased power by 25% (F from 5.67 to 7.1) to match observed performance -->
+    <!-- Corrected power: reduced by 30% (F from 7.1 to 5.0) to match real cruise speeds -->
     <power units="1">
-      <automagic F="7.1" V="20.501971">
+      <automagic F="5.0" V="20.501971">
         <battery throttle_min="0">
           <automagic T="420" />
           <shaft J="0" brake="0">
