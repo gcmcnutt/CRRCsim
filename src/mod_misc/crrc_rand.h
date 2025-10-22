@@ -63,15 +63,31 @@ class CRRC_Random
    
    /**
     * Returns a random number between 0 and max().
-    */
-   static inline int rand() { return(::rand()); };
+   */
+  static int rand();
 
-   static inline int max() { return(RAND_MAX); };
+  static inline int max() { return(RAND_MAX); };
+
+  /**
+   * Temporarily associate a contextual label with subsequent rand() calls.
+   * Returns the prior context so callers can restore it.
+   */
+  static const char* pushTraceContext(const char* context);
+
+  /**
+   * Restore a previous context returned by pushTraceContext.
+   */
+  static void popTraceContext(const char* previousContext);
    
    /**
-    * Call this using some random data you have, anytime you want to.
-    */
-   static void insertData(int nData);
+   * Call this using some random data you have, anytime you want to.
+   */
+  static void insertData(int nData);
+
+  /**
+   * Reset RNG state to a deterministic seed.
+   */
+  static void reset(unsigned int seed);
    
   private:
    
@@ -118,4 +134,3 @@ class RandGauss
 };
 
 #endif
-

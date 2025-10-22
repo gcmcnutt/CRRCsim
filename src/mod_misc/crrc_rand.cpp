@@ -21,7 +21,38 @@
 
 #include "crrc_rand.h"
 
+#include <atomic>
 #include <cmath>
+#include <cstdint>
+#include <cstdlib>
+#include <iostream>
+
+namespace {
+
+bool shouldTraceRand() {
+  static const bool trace =
+      []() {
+        const char* env = std::getenv("AUTOC_RNG_TRACE");
+        return env != nullptr && env[0] != '\0';
+      }();
+  return trace;
+}
+
+std::atomic<uint64_t>& randCounter() {
+  static std::atomic<uint64_t> counter{0};
+  return counter;
+}
+
+thread_local const char* gRandContext = nullptr;
+
+double uniformUnit(const char* label) {
+  const char* previous = CRRC_Random::pushTraceContext(label);
+  int raw = CRRC_Random::rand();
+  CRRC_Random::popTraceContext(previous);
+  return static_cast<double>(raw) / CRRC_Random::max();
+}
+
+}  // namespace
 
 unsigned int CRRC_Random::uRandState16;
 unsigned int CRRC_Random::uRandState32;
@@ -48,6 +79,52 @@ void CRRC_Random::insertData(int nData)
   // Value over time is equally distributed, too.
   
   srand(uRandState32);
+  if (shouldTraceRand()) {
+    randCounter().store(0);
+    std::cerr << "[AUTOC:RNG] insertData nData=" << nData
+              << " seed=" << uRandState32 << std::endl;
+  }
+}
+
+void CRRC_Random::reset(unsigned int seed)
+{
+  uRandState16 = seed & 0x7FFF;
+  uRandState32 = seed;
+  srand(seed);
+  if (shouldTraceRand()) {
+    randCounter().store(0);
+    std::cerr << "[AUTOC:RNG] reset seed=" << seed
+              << " u16=" << uRandState16
+              << " u32=" << uRandState32 << std::endl;
+  }
+}
+
+int CRRC_Random::rand()
+{
+  int value = ::rand();
+  if (shouldTraceRand()) {
+    auto& counter = randCounter();
+    uint64_t callIndex = ++counter;
+    std::cerr << "[AUTOC:RNG] rand call=" << callIndex
+              << " value=" << value;
+    if (gRandContext && gRandContext[0] != '\0') {
+      std::cerr << " context=" << gRandContext;
+    }
+    std::cerr << std::endl;
+  }
+  return value;
+}
+
+const char* CRRC_Random::pushTraceContext(const char* context)
+{
+  const char* previous = gRandContext;
+  gRandContext = context;
+  return previous;
+}
+
+void CRRC_Random::popTraceContext(const char* previousContext)
+{
+  gRandContext = previousContext;
 }
 
 RandGauss::RandGauss()
@@ -72,8 +149,8 @@ double RandGauss::Get()
   {
     do
     {
-      U1 = (double)rand() / RAND_MAX;
-      U2 = (double)rand() / RAND_MAX;
+      U1 = uniformUnit("RandGauss::Get.U1");
+      U2 = uniformUnit("RandGauss::Get.U2");
 
       V1 = 2 * U1 - 1;
       V2 = 2 * U2 - 1;
@@ -89,4 +166,3 @@ double RandGauss::Get()
 
   return Z*sigma_ + mean_;  
 }
-

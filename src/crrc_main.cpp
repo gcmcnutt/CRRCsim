@@ -74,6 +74,8 @@ If you'd like to help with CRRCSIM, then send me an email!
 #include "mod_fdm/formats/airtoxml.h"
 #include "mod_fdm/xmlmodelfile.h"
 #include "mod_misc/crrc_rand.h"
+#include <cstdlib>
+static bool gAutocDeterministicMode = (std::getenv("AUTOC_DETERMINISTIC") != nullptr);
 #include "mod_video/glconsole.h"
 #include "crrc_fdm.h"
 #include "mod_misc/ls_constants.h"
@@ -493,7 +495,9 @@ void initializeRandomNumberGenerator()
 {
   time_t sometime = time(0);
   srand((unsigned int) sometime);
-  CRRC_Random::insertData(rand());
+  const char* ctx = CRRC_Random::pushTraceContext("initializeRandomNumberGenerator.seed");
+  CRRC_Random::insertData(CRRC_Random::rand());
+  CRRC_Random::popTraceContext(ctx);
   std::cout << "RAND_MAX = " << RAND_MAX << "\n";
 }
 
@@ -933,10 +937,10 @@ int main(int argc,char **argv)
 
       Global::inputs.ClearKeys();
       
-      // random data
-      {
+      // random data (skip when deterministic mode enforced)
+      if (!gAutocDeterministicMode) {
         CRRC_Random::insertData(SDL_GetTicks());
-        CRRC_Random::insertData(Global::inputs.getRandNum());                   
+        CRRC_Random::insertData(Global::inputs.getRandNum());
       }
 
       // get aircraft position from FDM
@@ -1085,4 +1089,4 @@ int main(int argc,char **argv)
   // crrc_exit() will never return, keep the compiler happy anyway:
   return 0;
 }
-
+#include <cstdlib>

@@ -51,6 +51,33 @@
 #include "thermal03/tschalen.h"
 #include "../mod_landscape/crrc_scenery.h"
 
+namespace {
+
+class RandContextScope {
+ public:
+  explicit RandContextScope(const char* label)
+      : previous_(CRRC_Random::pushTraceContext(label)) {}
+  RandContextScope(const RandContextScope&) = delete;
+  RandContextScope& operator=(const RandContextScope&) = delete;
+  ~RandContextScope() { CRRC_Random::popTraceContext(previous_); }
+
+ private:
+  const char* previous_;
+};
+
+int randWithContext(const char* label) {
+  RandContextScope scope(label);
+  return CRRC_Random::rand();
+}
+
+double uniform01WithContext(const char* label) {
+  RandContextScope scope(label);
+  int raw = CRRC_Random::rand();
+  return static_cast<double>(raw) / (static_cast<double>(CRRC_Random::max()) + 1.0);
+}
+
+}  // namespace
+
 #if (THERMAL_CODE == 1)
 # include "thermalprofile.h"
 #endif
@@ -269,12 +296,14 @@ bool find_new_thermal_position(float *xpos, float *ypos,
       6580, 6934, 7064, 7136, 7372, 7474, 7586, 7592 };
 
   // choose a poly
-  unsigned int uPoly = aPoly[CRRC_Random::rand() % (sizeof(aPoly)/sizeof(unsigned int))];
+  unsigned int uPoly = aPoly[randWithContext("windfield::find_new_thermal_position.select_poly") %
+                              (sizeof(aPoly)/sizeof(unsigned int))];
     
   // find an initial value
-  unsigned int uCRCVal = CRRC_Random::rand();
-  while (uCRCVal == 0)
-    CRRC_Random::rand();
+  unsigned int uCRCVal = static_cast<unsigned int>(randWithContext("windfield::find_new_thermal_position.initial_crc"));
+  while (uCRCVal == 0) {
+    uCRCVal = static_cast<unsigned int>(randWithContext("windfield::find_new_thermal_position.retry_crc"));
+  }
 
   *xcoord = (uCRCVal >> occupancy_grid_size_exp) & (occupancy_grid_size-1);
   *ycoord = uCRCVal & (occupancy_grid_size-1);
@@ -294,8 +323,10 @@ bool find_new_thermal_position(float *xpos, float *ypos,
     *xcoord = (uCRCVal >> occupancy_grid_size_exp) & (occupancy_grid_size-1);
     *ycoord = uCRCVal & (occupancy_grid_size-1);
   }
-  *xpos = gridToAbsCoor(*xcoord, (float)(CRRC_Random::rand())/CRRC_Random::max());
-  *ypos = gridToAbsCoor(*ycoord, (float)(CRRC_Random::rand())/CRRC_Random::max());
+  *xpos = gridToAbsCoor(*xcoord,
+                        static_cast<float>(uniform01WithContext("windfield::find_new_thermal_position.x_offset")));
+  *ypos = gridToAbsCoor(*ycoord,
+                        static_cast<float>(uniform01WithContext("windfield::find_new_thermal_position.y_offset")));
 
   // If no such square could be found, thermal density is set way too high.
   // No visible thermal should be created.
@@ -1103,7 +1134,7 @@ Thermal::Thermal()
 {
   random_init();
   // to have a higher level of initial randomness:
-  lifetime *= rand()/(RAND_MAX+1.0);
+  lifetime *= uniform01WithContext("windfield::Thermal.ctor.lifetime_scale");
 }
 
 /**
