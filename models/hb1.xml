@@ -37,25 +37,25 @@ Key changes: Increased roll/pitch authority, increased power, reduced damping.
       <author>Claude Code</author>
       <en>Correction: Reduced power (F 7.1→5.0) and increased drag (CD_prof 0.022→0.028) to fix 2x overspeed issue. Sim was 26 m/s vs real 13 m/s mean.</en>
     </change>
+    <change>
+      <date>2025-11-20</date>
+      <author>Claude Code</author>
+      <en>Updated geometry and mass properties to match 30in span HB1 (505g), retuned aero/prop for real-flight tracking.</en>
+    </change>
   </changelog>
-  <aero version="1" units="0">
-    <!-- Updated reference speed to match observed cruise speed -->
-    <ref chord="0.708" span="2.5" area="1.77" speed="13.2" />
-    <misc Alpha_0="0" eta_loc="0.25" CG_arm="0.25" span_eff="0.85" />
-    <!-- Pitch moment: Increased Cm_de magnitude by 20% for better pitch authority -->
-    <!-- Reduced Cm_q magnitude by 10% for more responsive pitch -->
-    <m Cm_0="0.0100395" Cm_a="-0.42268" Cm_q="-1.52" Cm_de="-0.253" />
-    <lift CL_0="0.132896" CL_max="1.1" CL_min="-0.8" CL_a="4.08115" CL_q="4.90714"
-       CL_de="0.49144" CL_drop="0.1" CL_CD0="0.3" />
-    <!-- Corrected drag: increased by 27% to slow down cruise (was too fast at 26 m/s vs real 13 m/s) -->
-    <drag CD_prof="0.028" Uexp_CD="-0.5" CD_stall="0" CD_CLsq="0.02" CD_AIsq="0.04"
-       CD_ELsq="0.04" />
-    <Y CY_b="-0.10799" CY_p="-0.03859" CY_r="0.0595832" CY_dr="0" CY_da="0.02049" />
-    <!-- Roll: Increased Cl_da by 25% for better roll authority -->
-    <!-- Reduced Cl_p magnitude by 10% for more responsive roll -->
-    <l Cl_b="-0.05249" Cl_p="-0.383" Cl_r="0.04428" Cl_dr="0" Cl_da="0.1666" />
-    <n Cn_b="0.0213716" Cn_p="-0.000882313" Cn_r="-0.0122373" Cn_dr="0"
-       Cn_da="-0.00725753" />
+  <aero version="1" units="1">
+    <!-- Geometry updated to match 7in chord, 30in span, trimmed at ~15 m/s -->
+    <ref chord="0.178" span="0.762" area="0.136" speed="15.0" />
+    <misc Alpha_0="0" eta_loc="0.25" CG_arm="0.25" span_eff="0.82" />
+    <m Cm_0="0.015" Cm_a="-0.55" Cm_q="-3.0" Cm_de="-0.32" />
+    <lift CL_0="0.18" CL_max="1.2" CL_min="-0.9" CL_a="4.7" CL_q="5.5"
+       CL_de="0.55" CL_drop="0.1" CL_CD0="0.35" />
+    <drag CD_prof="0.045" Uexp_CD="-0.5" CD_stall="0" CD_CLsq="0.04" CD_AIsq="0.05"
+       CD_ELsq="0.05" />
+    <Y CY_b="-0.12" CY_p="-0.05" CY_r="0.08" CY_dr="0" CY_da="0.03" />
+    <l Cl_b="-0.06" Cl_p="-0.55" Cl_r="0.05" Cl_dr="0" Cl_da="0.14" />
+    <n Cn_b="0.03" Cn_p="-0.005" Cn_r="-0.015" Cn_dr="0"
+       Cn_da="-0.010" />
   </aero>
   <config version="1">
     <descr_long>
@@ -64,14 +64,13 @@ Key changes: Increased roll/pitch authority, increased power, reduced damping.
     <descr_short>
       <en>Real-flight tuned</en>
     </descr_short>
-    <mass_inertia version="1" units="0" Mass="0.0343" I_xx="0.0208188"
-       I_yy="0.00449063" I_zz="0.0252959" I_xz="0" />
+    <mass_inertia version="1" units="1" Mass="0.505" I_xx="0.024"
+       I_yy="0.0013" I_zz="0.026" I_xz="0" />
     <sound version="1">
       <sample filename="electric.wav" type="1" pitchfactor="0.007" maxvolume="1" />
     </sound>
-    <!-- Corrected power: reduced by 30% (F from 7.1 to 5.0) to match real cruise speeds -->
     <power units="1">
-      <automagic F="5.0" V="20.501971">
+      <automagic F="8.0" V="11.1">
         <battery throttle_min="0">
           <automagic T="420" />
           <shaft J="0" brake="0">
