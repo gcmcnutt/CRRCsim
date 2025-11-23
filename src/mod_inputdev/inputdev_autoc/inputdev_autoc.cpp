@@ -37,6 +37,33 @@ using namespace std::chrono;
 using namespace std;
 using boost::asio::ip::tcp;
 
+namespace {
+
+void ensureScenarioMetadata(EvalData& evalData) {
+  if (evalData.scenarioList.size() == evalData.pathList.size()) {
+    return;
+  }
+  evalData.scenarioList.assign(evalData.pathList.size(), evalData.scenario);
+  for (size_t idx = 0; idx < evalData.scenarioList.size(); ++idx) {
+    if (evalData.scenarioList[idx].pathVariantIndex < 0) {
+      evalData.scenarioList[idx].pathVariantIndex = static_cast<int>(idx);
+    }
+  }
+}
+
+ScenarioMetadata scenarioForPathIndex(const EvalData& evalData, size_t idx) {
+  if (idx < evalData.scenarioList.size()) {
+    return evalData.scenarioList.at(idx);
+  }
+  ScenarioMetadata meta = evalData.scenario;
+  if (meta.pathVariantIndex < 0) {
+    meta.pathVariantIndex = static_cast<int>(idx);
+  }
+  return meta;
+}
+
+} // namespace
+
 static bool gAutocDeterministicMode = (std::getenv("AUTOC_DETERMINISTIC") != nullptr);
 
 // Reference to the global aircraftState used by GP evaluation (from autoc-eval.cc)
@@ -182,6 +209,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     if (evalDataEmpty)
     {
       evalData = receiveRPC<EvalData>(*socket_);
+      ensureScenarioMetadata(evalData);
       
       Global::Simulation->reset();
       lastUpdateTimeMsec = 0;
@@ -193,23 +221,22 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       evalResults.crashReasonList.clear();
       evalResults.pathList = evalData.pathList;
       evalResults.gp = evalData.gp;
-      evalResults.scenario = evalData.scenario;
+      if (!evalData.scenarioList.empty()) {
+        evalResults.scenario = evalData.scenarioList.front();
+      } else {
+        evalResults.scenario = evalData.scenario;
+      }
       evalResults.scenarioList.clear();
-      evalResults.scenarioList.reserve(evalData.pathList.size());
+      evalResults.scenarioList.reserve(evalData.scenarioList.size());
 
-      CRRC_Random::reset(evalData.scenario.windSeed);
 #ifdef DETAILED_LOGGING
-      if (gAutocDeterministicMode) {
-        std::cerr << "AUTOC deterministic wind seed=" << evalData.scenario.windSeed
-                  << " pathVariant=" << evalData.scenario.pathVariantIndex
-                  << " windVariant=" << evalData.scenario.windVariantIndex << std::endl;
-        std::cerr << "AUTOC deterministic path start pathSelector=" << pathSelector
-                  << " pathVariant=" << pathSelector
-                  << " windVariant=" << evalData.scenario.windVariantIndex
-                  << " windSeed=" << evalData.scenario.windSeed << std::endl;
+      if (gAutocDeterministicMode && !evalData.scenarioList.empty()) {
+        const auto& firstScenario = evalData.scenarioList.front();
+        std::cerr << "AUTOC deterministic wind seed=" << firstScenario.windSeed
+                  << " pathVariant=" << firstScenario.pathVariantIndex
+                  << " windVariant=" << firstScenario.windVariantIndex << std::endl;
       }
 #endif
-      Init_mod_windfield();
       aircraftStates.clear();
 
       // Clean up previous interpreters
@@ -275,6 +302,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     if (priorPathSelector != pathSelector)
     {
       priorPathSelector = pathSelector;
+      ScenarioMetadata activeScenario = scenarioForPathIndex(evalData, static_cast<size_t>(pathSelector));
 
       // reset sim
       Global::Simulation->reset();
@@ -282,6 +310,17 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       lastUpdateTimeMsec = 0;
       pathIndex = 0;
       aircraftStates.clear();
+
+      CRRC_Random::reset(activeScenario.windSeed);
+      Init_mod_windfield();
+#ifdef DETAILED_LOGGING
+      if (gAutocDeterministicMode) {
+        std::cerr << "AUTOC deterministic path start pathSelector=" << pathSelector
+                  << " pathVariant=" << activeScenario.pathVariantIndex
+                  << " windVariant=" << activeScenario.windVariantIndex
+                  << " windSeed=" << activeScenario.windSeed << std::endl;
+      }
+#endif
       
       // Record initial aircraft state at time 0 to match path start
       // Get initial position and orientation after reset
@@ -455,8 +494,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       evalResults.crashReasonList.push_back(crashReason);
 
       // save the results list
-      ScenarioMetadata pathMeta = evalData.scenario;
-      pathMeta.pathVariantIndex = pathSelector;
+      ScenarioMetadata pathMeta = scenarioForPathIndex(evalData, static_cast<size_t>(pathSelector));
       evalResults.scenarioList.push_back(pathMeta);
 
       std::vector<AircraftState> aircraftStatesCopy = aircraftStates;
@@ -469,10 +507,11 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
         path = evalData.pathList.at(pathSelector);
 #ifdef DETAILED_LOGGING
         if (gAutocDeterministicMode) {
+          ScenarioMetadata nextScenario = scenarioForPathIndex(evalData, static_cast<size_t>(pathSelector));
           std::cerr << "AUTOC deterministic path start pathSelector=" << pathSelector
-                    << " pathVariant=" << pathSelector
-                    << " windVariant=" << evalData.scenario.windVariantIndex
-                    << " windSeed=" << evalData.scenario.windSeed << std::endl;
+                    << " pathVariant=" << nextScenario.pathVariantIndex
+                    << " windVariant=" << nextScenario.windVariantIndex
+                    << " windSeed=" << nextScenario.windSeed << std::endl;
         }
 #endif
       }
