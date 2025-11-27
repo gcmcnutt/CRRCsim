@@ -26,6 +26,8 @@ find_package(Boost REQUIRED COMPONENTS thread system serialization)
 # Add GP_BUILD definition for autoc integration
 add_definitions(-DGP_BUILD)
 
+option(ENABLE_PROFILING "Build with frame pointers and debug info for perf/FlameGraph" OFF)
+
 # uncomment to get verbose output
 #set (CMAKE_VERBOSE_MAKEFILE ON)
 
@@ -184,6 +186,12 @@ endif (HAS_CGAL)
 
 set(CMAKE_CXX_FLAGS_DEBUG "-g3 -O0 -Wno-write-strings")
 set(CMAKE_EXE_LINKER_FLAGS "-no-pie")
+
+if(ENABLE_PROFILING)
+  message(STATUS "Enabling profiling-friendly compiler flags for crrcsim")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O2 -fno-omit-frame-pointer -fno-optimize-sibling-calls")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O2 -fno-omit-frame-pointer -fno-optimize-sibling-calls")
+endif()
 
 set(CRRCSIM_INCDIRS ${SDL_INCLUDE_DIR}
                     ${CMAKE_BINARY_DIR}
