@@ -27,6 +27,7 @@ find_package(Boost REQUIRED COMPONENTS thread system serialization)
 add_definitions(-DGP_BUILD)
 
 option(ENABLE_PROFILING "Build with frame pointers and debug info for perf/FlameGraph" OFF)
+option(GP_FASTMATH_TRACE "Enable FastMath instrumentation logs" OFF)
 
 # uncomment to get verbose output
 #set (CMAKE_VERBOSE_MAKEFILE ON)

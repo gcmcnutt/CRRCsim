@@ -32,6 +32,7 @@
 #include <stdio.h>
 #include <boost/archive/binary_iarchive.hpp>
 #include <cstdlib>
+#include <fastmath/metrics.h>
 
 using namespace std::chrono;
 using namespace std;
@@ -522,6 +523,11 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
         evalResults.dump(std::cout);
 #endif
         sendRPC(*socket_, evalResults);
+#ifdef GP_FASTMATH_TRACE
+        double evalCount = static_cast<double>(evalResults.pathList.size());
+        if (evalCount <= 0.0) evalCount = 1.0;
+        fastmath::logFastMathMetrics("crrcsim", std::cout, evalCount);
+#endif
         evalDataEmpty = true;
         evalResults.pathList.clear();
         evalResults.aircraftStateList.clear();

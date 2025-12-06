@@ -36,5 +36,8 @@ include_directories(
 )
 add_compile_options(-Wno-write-strings)
 add_definitions(-DGP_BUILD)
+if(GP_FASTMATH_TRACE)
+  target_compile_definitions(mod_inputdev PRIVATE GP_FASTMATH_TRACE)
+endif()
 
 link_directories      ( ${MOD_INPUTDEV_LINKDIRS} )
