@@ -33,6 +33,7 @@
 #include <boost/archive/binary_iarchive.hpp>
 #include <cstdlib>
 #include <fastmath/metrics.h>
+#include <fastmath/orientation_math.h>
 
 using namespace std::chrono;
 using namespace std;
@@ -157,6 +158,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 #if DEBUG_TX_INTERFACE > 1
   printf("void T_TX_InterfaceAUTOC::getInputData(TSimInputs* inputs)\n");
 #endif
+  const bool comparisonEnabled = fastmath::isFastMathComparisonEnabled();
   // occasionally ask for a model update?
   unsigned long simTimeMsec = Global::Simulation->getSimulationTimeSinceReset();
 
@@ -528,6 +530,9 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
         if (evalCount <= 0.0) evalCount = 1.0;
         fastmath::logFastMathMetrics("crrcsim", std::cout, evalCount);
 #endif
+        if (comparisonEnabled) {
+          fastmath::logFastMathComparison("crrcsim", std::cout);
+        }
         evalDataEmpty = true;
         evalResults.pathList.clear();
         evalResults.aircraftStateList.clear();
@@ -560,7 +565,8 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 #endif
 
     // Transform the craft-to-target vector to body frame
-    Eigen::Vector3d target_local = aircraftState.getOrientation().inverse() * craftToTarget;
+    Eigen::Vector3d target_local = fastmath::rotateWorldToBody(
+        aircraftState.getOrientation(), craftToTarget);
 
 #ifdef DETAILED_LOGGING
     {
@@ -589,7 +595,8 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     Eigen::Quaterniond virtualOrientation = aircraftState.getOrientation() * rollRotation;
 
     // Transform target vector to new virtual orientation
-    Eigen::Vector3d newLocalTargetVector = virtualOrientation.inverse() * craftToTarget;
+    Eigen::Vector3d newLocalTargetVector = fastmath::rotateWorldToBody(
+        virtualOrientation, craftToTarget);
 
     // Calculate pitch angle
     double pitchEstimate = std::atan2(-newLocalTargetVector.z(), newLocalTargetVector.x());
@@ -652,13 +659,35 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     }
 #endif
 
+    double evaluation_result = 0.0;
+    AircraftState referenceState;
+    if (comparisonEnabled) {
+      referenceState = aircraftState;
+    }
+
     // evaluate the current state using appropriate method
     if (isGPTreeData) {
-      // Now using global aircraftState directly - no copying needed!
-      gp->NthMyGene(0)->evaluate(path, *gp, 0);
+      evaluation_result = gp->NthMyGene(0)->evaluate(path, *gp, 0);
     } else if (isBytecodeData) {
-      // Use bytecode interpreter to evaluate and set control commands
-      interpreter->evaluate(aircraftState, path, 0.0);
+      evaluation_result = interpreter->evaluate(aircraftState, path, 0.0);
+    }
+
+    if (comparisonEnabled) {
+      double reference_result = evaluation_result;
+      if (isGPTreeData) {
+        reference_result = gp->NthMyGene(0)->evaluateReference(path, *gp, 0.0, referenceState);
+      } else if (isBytecodeData) {
+        reference_result = interpreter->evaluateReference(referenceState, path, 0.0);
+      }
+      fastmath::recordFastMathComparison(
+        aircraftState.getPitchCommand(),
+        referenceState.getPitchCommand(),
+        aircraftState.getRollCommand(),
+        referenceState.getRollCommand(),
+        aircraftState.getThrottleCommand(),
+        referenceState.getThrottleCommand(),
+        evaluation_result,
+        reference_result);
     }
 
 #ifdef DETAILED_LOGGING
@@ -666,16 +695,16 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     {
       char tbuf[100];
       // Calculate some key sensor values the GP would see
-      Eigen::Vector3d velocity_body = aircraftState.getOrientation().inverse() * aircraftState.getVelocity();
+      Eigen::Vector3d velocity_body = fastmath::rotateWorldToBody(
+          aircraftState.getOrientation(), aircraftState.getVelocity());
       double alpha = std::atan2(-velocity_body.z(), velocity_body.x()); // GETALPHA
       double beta = std::atan2(velocity_body.y(), velocity_body.x());   // GETBETA
       double vel = aircraftState.getRelVel();                          // GETVEL
       double dhome = (Eigen::Vector3d(0, 0, SIM_INITIAL_ALTITUDE) - aircraftState.getPosition()).norm(); // GETDHOME
       
       // Calculate roll and pitch angles from quaternion for logging
-      Eigen::Vector3d euler = aircraftState.getOrientation().toRotationMatrix().eulerAngles(2, 1, 0);
-      double roll_rad = euler[2];   // Roll angle (rotation around X-axis)
-      double pitch_rad = euler[1];  // Pitch angle (rotation around Y-axis)
+      double roll_rad = fastmath::rollFromQuaternion(aircraftState.getOrientation());
+      double pitch_rad = fastmath::pitchFromQuaternion(aircraftState.getOrientation());
       
       printf("%s: gp_sensors: vel=%8.2f alpha_deg=%8.2f beta_deg=%8.2f dhome=%8.2f velx=%8.2f vely=%8.2f velz=%8.2f roll_rad=%8.4f pitch_rad=%8.4f\n",
              get_iso8601_timestamp(tbuf, sizeof(tbuf)),
