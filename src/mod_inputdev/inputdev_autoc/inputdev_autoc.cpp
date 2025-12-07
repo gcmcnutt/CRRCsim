@@ -324,28 +324,29 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       
       // Record initial aircraft state at time 0 to match path start
       // Get initial position and orientation after reset
-      Eigen::Vector3d initialPos{Global::aircraft->getPos().r[0] * FEET_TO_METERS,
-                                Global::aircraft->getPos().r[1] * FEET_TO_METERS,
-                                Global::aircraft->getPos().r[2] * FEET_TO_METERS};
+      gp_vec3 initialPos{static_cast<gp_scalar>(Global::aircraft->getPos().r[0] * FEET_TO_METERS),
+                                static_cast<gp_scalar>(Global::aircraft->getPos().r[1] * FEET_TO_METERS),
+                                static_cast<gp_scalar>(Global::aircraft->getPos().r[2] * FEET_TO_METERS)};
       
       EOM01* eom01 = dynamic_cast<EOM01*>(Global::aircraft->getFDM());
-      Eigen::Quaterniond initialQuat;
+      gp_quat initialQuat;
       if (eom01) {
-        initialQuat = Eigen::Quaterniond(eom01->getQuatW(), eom01->getQuatX(), eom01->getQuatY(), eom01->getQuatZ());
+        initialQuat = gp_quat(eom01->getQuatW(), eom01->getQuatX(), eom01->getQuatY(), eom01->getQuatZ());
       } else {
-        initialQuat = Eigen::Quaterniond::Identity();
+        initialQuat = gp_quat::Identity();
       }
       initialQuat.normalize();
       
       CRRCMath::Vector3 fdm_velocity = Global::aircraft->getFDM()->getVel();
-      Eigen::Vector3d initialVel{
-          fdm_velocity.r[0] * FEET_TO_METERS,
-          fdm_velocity.r[1] * FEET_TO_METERS, 
-          fdm_velocity.r[2] * FEET_TO_METERS
+      gp_vec3 initialVel{
+          static_cast<gp_scalar>(fdm_velocity.r[0] * FEET_TO_METERS),
+          static_cast<gp_scalar>(fdm_velocity.r[1] * FEET_TO_METERS), 
+          static_cast<gp_scalar>(fdm_velocity.r[2] * FEET_TO_METERS)
       };
-      double initialSpeed = initialVel.norm();
+      gp_scalar initialSpeed = initialVel.norm();
       
-      AircraftState initialState{0, initialSpeed, initialVel, initialQuat, initialPos, 0.0, 0.0, 0.0, 0};
+      AircraftState initialState{0, initialSpeed, initialVel, initialQuat, initialPos,
+                                 static_cast<gp_scalar>(0.0f), static_cast<gp_scalar>(0.0f), static_cast<gp_scalar>(0.0f), 0};
       aircraftStates.push_back(initialState);
 
 #ifdef DETAILED_LOGGING
@@ -381,31 +382,31 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 
     // get actual velocity vector from FDM (in feet/s, convert to m/s) - ground speed
     CRRCMath::Vector3 fdm_velocity = Global::aircraft->getFDM()->getVel();
-    Eigen::Vector3d velocity_vector{
+    gp_vec3 velocity_vector{
         fdm_velocity.r[0] * FEET_TO_METERS,  // North
         fdm_velocity.r[1] * FEET_TO_METERS,  // East
         fdm_velocity.r[2] * FEET_TO_METERS   // Down
     };
     if (isnan(velocity_vector[0]) || isnan(velocity_vector[1]) || isnan(velocity_vector[2]))
     {
-      velocity_vector = Eigen::Vector3d::Zero();
+      velocity_vector = gp_vec3::Zero();
     }
 
     // compute ground speed magnitude (consistent with velocity vector)
-    double v = velocity_vector.norm();
+    gp_scalar v = velocity_vector.norm();
     if (isnan(v) || isinf(v))
     {
-      v = 0.0;
+      v = 0.0f;
     }
 
     // Access native quaternion from EOM01 FDM instead of reconstructing from Euler angles
-    Eigen::Quaterniond q;
+    gp_quat q;
     
     // Try to cast to EOM01 to access native quaternion components
     EOM01* eom01 = dynamic_cast<EOM01*>(Global::aircraft->getFDM());
     if (eom01) {
       // Use native quaternion components from EOM01 (w, x, y, z format)
-      q = Eigen::Quaterniond(eom01->getQuatW(), eom01->getQuatX(), eom01->getQuatY(), eom01->getQuatZ());
+      q = gp_quat(eom01->getQuatW(), eom01->getQuatX(), eom01->getQuatY(), eom01->getQuatZ());
       
 #ifdef DETAILED_LOGGING
       {
@@ -424,12 +425,12 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     q.normalize();
 
     // position
-    Eigen::Vector3d p{Global::aircraft->getPos().r[0] * FEET_TO_METERS,
-                      Global::aircraft->getPos().r[1] * FEET_TO_METERS,
-                      Global::aircraft->getPos().r[2] * FEET_TO_METERS};
+    gp_vec3 p{static_cast<gp_scalar>(Global::aircraft->getPos().r[0] * FEET_TO_METERS),
+              static_cast<gp_scalar>(Global::aircraft->getPos().r[1] * FEET_TO_METERS),
+              static_cast<gp_scalar>(Global::aircraft->getPos().r[2] * FEET_TO_METERS)};
     if (isnan(p[0]) || isnan(p[1]) || isnan(p[2]))
     {
-      p = Eigen::Vector3d::Zero();
+      p = gp_vec3::Zero();
     }
 
     // search for location of next timestamp using time-based targeting
@@ -458,7 +459,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     CrashReason crashReason = CrashReason::None;
 
     // out of bounds?
-    double distanceFromOrigin = std::sqrt(aircraftState.getPosition()[0] * aircraftState.getPosition()[0] +
+    gp_scalar distanceFromOrigin = std::sqrt(aircraftState.getPosition()[0] * aircraftState.getPosition()[0] +
                                           aircraftState.getPosition()[1] * aircraftState.getPosition()[1]);
     if (aircraftState.getPosition()[2] < SIM_MAX_ELEVATION || // too high
         aircraftState.getPosition()[2] > SIM_MIN_ELEVATION || // too low
@@ -536,7 +537,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 
     // *** ROLL: Calculate the vector from craft to target in world frame
     /* COMMENTED OUT - BASELINE CONTROLLER DISABLED
-    Eigen::Vector3d craftToTarget = path.at(aircraftState.getThisPathIndex()).start - aircraftState.getPosition();
+    gp_vec3 craftToTarget = path.at(aircraftState.getThisPathIndex()).start - aircraftState.getPosition();
 
 #ifdef DETAILED_LOGGING
     {
@@ -554,12 +555,12 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 #endif
 
     // Transform the craft-to-target vector to body frame
-    Eigen::Vector3d target_local = aircraftState.getOrientation().inverse() * craftToTarget;
+    gp_vec3 target_local = aircraftState.getOrientation().inverse() * craftToTarget;
 
 #ifdef DETAILED_LOGGING
     {
       char tbuf[1000];
-      Eigen::Matrix3d rotMatrix = aircraftState.getOrientation().toRotationMatrix();
+      Eigen::Matrix<gp_scalar,3,3> rotMatrix = aircraftState.getOrientation().toRotationMatrix();
       printf("%s: coordinate_transform: world_vector[%8.2f,%8.2f,%8.2f] -> body_vector[%8.2f,%8.2f,%8.2f]\n",
              get_iso8601_timestamp(tbuf, sizeof(tbuf)),
              craftToTarget[0], craftToTarget[1], craftToTarget[2],
@@ -573,20 +574,20 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 #endif
 
     // Project the craft-to-target vector onto the body YZ plane
-    Eigen::Vector3d projectedVector(0, target_local.y(), target_local.z());
+    gp_vec3 projectedVector(0, target_local.y(), target_local.z());
 
     // Calculate the angle between the projected vector and the body Z-axis
-    double rollEstimate = std::atan2(projectedVector.y(), -projectedVector.z());
+    gp_scalar rollEstimate = std::atan2(projectedVector.y(), -projectedVector.z());
 
     // *** PITCH: Calculate the vector from craft to target in world frame if it did rotate
-    Eigen::Quaterniond rollRotation(Eigen::AngleAxisd(rollEstimate, Eigen::Vector3d::UnitX()));
-    Eigen::Quaterniond virtualOrientation = aircraftState.getOrientation() * rollRotation;
+    gp_quat rollRotation(Eigen::AngleAxis<gp_scalar>(rollEstimate, gp_vec3::UnitX()));
+    gp_quat virtualOrientation = aircraftState.getOrientation() * rollRotation;
 
     // Transform target vector to new virtual orientation
-    Eigen::Vector3d newLocalTargetVector = virtualOrientation.inverse() * craftToTarget;
+    gp_vec3 newLocalTargetVector = virtualOrientation.inverse() * craftToTarget;
 
     // Calculate pitch angle
-    double pitchEstimate = std::atan2(-newLocalTargetVector.z(), newLocalTargetVector.x());
+    gp_scalar pitchEstimate = std::atan2(-newLocalTargetVector.z(), newLocalTargetVector.x());
 
     // // now try to determine if pitch up or pitch down makes more sense
     // if (std::abs(pitchEstimate) > M_PI / 2) {
@@ -596,8 +597,8 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 
     // range is -1:1 
     // Keep baseline estimates identical to minisim - no experimental changes
-    double rollCmd = std::clamp(rollEstimate / M_PI, -1.0, 1.0);    // Clamp to prevent extreme values
-    double pitchCmd = std::clamp(pitchEstimate / M_PI, -1.0, 1.0);  // Clamp to prevent extreme values
+    gp_scalar rollCmd = std::clamp(rollEstimate / static_cast<gp_scalar>(M_PI), static_cast<gp_scalar>(-1.0f), static_cast<gp_scalar>(1.0f));    // Clamp to prevent extreme values
+    gp_scalar pitchCmd = std::clamp(pitchEstimate / static_cast<gp_scalar>(M_PI), static_cast<gp_scalar>(-1.0f), static_cast<gp_scalar>(1.0f));  // Clamp to prevent extreme values
     aircraftState.setRollCommand(rollCmd);
     aircraftState.setPitchCommand(pitchCmd);
     END COMMENTED OUT SECTION */
@@ -608,8 +609,8 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     // BASELINE CONTROLLER LOGGING ALSO DISABLED
     /* COMMENTED OUT - BASELINE CONTROLLER VARIABLES UNDEFINED
     // Store baseline controller estimates for comparison
-    double baselineRoll = rollCmd;
-    double baselinePitch = pitchCmd;
+    gp_scalar baselineRoll = rollCmd;
+    gp_scalar baselinePitch = pitchCmd;
     
     {
       char tbuf[1000];
@@ -629,8 +630,8 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     /* COMMENTED OUT - BASELINE CONTROLLER DISABLED
     // Throttle estimate range is -1:1
     {
-      double distance = (path.at(aircraftState.getThisPathIndex()).start - aircraftState.getPosition()).norm();
-      double throttleEstimate = std::clamp((distance - 10) / aircraftState.getRelVel(), -1.0, 1.0);
+      gp_scalar distance = (path.at(aircraftState.getThisPathIndex()).start - aircraftState.getPosition()).norm();
+      gp_scalar throttleEstimate = std::clamp((distance - static_cast<gp_scalar>(10.0f)) / aircraftState.getRelVel(), static_cast<gp_scalar>(-1.0f), static_cast<gp_scalar>(1.0f));
       aircraftState.setThrottleCommand(throttleEstimate);
     }
     END COMMENTED OUT SECTION */
@@ -660,16 +661,16 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     {
       char tbuf[100];
       // Calculate some key sensor values the GP would see
-      Eigen::Vector3d velocity_body = aircraftState.getOrientation().inverse() * aircraftState.getVelocity();
-      double alpha = std::atan2(-velocity_body.z(), velocity_body.x()); // GETALPHA
-      double beta = std::atan2(velocity_body.y(), velocity_body.x());   // GETBETA
-      double vel = aircraftState.getRelVel();                          // GETVEL
-      double dhome = (Eigen::Vector3d(0, 0, SIM_INITIAL_ALTITUDE) - aircraftState.getPosition()).norm(); // GETDHOME
+      gp_vec3 velocity_body = aircraftState.getOrientation().inverse() * aircraftState.getVelocity();
+      gp_scalar alpha = std::atan2(-velocity_body.z(), velocity_body.x()); // GETALPHA
+      gp_scalar beta = std::atan2(velocity_body.y(), velocity_body.x());   // GETBETA
+      gp_scalar vel = aircraftState.getRelVel();                          // GETVEL
+      gp_scalar dhome = (gp_vec3(0, 0, SIM_INITIAL_ALTITUDE) - aircraftState.getPosition()).norm(); // GETDHOME
       
       // Calculate roll and pitch angles from quaternion for logging
-      Eigen::Vector3d euler = aircraftState.getOrientation().toRotationMatrix().eulerAngles(2, 1, 0);
-      double roll_rad = euler[2];   // Roll angle (rotation around X-axis)
-      double pitch_rad = euler[1];  // Pitch angle (rotation around Y-axis)
+      gp_vec3 euler = aircraftState.getOrientation().toRotationMatrix().eulerAngles(2, 1, 0);
+      gp_scalar roll_rad = euler[2];   // Roll angle (rotation around X-axis)
+      gp_scalar pitch_rad = euler[1];  // Pitch angle (rotation around Y-axis)
       
       printf("%s: gp_sensors: vel=%8.2f alpha_deg=%8.2f beta_deg=%8.2f dhome=%8.2f velx=%8.2f vely=%8.2f velz=%8.2f roll_rad=%8.4f pitch_rad=%8.4f\n",
              get_iso8601_timestamp(tbuf, sizeof(tbuf)),

@@ -87,9 +87,9 @@ private:
   bool simCrashed = false;
   bool gpInitialized = false;
 
-  double pitchCommand = 0;
-  double rollCommand = 0;
-  double throttleCommand = 0;
+  gp_scalar pitchCommand = 0;
+  gp_scalar rollCommand = 0;
+  gp_scalar throttleCommand = 0;
 
   // diagnostics
   boost::circular_buffer<unsigned long> buffer{15};
