@@ -39,6 +39,23 @@ using boost::asio::ip::tcp;
 
 namespace {
 
+// Runtime-configurable intervals (sim time)
+unsigned long parseIntervalFromEnv(const char* name, unsigned long fallback) {
+  const char* env = std::getenv(name);
+  if (!env || *env == '\0') {
+    return fallback;
+  }
+  char* endptr = nullptr;
+  unsigned long val = strtoul(env, &endptr, 10);
+  if (endptr == env || val == 0) {
+    return fallback;
+  }
+  // clamp to a sane range (5ms .. 1000ms)
+  if (val < 5) val = 5;
+  if (val > 1000) val = 1000;
+  return val;
+}
+
 void ensureScenarioMetadata(EvalData& evalData) {
   if (evalData.scenarioList.size() == evalData.pathList.size()) {
     return;
@@ -63,6 +80,16 @@ ScenarioMetadata scenarioForPathIndex(const EvalData& evalData, size_t idx) {
 }
 
 } // namespace
+
+// Global intervals used by AUTOC input (declared in header)
+unsigned long gInputUpdateIntervalMsec = INPUT_UPDATE_INTERVAL_MSEC_DEFAULT; // RC send cadence
+unsigned long gEvalUpdateIntervalMsec = EVAL_UPDATE_INTERVAL_MSEC_DEFAULT;   // sensor/GP cadence
+
+unsigned long getCycleCounterOverflow() {
+  // a few cycles after the last update, we assume crash, no flight updates, etc
+  unsigned long overflow = static_cast<unsigned long>(SIM_FPS * gEvalUpdateIntervalMsec / 1000.0);
+  return overflow > 0 ? overflow : 1;
+}
 
 static bool gAutocDeterministicMode = (std::getenv("AUTOC_DETERMINISTIC") != nullptr);
 
@@ -134,6 +161,13 @@ int T_TX_InterfaceAUTOC::init(SimpleXMLTransfer *config)
 #if DEBUG_TX_INTERFACE > 0
   printf("int T_TX_InterfaceAUTOC::init(SimpleXMLTransfer* config)\n");
 #endif
+  // Allow runtime override of RC send and GP eval cadence (sim time).
+  // Prefer specific names, then fall back to AUTOC_LATENCY_MS for legacy use.
+  gInputUpdateIntervalMsec = parseIntervalFromEnv("AUTOC_INPUT_INTERVAL_MSEC", INPUT_UPDATE_INTERVAL_MSEC_DEFAULT);
+  gInputUpdateIntervalMsec = parseIntervalFromEnv("AUTOC_LATENCY_MS", gInputUpdateIntervalMsec);
+  gEvalUpdateIntervalMsec = parseIntervalFromEnv("AUTOC_EVAL_INTERVAL_MSEC", EVAL_UPDATE_INTERVAL_MSEC_DEFAULT);
+  gEvalUpdateIntervalMsec = parseIntervalFromEnv("AUTOC_EVAL_MS", gEvalUpdateIntervalMsec);
+  gEvalUpdateIntervalMsec = parseIntervalFromEnv("AUTOC_LATENCY_MS", gEvalUpdateIntervalMsec); // legacy alias
   T_TX_Interface::init(config);
 
   boost::asio::io_context io_context;
@@ -159,8 +193,11 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
   // occasionally ask for a model update?
   unsigned long simTimeMsec = Global::Simulation->getSimulationTimeSinceReset();
 
+  // Always emit the last cached commands at RC send cadence (~20Hz via getInputData call rate)
   buffer.push_back(simTimeMsec);
-  if (simTimeMsec > lastUpdateTimeMsec + INPUT_UPDATE_INTERVAL_MSEC || ++cycleCounter > CYCLE_COUNTER_OVERFLOW)
+  const unsigned long overflowLimit = getCycleCounterOverflow();
+  bool shouldEval = (simTimeMsec > lastUpdateTimeMsec + gEvalUpdateIntervalMsec) || (++cycleCounter > overflowLimit);
+  if (shouldEval)
   {
 #ifdef DETAILED_LOGGING
     {
@@ -701,21 +738,22 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 
     // save the state for results
     aircraftStates.push_back(aircraftState);
-
-    // convert cached values to crrcsim scales and return
-    // NOTE: Critical fix - GP/bytecode expects different coordinate conventions than crrcsim
-    inputs->elevator = -pitchCommand / 2.0;         // invert from -1:1 to -0.5:0.5 (crrcsim convention)
-    inputs->aileron = rollCommand / 2.0;            // from -1:1 to -0.5:0.5
-    inputs->throttle = throttleCommand / 2.0 + 0.5; // from -1:1 to 0:1
-    
-#ifdef DETAILED_LOGGING
-    {
-      char tbuf[1000];
-      printf("%s: final_inputs: elevator:%8.2f aileron:%8.2f throttle:%8.2f (from pitch:%8.2f roll:%8.2f throttle:%8.2f)\n", 
-             get_iso8601_timestamp(tbuf, sizeof(tbuf)),
-             inputs->elevator, inputs->aileron, inputs->throttle,
-             pitchCommand, rollCommand, throttleCommand);
-    }
-#endif
   }
+
+  // convert cached values to crrcsim scales and return every frame (RC send cadence)
+  // NOTE: Critical fix - GP/bytecode expects different coordinate conventions than crrcsim
+  inputs->elevator = -pitchCommand / 2.0;         // invert from -1:1 to -0.5:0.5 (crrcsim convention)
+  inputs->aileron = rollCommand / 2.0;            // from -1:1 to -0.5:0.5
+  inputs->throttle = throttleCommand / 2.0 + 0.5; // from -1:1 to 0:1
+  
+#ifdef DETAILED_LOGGING
+  {
+    char tbuf[1000];
+    printf("%s: final_inputs: elevator:%8.2f aileron:%8.2f throttle:%8.2f (from pitch:%8.2f roll:%8.2f throttle:%8.2f) simTime:%ld eval:%s\n", 
+           get_iso8601_timestamp(tbuf, sizeof(tbuf)),
+           inputs->elevator, inputs->aileron, inputs->throttle,
+           pitchCommand, rollCommand, throttleCommand,
+           simTimeMsec, shouldEval ? "Y" : "N");
+  }
+#endif
 }

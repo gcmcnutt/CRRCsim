@@ -10,7 +10,7 @@
     </resolution>
     <textures fUse_textures="1" fUse_mipmaps="0" />
   </video>
-  <launch altitude="75" velocity_rel="0.6" angle="0.22" sal="0" rel_to_player="0"
+  <launch altitude="75" velocity_rel="0.5" angle="0.18" sal="0" rel_to_player="0"
      rel_front="21" rel_right="0">
     <preset name_en="hand" altitude="10" velocity_rel="1" angle="0" rel_to_player="1"
        rel_front="0" rel_right="2" />
@@ -25,7 +25,7 @@
        rel_to_player="1" rel_front="2.5" rel_right="-20" />
     <preset name_en="motor" altitude="0" velocity_rel="0" angle="0" sal="0"
        rel_to_player="1" rel_front="15" rel_right="0" />
-    <preset name_en="autoc" altitude="30" velocity_rel="0.6" angle="0.22" sal="0"
+    <preset name_en="autoc" altitude="30" velocity_rel="0.5" angle="0.18" sal="0"
        rel_to_player="0" rel_front="21" rel_right="0" />
   </launch>
   <presets>
@@ -77,7 +77,8 @@
         </v3>
       </thermal>
       <start position="field" />
-      <wind velocity="3" direction="180" turbulence="1" />
+      <!-- Summer field: ~8 mph steady (≈12 ft/s), gusty to ~15 mph; wind from ~330 deg -->
+      <wind velocity="12" direction="330" turbulence="1.5" />
     </location>
   </locations>
   <inputMethod method="Mouse">
@@ -145,7 +146,8 @@
     <flightModel dt="0.003" />
     <display_mode fUse="0" />
   </simulation>
-  <airplane verbosity="5" graphics="0" config="0" file="models/hb1.xml"
+  <!-- Point sim at streamer-tuned HB1 to mirror current test setup -->
+  <airplane verbosity="5" graphics="0" config="0" file="models/hb1_streamer.xml"
      use_default_launch="1" use_default_mixer="1" />
   <game>
     <f3a enabled="0" />

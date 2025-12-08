@@ -45,11 +45,14 @@ using boost::asio::ip::tcp;
 // #define DETAILED_LOGGING 1
 
 #define FEET_TO_METERS 0.3048
-#define INPUT_UPDATE_INTERVAL_MSEC 200
+#define INPUT_UPDATE_INTERVAL_MSEC_DEFAULT 50   // RC send cadence (~20Hz)
+#define EVAL_UPDATE_INTERVAL_MSEC_DEFAULT 200   // Sensor+GP cadence (~5Hz)
 #define SIM_FPS 20.0
 
-// a few cycles after the last update, we assume crash, no flght updates, etc
-#define CYCLE_COUNTER_OVERFLOW (SIM_FPS * INPUT_UPDATE_INTERVAL_MSEC / 1000)
+// Settable at runtime (see inputdev_autoc.cpp). Defaults to 40ms to model RC/GP latency.
+extern unsigned long gInputUpdateIntervalMsec;
+extern unsigned long gEvalUpdateIntervalMsec;
+unsigned long getCycleCounterOverflow();
 
 class T_TX_InterfaceAUTOC : public T_TX_Interface
 {
