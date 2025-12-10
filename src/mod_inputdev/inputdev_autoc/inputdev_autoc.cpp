@@ -82,8 +82,8 @@ ScenarioMetadata scenarioForPathIndex(const EvalData& evalData, size_t idx) {
 } // namespace
 
 // Global intervals used by AUTOC input (declared in header)
-unsigned long gInputUpdateIntervalMsec = INPUT_UPDATE_INTERVAL_MSEC_DEFAULT; // RC send cadence
 unsigned long gEvalUpdateIntervalMsec = EVAL_UPDATE_INTERVAL_MSEC_DEFAULT;   // sensor/GP cadence
+unsigned long gComputeLatencyMsec = COMPUTE_LATENCY_MSEC_DEFAULT;           // simulated GP compute latency (sensor→output)
 
 unsigned long getCycleCounterOverflow() {
   // a few cycles after the last update, we assume crash, no flight updates, etc
@@ -95,6 +95,16 @@ static bool gAutocDeterministicMode = (std::getenv("AUTOC_DETERMINISTIC") != nul
 
 // Reference to the global aircraftState used by GP evaluation (from autoc-eval.cc)
 extern AircraftState aircraftState;
+
+// Single pending command to model compute latency between sensor sample and applied outputs
+struct PendingCommand {
+  bool valid = false;
+  unsigned long readyTimeMsec = 0;
+  gp_scalar pitch = 0;
+  gp_scalar roll = 0;
+  gp_scalar throttle = 0;
+};
+static PendingCommand gPendingCommand;
 
 void MyGP::evaluate() {}
 void MyGP::evalTask(WorkerContext& context) {}
@@ -161,13 +171,9 @@ int T_TX_InterfaceAUTOC::init(SimpleXMLTransfer *config)
 #if DEBUG_TX_INTERFACE > 0
   printf("int T_TX_InterfaceAUTOC::init(SimpleXMLTransfer* config)\n");
 #endif
-  // Allow runtime override of RC send and GP eval cadence (sim time).
-  // Prefer specific names, then fall back to AUTOC_LATENCY_MS for legacy use.
-  gInputUpdateIntervalMsec = parseIntervalFromEnv("AUTOC_INPUT_INTERVAL_MSEC", INPUT_UPDATE_INTERVAL_MSEC_DEFAULT);
-  gInputUpdateIntervalMsec = parseIntervalFromEnv("AUTOC_LATENCY_MS", gInputUpdateIntervalMsec);
+  // Allow runtime override of GP eval cadence and compute latency (sim time).
   gEvalUpdateIntervalMsec = parseIntervalFromEnv("AUTOC_EVAL_INTERVAL_MSEC", EVAL_UPDATE_INTERVAL_MSEC_DEFAULT);
-  gEvalUpdateIntervalMsec = parseIntervalFromEnv("AUTOC_EVAL_MS", gEvalUpdateIntervalMsec);
-  gEvalUpdateIntervalMsec = parseIntervalFromEnv("AUTOC_LATENCY_MS", gEvalUpdateIntervalMsec); // legacy alias
+  gComputeLatencyMsec = parseIntervalFromEnv("AUTOC_COMPUTE_LATENCY_MSEC", COMPUTE_LATENCY_MSEC_DEFAULT);
   T_TX_Interface::init(config);
 
   boost::asio::io_context io_context;
@@ -193,7 +199,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
   // occasionally ask for a model update?
   unsigned long simTimeMsec = Global::Simulation->getSimulationTimeSinceReset();
 
-  // Always emit the last cached commands at RC send cadence (~20Hz via getInputData call rate)
+  // Always emit the last cached commands each frame; eval only on cadence
   buffer.push_back(simTimeMsec);
   const unsigned long overflowLimit = getCycleCounterOverflow();
   bool shouldEval = (simTimeMsec > lastUpdateTimeMsec + gEvalUpdateIntervalMsec) || (++cycleCounter > overflowLimit);
@@ -229,6 +235,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       priorPathSelector = -1;
       lastUpdateTimeMsec = simTimeMsec;
       cycleCounter = 0;
+      gPendingCommand = PendingCommand{};
       return;
     }
 
@@ -254,6 +261,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       priorPathSelector = -1;
       pathSelector = 0;
       path = evalData.pathList.at(pathSelector);
+      gPendingCommand = PendingCommand{};
       evalResults.aircraftStateList.clear();
       evalResults.crashReasonList.clear();
       evalResults.pathList = evalData.pathList;
@@ -346,6 +354,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       simCrashed = false;
       lastUpdateTimeMsec = 0;
       pathIndex = 0;
+      gPendingCommand = PendingCommand{};
       aircraftStates.clear();
 
       CRRC_Random::reset(activeScenario.windSeed);
@@ -684,14 +693,22 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     }
 #endif
 
-    // evaluate the current state using appropriate method
+    // Evaluate immediately on this snapshot
     if (isGPTreeData) {
-      // Now using global aircraftState directly - no copying needed!
       gp->NthMyGene(0)->evaluate(path, *gp, 0);
     } else if (isBytecodeData) {
-      // Use bytecode interpreter to evaluate and set control commands
       interpreter->evaluate(aircraftState, path, 0.0);
     }
+
+    // Save post-eval state for results
+    aircraftStates.push_back(aircraftState);
+
+    // Stage commands to be applied after compute latency
+    gPendingCommand.pitch = aircraftState.getPitchCommand();
+    gPendingCommand.roll = aircraftState.getRollCommand();
+    gPendingCommand.throttle = aircraftState.getThrottleCommand();
+    gPendingCommand.readyTimeMsec = simTimeMsec + gComputeLatencyMsec;
+    gPendingCommand.valid = true;
 
 #ifdef DETAILED_LOGGING
     // Log key sensor values that GP can access for diagnostics
@@ -717,11 +734,6 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     }
 #endif
 
-    // capture the computed outputs
-    pitchCommand = aircraftState.getPitchCommand();
-    rollCommand = aircraftState.getRollCommand();
-    throttleCommand = aircraftState.getThrottleCommand();
-
 #ifdef DETAILED_LOGGING
     // BASELINE COMPARISON LOGGING ALSO DISABLED
     /* COMMENTED OUT - BASELINE CONTROLLER VARIABLES UNDEFINED  
@@ -735,12 +747,17 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     }
     END COMMENTED OUT SECTION */
 #endif
-
-    // save the state for results
-    aircraftStates.push_back(aircraftState);
   }
 
-  // convert cached values to crrcsim scales and return every frame (RC send cadence)
+  // Apply pending commands when latency expires
+  if (gPendingCommand.valid && simTimeMsec >= gPendingCommand.readyTimeMsec) {
+    pitchCommand = gPendingCommand.pitch;
+    rollCommand = gPendingCommand.roll;
+    throttleCommand = gPendingCommand.throttle;
+    gPendingCommand.valid = false;
+  }
+
+  // convert cached values to crrcsim scales and return every frame
   // NOTE: Critical fix - GP/bytecode expects different coordinate conventions than crrcsim
   inputs->elevator = -pitchCommand / 2.0;         // invert from -1:1 to -0.5:0.5 (crrcsim convention)
   inputs->aileron = rollCommand / 2.0;            // from -1:1 to -0.5:0.5
@@ -749,11 +766,11 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 #ifdef DETAILED_LOGGING
   {
     char tbuf[1000];
-    printf("%s: final_inputs: elevator:%8.2f aileron:%8.2f throttle:%8.2f (from pitch:%8.2f roll:%8.2f throttle:%8.2f) simTime:%ld eval:%s\n", 
+    printf("%s: final_inputs: elevator:%8.2f aileron:%8.2f throttle:%8.2f (from pitch:%8.2f roll:%8.2f throttle:%8.2f) simTime:%ld eval:%s pending:%s\n", 
            get_iso8601_timestamp(tbuf, sizeof(tbuf)),
            inputs->elevator, inputs->aileron, inputs->throttle,
            pitchCommand, rollCommand, throttleCommand,
-           simTimeMsec, shouldEval ? "Y" : "N");
+           simTimeMsec, shouldEval ? "Y" : "N", gPendingCommand.valid ? "Y" : "N");
   }
 #endif
 }
