@@ -45,9 +45,9 @@ using boost::asio::ip::tcp;
 // #define DETAILED_LOGGING 1
 
 #define FEET_TO_METERS 0.3048
-#define EVAL_UPDATE_INTERVAL_MSEC_DEFAULT 200   // Sensor+GP cadence (~5Hz)
+#define EVAL_UPDATE_INTERVAL_MSEC_DEFAULT 100   // Sensor+GP cadence (~10Hz)
 #define COMPUTE_LATENCY_MSEC_DEFAULT 40         // GP compute + scheduling latency
-#define SIM_FPS 20.0
+#define SIM_FPS 25.0                            // ~40 Hz physics tick assumption for overflow calc
 
 // Settable at runtime (see inputdev_autoc.cpp).
 extern unsigned long gEvalUpdateIntervalMsec;
