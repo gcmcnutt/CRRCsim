@@ -405,8 +405,7 @@ void initialize_wind_field(SimpleXMLTransfer* el)
     num_thermals = (int)(pow(occupancy_grid_size*occupancy_grid_res,2)*
                          dDensity);
 
-    // XXX disable for now
-    num_thermals = 0;
+    // num_thermals = 0;  // Commented out to enable thermals
   }
 
 #if THERMAL_TEST != 0
