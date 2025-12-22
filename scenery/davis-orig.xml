@@ -33,7 +33,7 @@ using the original hard-coded rendering.
   
   <!-- Starting position for the model. -->
   <start>
-    <position name="field" north="0" east ="18"  />
+    <position name="field" north="0" east ="0"  />
   </start>
    
   <!-- Default settings -->
@@ -107,4 +107,3 @@ using the original hard-coded rendering.
   </scene>
 
 </crrcsimSceneryFile>
-

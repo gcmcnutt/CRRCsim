@@ -196,6 +196,8 @@ void initialize_flight_model()
     dZRot = calculate_z_rotation(velocity_rel);
   }
   double wind_direction = (cfg->wind->getDirection()*M_PI/180);
+  double launch_heading = (cfgfile->getDouble("launch.heading_deg",
+                                              cfg->wind->getDirection())*M_PI/180.0);
   double posX, posY;
   
   int StartFromPlayer = cfgfile->getInt("launch.rel_to_player", 1);
@@ -221,7 +223,7 @@ void initialize_flight_model()
   float plane[4];
   phi = 0;
   theta = cfgfile->getDouble("launch.angle", 0);
-  psi = wind_direction;
+  psi = launch_heading;
   Altitude = cfgfile->getDouble("launch.altitude", 6);
   double zlow = Global::aircraft->getFDM()->getZLow();
   height = Global::scenery->getHeightAndPlane(posX, posY, plane);

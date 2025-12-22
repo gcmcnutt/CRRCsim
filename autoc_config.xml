@@ -10,8 +10,8 @@
     </resolution>
     <textures fUse_textures="1" fUse_mipmaps="0" />
   </video>
-  <launch altitude="75" velocity_rel="0.5" angle="0.18" sal="0" rel_to_player="0"
-     rel_front="21" rel_right="0">
+  <launch altitude="82" velocity_rel="0.5" angle="0" sal="0" rel_to_player="0"
+     rel_front="21" rel_right="0" heading_deg="180">
     <preset name_en="hand" altitude="10" velocity_rel="1" angle="0" rel_to_player="1"
        rel_front="0" rel_right="2" />
     <preset name_en="winch" altitude="300" velocity_rel="1" angle="0" sal="0" />
