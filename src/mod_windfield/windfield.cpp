@@ -465,6 +465,12 @@ void initialize_wind_field(SimpleXMLTransfer* el)
   rnd_strength.SetSigmaAndMean( cfg->thermal->strength_sigma, cfg->thermal->strength_mean );
   rnd_lifetime.SetSigmaAndMean( cfg->thermal->lifetime_sigma, cfg->thermal->lifetime_mean );
 
+  // CRITICAL: Reset the thermal RandGauss RNGs to ensure determinism
+  // These are file-scope global objects that persist across simulation resets
+  rnd_radius.Reset();
+  rnd_strength.Reset();
+  rnd_lifetime.Reset();
+
   // Create the said number of thermals as a linked list.
   thermals = NULL;
   for (loop=0;loop<num_thermals;loop++)
@@ -779,6 +785,13 @@ void initialize_gust()
   v_V_gust_body_old_ = v_V_gust_body_;
 
   v_R_omega_gust_body_.r[0] = v_R_omega_gust_body_.r[1] = v_R_omega_gust_body_.r[2] = 0.0;
+
+  // CRITICAL: Reset the Dryden turbulence Gaussian RNGs to ensure determinism
+  // These are global static objects that persist across simulation resets
+  eta1.Reset();
+  eta2.Reset();
+  eta3.Reset();
+  eta4.Reset();
 }
 
 // Description: see header file

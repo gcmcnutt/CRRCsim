@@ -124,7 +124,13 @@ class RandGauss
 
     inline void SetSigmaAndMean( double sigma, double mean )
       { sigma_ = sigma; mean_ = mean; };
-    
+
+    /**
+     * Reset internal state to initial conditions.
+     * Call this before starting a new simulation run to ensure determinism.
+     */
+    void Reset();
+
     double Get();
     
   private:

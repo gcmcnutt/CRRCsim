@@ -130,13 +130,24 @@ void CRRC_Random::popTraceContext(const char* previousContext)
 RandGauss::RandGauss()
 {
   SetSigmaAndMean( 1.0, 0.0 );
-  phase = 0.0;
+  phase = 0;
+  V2 = 0.0;
+  fac = 0.0;
 }
 
 RandGauss::RandGauss( double sigma, double mean )
 {
   SetSigmaAndMean( sigma, mean );
-  phase = 0.0;
+  phase = 0;
+  V2 = 0.0;
+  fac = 0.0;
+}
+
+void RandGauss::Reset()
+{
+  phase = 0;
+  V2 = 0.0;
+  fac = 0.0;
 }
 
 double RandGauss::Get()
