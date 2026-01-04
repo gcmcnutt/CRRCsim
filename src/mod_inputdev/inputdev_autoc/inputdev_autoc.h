@@ -106,6 +106,10 @@ private:
   EvalResults evalResults;
   std::vector<AircraftState> aircraftStates;
 
+  // DTEST: Flag to log first timestep after reset
+  bool needDtestFirstLog = false;
+  int evalCounter = 0;  // Total evaluations this worker has processed
+
   // work in progress
   MyGP *gp = nullptr;
   GPBytecodeInterpreter *interpreter = nullptr;
@@ -113,5 +117,8 @@ private:
   bool isBytecodeData = false;
   std::vector<Path> path;
 };
+
+// Expose deterministic mode flag for RNG tracing
+bool isAutocDeterministicMode();
 
 #endif

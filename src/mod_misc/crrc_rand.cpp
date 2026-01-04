@@ -20,6 +20,7 @@
  */
 
 #include "crrc_rand.h"
+#include "autoc_deterministic.h"
 
 #include <atomic>
 #include <cmath>
@@ -30,12 +31,13 @@
 namespace {
 
 bool shouldTraceRand() {
-  static const bool trace =
+  static const bool envEnabled =
       []() {
         const char* env = std::getenv("AUTOC_RNG_TRACE");
         return env != nullptr && env[0] != '\0';
       }();
-  return trace;
+  // Only trace when both env var is set AND we're in deterministic test mode
+  return envEnabled && isAutocDeterministicMode();
 }
 
 std::atomic<uint64_t>& randCounter() {

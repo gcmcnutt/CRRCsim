@@ -495,8 +495,9 @@ void write_globals_into_config()
 /*****************************************************************************/
 void initializeRandomNumberGenerator()
 {
-  time_t sometime = time(0);
-  srand((unsigned int) sometime);
+  // TEMPORARY: Hard-code deterministic seed for autoc troubleshooting
+  // Instead of: time_t sometime = time(0); srand((unsigned int) sometime);
+  srand(42);  // Fixed seed for determinism across all processes
   const char* ctx = CRRC_Random::pushTraceContext("initializeRandomNumberGenerator.seed");
   CRRC_Random::insertData(CRRC_Random::rand());
   CRRC_Random::popTraceContext(ctx);

@@ -88,7 +88,13 @@ class CRRC_Random
    * Reset RNG state to a deterministic seed.
    */
   static void reset(unsigned int seed);
-   
+
+  /**
+   * Get current RNG state for debugging/logging.
+   */
+  static unsigned int getState16() { return uRandState16; }
+  static unsigned int getState32() { return uRandState32; }
+
   private:
    
    /**

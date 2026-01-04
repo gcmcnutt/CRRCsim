@@ -64,7 +64,7 @@
     <location name="scenery/davis-orig.xml">
       <sky nUse="0" />
       <thermal strength_mean="5" strength_sigma="1" radius_mean="70"
-         radius_sigma="10" density="2.4e-06" lifetime_mean="240" lifetime_sigma="60">
+         radius_sigma="10" density="0" lifetime_mean="240" lifetime_sigma="60">
         <v3 vRefExp="2" dz_m="50" height_m="600">
           <inside>
             <upper r_m="30" sl_r="0.8" sl_dz_r="0.2" />
@@ -78,7 +78,8 @@
       </thermal>
       <start position="field" />
       <!-- Summer field: ~8 mph steady (≈12 ft/s), gusty to ~15 mph; wind from ~330 deg -->
-      <wind velocity="12" direction="330" turbulence="1.5" />
+      <!-- DISABLED for determinism testing: wind and turbulence set to 0 -->
+      <wind velocity="0" direction="330" turbulence="0" />
     </location>
   </locations>
   <inputMethod method="Mouse">

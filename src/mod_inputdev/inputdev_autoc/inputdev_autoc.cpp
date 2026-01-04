@@ -27,6 +27,7 @@
 #include "../../mod_fdm/fdm.h"
 #include "../../mod_fdm/eom01/eom01.h"
 #include "../../mod_misc/crrc_rand.h"
+#include "../../mod_windfield/windfield.h"
 #include "inputdev_autoc.h"
 #include <chrono>
 #include <stdio.h>
@@ -92,6 +93,13 @@ unsigned long getCycleCounterOverflow() {
 }
 
 static bool gAutocDeterministicMode = (std::getenv("AUTOC_DETERMINISTIC") != nullptr);
+static bool gInDeterministicTest = false;
+
+// Expose deterministic mode flag for RNG tracing
+// Only returns true when we're actually in a scenario with enableDeterministicLogging=true
+bool isAutocDeterministicMode() {
+  return gInDeterministicTest;
+}
 
 // Reference to the global aircraftState used by GP evaluation (from autoc-eval.cc)
 extern AircraftState aircraftState;
@@ -254,7 +262,56 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     {
       evalData = receiveRPC<EvalData>(*socket_);
       ensureScenarioMetadata(evalData);
-      
+
+      // Set flag for RNG tracing when entering deterministic test
+      gInDeterministicTest = (!evalData.scenarioList.empty() &&
+                              evalData.scenarioList.front().enableDeterministicLogging);
+
+      // Log scenario metadata hash during determinism test
+      if (gInDeterministicTest) {
+        size_t scenarioHash = 0;
+        for (const auto& scenario : evalData.scenarioList) {
+          scenarioHash ^= std::hash<int>{}(scenario.pathVariantIndex) << 1;
+          scenarioHash ^= std::hash<int>{}(scenario.windVariantIndex) << 2;
+          scenarioHash ^= std::hash<unsigned int>{}(scenario.windSeed) << 3;
+        }
+        // Hash first few path points from first path
+        size_t pathHash = 0;
+        if (!evalData.pathList.empty() && !evalData.pathList[0].empty()) {
+          for (size_t i = 0; i < std::min(size_t(3), evalData.pathList[0].size()); ++i) {
+            const auto& pt = evalData.pathList[0][i];
+            pathHash ^= std::hash<float>{}(pt.start[0]) << i;
+            pathHash ^= std::hash<float>{}(pt.start[1]) << (i+1);
+            pathHash ^= std::hash<float>{}(pt.start[2]) << (i+2);
+          }
+        }
+        fprintf(stderr, "DTEST_EVALDATA scenarios=%zu paths=%zu scenarioHash=%016zx pathHash=%016zx\n",
+               evalData.scenarioList.size(), evalData.pathList.size(), scenarioHash, pathHash);
+
+        // Log detailed scenario list
+        fprintf(stderr, "DTEST_SCENARIOS count=%zu: ", evalData.scenarioList.size());
+        for (size_t i = 0; i < evalData.scenarioList.size(); ++i) {
+          const auto& s = evalData.scenarioList[i];
+          fprintf(stderr, "[%zu:pv=%d,wv=%d,ws=%u] ", i, s.pathVariantIndex, s.windVariantIndex, s.windSeed);
+        }
+        fprintf(stderr, "\n");
+
+        // Hash each path individually to find which ones differ
+        fprintf(stderr, "DTEST_PATHLIST count=%zu: ", evalData.pathList.size());
+        for (size_t pathIdx = 0; pathIdx < evalData.pathList.size(); ++pathIdx) {
+          size_t thisPathHash = 0;
+          const auto& thisPath = evalData.pathList[pathIdx];
+          for (size_t i = 0; i < std::min(size_t(3), thisPath.size()); ++i) {
+            const auto& pt = thisPath[i];
+            thisPathHash ^= std::hash<float>{}(pt.start[0]) << i;
+            thisPathHash ^= std::hash<float>{}(pt.start[1]) << (i+1);
+            thisPathHash ^= std::hash<float>{}(pt.start[2]) << (i+2);
+          }
+          fprintf(stderr, "[%zu:pts=%zu,hash=%016zx] ", pathIdx, thisPath.size(), thisPathHash);
+        }
+        fprintf(stderr, "\n");
+      }
+
       Global::Simulation->reset();
       lastUpdateTimeMsec = 0;
       evalDataEmpty = false;
@@ -343,22 +400,43 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       return;
     }
 
+    // WARMUP: On very first evaluation (evalCounter==1, since we increment before logging),
+    // run a dummy simulation to initialize lazy state
+    // This fixes non-determinism where first evaluation produces different results than subsequent ones
+    if (evalCounter == 0) {
+      fprintf(stderr, "WARMUP: Running dummy evaluation to initialize lazy state...\n");
+      // Use a dummy seed for warmup
+      CRRC_Random::reset(12345);
+      Global::Simulation->reset();
+
+      // Run simulation for 1 second (enough to initialize any lazy state)
+      // Use doIdle() which is the normal simulation update call
+      TSimInputs warmupInputs;  // Default inputs (neutral stick)
+      for (int i = 0; i < 100; i++) {  // ~10ms per frame = 1 second
+        Global::Simulation->doIdle(&warmupInputs, 10);  // 10ms timestep
+      }
+
+      fprintf(stderr, "WARMUP: Complete, proceeding with real evaluation\n");
+    }
+
     // ok, if we are on to a new path, reset the simulator
     if (priorPathSelector != pathSelector)
     {
       priorPathSelector = pathSelector;
       ScenarioMetadata activeScenario = scenarioForPathIndex(evalData, static_cast<size_t>(pathSelector));
 
-      // reset sim
+      // CRITICAL: Reset RNG state BEFORE simulation reset so windfield initialization is deterministic
+      CRRC_Random::reset(activeScenario.windSeed);
+      // Note: initialize_gust() is called by initialize_wind_field() inside Simulation->reset()
+      // so we don't need to call it here - that was causing a redundant double-reset
+
+      // reset sim (this calls Init_mod_windfield → initialize_wind_field → initialize_gust internally)
       Global::Simulation->reset();
       simCrashed = false;
       lastUpdateTimeMsec = 0;
       pathIndex = 0;
       gPendingCommand = PendingCommand{};
       aircraftStates.clear();
-
-      CRRC_Random::reset(activeScenario.windSeed);
-      Init_mod_windfield();
 #ifdef DETAILED_LOGGING
       if (gAutocDeterministicMode) {
         std::cerr << "AUTOC deterministic path start pathSelector=" << pathSelector
@@ -395,14 +473,24 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
                                  static_cast<gp_scalar>(0.0f), static_cast<gp_scalar>(0.0f), static_cast<gp_scalar>(0.0f), 0};
       aircraftStates.push_back(initialState);
 
-#ifdef DETAILED_LOGGING
-      {
-        char tbuf[100];
-        printf("%s: reset: %ld % 8.2f %8.2f %8.2f\n", get_iso8601_timestamp(tbuf, sizeof(tbuf)),
-               simTimeMsec, Global::aircraft->getPos().r[0],
-               Global::aircraft->getPos().r[1], Global::aircraft->getPos().r[2]);
+      // Increment evaluation counter BEFORE any logging (needed for warmup check)
+      evalCounter++;
+
+      // Only log during deterministic test mode to keep output manageable
+      if (activeScenario.enableDeterministicLogging) {
+        static int evalCount = 0;
+        static int lastPath = -1;
+        fprintf(stderr, "DTEST_RESET eval#=%d worker_eval#=%d lastPath=%d currPath=%d wind=%u pos[%.6f,%.6f,%.6f] quat[%.6f,%.6f,%.6f,%.6f] vel[%.6f,%.6f,%.6f] prng[%u,%u]\n",
+               evalCount++, evalCounter, lastPath, pathSelector, activeScenario.windSeed,
+               initialPos[0], initialPos[1], initialPos[2],
+               initialQuat.w(), initialQuat.x(), initialQuat.y(), initialQuat.z(),
+               initialVel[0], initialVel[1], initialVel[2],
+               CRRC_Random::getState16(), CRRC_Random::getState32());
+        lastPath = pathSelector;
+
+        // Set flag to log first timestep in next update() call
+        needDtestFirstLog = true;
       }
-#endif
 
       // re-initialize aircraft state from incoming payload
       // cfgfile->setAttributeOverwrite("launch.velocity_rel", std::to_string(mainToSim.aircraftState.dRelVel / FEET_TO_METERS));
@@ -491,16 +579,17 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
                      pitchCommand, rollCommand, throttleCommand,
                      simTimeMsec};
 
-#ifdef DETAILED_LOGGING
-    {
-      char tbuf[1000];
-      printf("%s: aircraft_conversion: crrcsim_pos_ft[%8.2f,%8.2f,%8.2f] -> autoc_pos_m[%8.2f,%8.2f,%8.2f] v_ft=%8.2f->v_m=%8.2f\n",
-             get_iso8601_timestamp(tbuf, sizeof(tbuf)),
-             Global::aircraft->getPos().r[0], Global::aircraft->getPos().r[1], Global::aircraft->getPos().r[2],
+    // Only log during deterministic test mode to keep output manageable
+    ScenarioMetadata currentScenario = scenarioForPathIndex(evalData, static_cast<size_t>(pathSelector));
+    if (currentScenario.enableDeterministicLogging && needDtestFirstLog) {
+      // Log the very first timestep of this evaluation
+      fprintf(stderr, "DTEST_FIRST worker_eval#=%d path=%d wind=%u pos[%.6f,%.6f,%.6f] quat[%.6f,%.6f,%.6f,%.6f] time=%d\n",
+             evalCounter, pathSelector, currentScenario.windSeed,
              p[0], p[1], p[2],
-             Global::aircraft->getFDM()->getVRelAirmass(), v);
+             q.w(), q.x(), q.y(), q.z(),
+             simTimeMsec);
+      needDtestFirstLog = false;
     }
-#endif
 
     CrashReason crashReason = CrashReason::None;
 
