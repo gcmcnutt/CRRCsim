@@ -40,6 +40,49 @@
 
 EOM01::EOM01(const char* logfilename, FDMEnviroment* myEnv) : FDMBase(logfilename, myEnv)
 {
+  // Initialize ALL member variables to prevent uninitialized state in multi-evaluation scenarios.
+  // The FDM object is reused across evaluations, not recreated each time.
+
+  // Debug/diagnostic state (added for deterministic testing)
+  dbg_V_local_airmass = CRRCMath::Vector3();
+  dbg_V_gust_body = CRRCMath::Vector3();
+  dbg_force_body = CRRCMath::Vector3();
+  dbg_moment_body = CRRCMath::Vector3();
+
+  // Integrator history state (Adams-Bashforth requires previous timestep values)
+  v_V_dot_past = CRRCMath::Vector3();
+  latitude_dot_past = longitude_dot_past = radius_dot_past = 0.0;
+  v_R_omega_dot_body_past = CRRCMath::Vector3();
+  e_dot_0_past = e_dot_1_past = e_dot_2_past = e_dot_3_past = 0.0;
+
+  // Current state vectors (will be set by ls_step_init, but zero for safety)
+  v_R_omega_body = CRRCMath::Vector3();
+  v_V_local = CRRCMath::Vector3();
+  v_R_omega_dot_body = CRRCMath::Vector3();
+  v_V_dot_local = CRRCMath::Vector3();
+  v_V_local_rel_ground = CRRCMath::Vector3();
+  v_V_local_rel_airmass = CRRCMath::Vector3();
+  v_V_wind_body = CRRCMath::Vector3();
+  v_P_CG_Rwy = CRRCMath::Vector3();
+
+  // Scalars
+  e_0 = e_1 = e_2 = e_3 = 0.0;
+  Mass = I_xx = I_yy = I_zz = I_xz = 0.0;
+  Sea_level_radius = 0.0;
+  V_rel_wind = Alpha = Beta = 0.0;
+  Gravity = Density = 0.0;
+
+  // Arrays (using memset or explicit initialization)
+  euler_angles_v[0] = euler_angles_v[1] = euler_angles_v[2] = 0.0;
+  geocentric_position_v[0] = geocentric_position_v[1] = geocentric_position_v[2] = 0.0;
+  geodetic_position_v[0] = geodetic_position_v[1] = geodetic_position_v[2] = 0.0;
+
+  // Matrix (will be initialized by ls_step_init, but zero for safety)
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 3; j++) {
+      LocalToBody.v[i][j] = 0.0;
+    }
+  }
 }
 
 double EOM01::getPhi()
@@ -334,6 +377,8 @@ void EOM01::ls_aux(CRRCMath::Vector3 v_V_local_airmass, CRRCMath::Vector3 v_V_gu
   v_V_local_rel_ground = v_V_local;
   v_V_local_rel_airmass = v_V_local_rel_ground - v_V_local_airmass;
   v_V_wind_body = LocalToBody * v_V_local_rel_airmass - v_V_gust_body;
+  dbg_V_local_airmass = v_V_local_airmass;
+  dbg_V_gust_body = v_V_gust_body;
   
   V_rel_wind = v_V_wind_body.length();
 
@@ -462,6 +507,8 @@ void EOM01::ls_accel(CRRCMath::Vector3 v_F,
 #else
   v_V_dot_local.r[2] = inv_Mass*v_F_local.r[2] + Gravity - inv_Radius*(v_V_local.r[0]*v_V_local.r[0] + v_V_local.r[1]*v_V_local.r[1]);
 #endif
+  dbg_force_body = v_F;
+  dbg_moment_body = v_M_cg;
   
   // The altitude-controller, because it is very easy here:
   if (fixed_z < EOM01_FIXED_Z_OFF*0.98)

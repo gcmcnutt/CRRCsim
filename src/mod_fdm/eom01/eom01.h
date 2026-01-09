@@ -101,6 +101,59 @@ public:
    *   r nose right
    */
   virtual CRRCMath::Vector3 getPQR();
+  virtual CRRCMath::Vector3 getWindBody() { return v_V_wind_body; }
+  virtual double getMass() { return Mass; }
+  CRRCMath::Vector3 getVelRelGroundVec() { return v_V_local_rel_ground; }
+  CRRCMath::Vector3 getVelRelAirmassVec() { return v_V_local_rel_airmass; }
+  CRRCMath::Vector3 getOmegaDot() { return v_R_omega_dot_body; }
+  double getDensity() { return Density; }
+  double getGravity() { return Gravity; }
+  CRRCMath::Vector3 getAccelPast() { return v_V_dot_past; }
+  CRRCMath::Vector3 getOmegaDotPast() { return v_R_omega_dot_body_past; }
+  double getLatDotPast() const { return latitude_dot_past; }
+  double getLonDotPast() const { return longitude_dot_past; }
+  double getRadiusDotPast() const { return radius_dot_past; }
+  CRRCMath::Vector3 getVLocal() const { return v_V_local; }
+  CRRCMath::Vector3 getVLocalDot() const { return v_V_dot_local; }
+  CRRCMath::Vector3 getOmegaBody() const { return v_R_omega_body; }
+  CRRCMath::Vector3 getOmegaDot() const { return v_R_omega_dot_body; }
+  double getLatGeocentric() const { return geocentric_position_v[0]; }
+  double getLonGeocentric() const { return geocentric_position_v[1]; }
+  double getRadiusToVehicle() const { return geocentric_position_v[2]; }
+  double getAlpha() const { return Alpha; }
+  double getBeta() const { return Beta; }
+  double getVRelWind() const { return V_rel_wind; }
+  void getQuatDotPast(double (&out)[4]) {
+    out[0] = e_dot_0_past;
+    out[1] = e_dot_1_past;
+    out[2] = e_dot_2_past;
+    out[3] = e_dot_3_past;
+  }
+  CRRCMath::Vector3 getLastLocalAirmass() const { return dbg_V_local_airmass; }
+  CRRCMath::Vector3 getLastGustBody() const { return dbg_V_gust_body; }
+  CRRCMath::Vector3 getLastForceBody() const { return dbg_force_body; }
+  CRRCMath::Vector3 getLastMomentBody() const { return dbg_moment_body; }
+
+  // Reset integrator history/state explicitly
+  // Called on each Global::Simulation->reset() to ensure deterministic re-evaluation
+  void resetIntegratorState() {
+    // Clear Adams-Bashforth integrator history
+    // CRITICAL: Must clear BOTH past and current derivatives to prevent
+    // leftover values from previous path evaluation causing divergence
+    v_V_dot_past = CRRCMath::Vector3();
+    v_V_dot_local = CRRCMath::Vector3();  // Clear current linear acceleration
+    latitude_dot_past = longitude_dot_past = radius_dot_past  = 0.0;
+    v_R_omega_dot_body_past = CRRCMath::Vector3();
+    v_R_omega_dot_body = CRRCMath::Vector3();  // Clear current angular acceleration
+    e_dot_0_past = e_dot_1_past = e_dot_2_past = e_dot_3_past = 0.0;
+
+    // Clear debug state that may affect subsequent calculations
+    // (These shouldn't affect physics, but clear them to prevent any possibility)
+    dbg_V_local_airmass = CRRCMath::Vector3();
+    dbg_V_gust_body = CRRCMath::Vector3();
+    dbg_force_body = CRRCMath::Vector3();
+    dbg_moment_body = CRRCMath::Vector3();
+  }
   
   virtual double getLat();
   virtual double getLon();
@@ -230,6 +283,10 @@ protected:
   SCALAR    Alpha, Beta;  /* in radians */
   SCALAR    Gravity;      /* Local acceleration due to G */
   SCALAR    Density;
+  CRRCMath::Vector3 dbg_V_local_airmass;  // debug: last airmass velocity (local frame)
+  CRRCMath::Vector3 dbg_V_gust_body;      // debug: last gust in body frame
+  CRRCMath::Vector3 dbg_force_body;       // debug: last total force (body frame)
+  CRRCMath::Vector3 dbg_moment_body;      // debug: last moment at CG (body frame)
   
   /**
    * CG relative to runway, in rwy coordinates

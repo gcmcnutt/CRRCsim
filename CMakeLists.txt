@@ -193,15 +193,6 @@ if(ENABLE_PROFILING)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O2 -fno-omit-frame-pointer -fno-optimize-sibling-calls")
 endif()
 
-# Force deterministic floating-point behavior for GP evolution
-# -msse2 -mfpmath=sse: Use SSE2 for all FP math (avoid x87 extended precision)
-# -ffloat-store: Store intermediate results to memory (slower but deterministic)
-if (NOT APPLE AND NOT WIN32)
-  message(STATUS "Enabling deterministic floating-point flags for crrcsim")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse2 -mfpmath=sse -ffloat-store")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse2 -mfpmath=sse -ffloat-store")
-endif()
-
 set(CRRCSIM_INCDIRS ${SDL_INCLUDE_DIR}
                     ${CMAKE_BINARY_DIR}
                     ${HAVE_SYS_IO_H}

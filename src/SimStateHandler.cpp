@@ -41,7 +41,9 @@
 #include "mod_mode/T_GameHandler.h"
 #include "GUI/crrc_gui_main.h"
 #include "mod_fdm/fdm.h"
+#include "mod_fdm/eom01/eom01.h"
 #include "mod_windfield/windfield.h"
+#include "mod_misc/crrc_rand.h"
 #include "robots.h"
 #include "record.h"
 #include "mod_misc/lib_conversions.h"
@@ -172,45 +174,63 @@ void SimStateHandler::pause()
 void SimStateHandler::reset()
 {
   unsigned long int current;
-  
+
   Global::inputs = TSimInputs();
 
   if (Global::testmode)
     leave_test_mode();
 
   sim_steps = 0;
-  
+
   current = SDL_GetTicks();
   reset_time = current;
   pause_time = current;
   accum_pause_time = 0;
-  
+
   /*
   IdleFunc = idle;
   OldIdleFunc = NULL;
   */
-  
+
   nState = STATE_RESUMING;
   initialize_flight_model();
   Init_mod_windfield();
-    
+
   // Safely reset aircraft model if properly initialized
   if (Global::aircraft && Global::aircraft->getModel() && Global::aircraft->getFDM())
   {
     Global::aircraft->getModel()->reset(Global::aircraft->getFDM());
+    // Reset integrator history as part of the global reset to keep
+    // non-autoc code paths (and warmups) deterministic.
+    if (EOM01* eom = dynamic_cast<EOM01*>(Global::aircraft->getFDM())) {
+      eom->resetIntegratorState();
+    }
   }
   else
   {
     fprintf(stderr, "Warning: Aircraft not properly initialized for reset\n");
   }
-  
+
   Global::gameHandler->reset();
   Global::robots->Reset();
   Global::TXInterface->reset();
 
-  Video::InitSmartCamera();  
-  
+  Video::InitSmartCamera();
+
   LOG(_("Simulation reset."));
+}
+
+// Overload for autoc mode: set wind seed before windfield initialization
+void SimStateHandler::reset(unsigned int windSeed)
+{
+  // Set RNG seed BEFORE any initialization that might use it
+  CRRC_Random::reset(windSeed);
+
+  // Call standard reset which will:
+  // 1. Call Init_mod_windfield() -> initialize_wind_field()
+  // 2. Create thermals (consuming RNG with deterministic seed)
+  // 3. Call initialize_gust() which resets all RandGauss objects
+  reset();
 }
 
 

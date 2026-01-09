@@ -36,6 +36,7 @@
 #include <iostream>
 #include <cmath>
 #include <array>
+#include <unistd.h>
 
 #include <boost/circular_buffer.hpp>
 
@@ -105,9 +106,11 @@ private:
   EvalData evalData;
   EvalResults evalResults;
   std::vector<AircraftState> aircraftStates;
+  std::vector<DebugSample> debugSamplesCurrentPath;
+  double quatDotPast[4] = {0,0,0,0};
+  int workerIndex = -1;
+  int workerPid = 0;
 
-  // DTEST: Flag to log first timestep after reset
-  bool needDtestFirstLog = false;
   int evalCounter = 0;  // Total evaluations this worker has processed
 
   // work in progress
@@ -117,8 +120,5 @@ private:
   bool isBytecodeData = false;
   std::vector<Path> path;
 };
-
-// Expose deterministic mode flag for RNG tracing
-bool isAutocDeterministicMode();
 
 #endif

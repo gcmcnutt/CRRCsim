@@ -33,6 +33,7 @@
 #include "../include_gl.h"
 #include <math.h>
 #include <stdio.h>
+#include <cstdlib>
 #include <plib/ssg.h>   // for ssgSimpleState
 #include "../mod_misc/ls_constants.h"
 //jwtodo #include "../config.h"
@@ -50,6 +51,7 @@
 #include "../global_video.h"
 #include "thermal03/tschalen.h"
 #include "../mod_landscape/crrc_scenery.h"
+#include <atomic>
 
 namespace {
 
@@ -74,6 +76,17 @@ double uniform01WithContext(const char* label) {
   RandContextScope scope(label);
   int raw = CRRC_Random::rand();
   return static_cast<double>(raw) / (static_cast<double>(CRRC_Random::max()) + 1.0);
+}
+
+// Optional first-call logging to help debug wind nondeterminism.
+// Now enabled by default (can be disabled by clearing AUTOC_WIND_LOG_DISABLED).
+std::atomic<bool> gLogFirstWindCall{true};
+std::atomic<int> gWindResetCounter{0};
+std::atomic<bool> gFirstWindCallPending{false};
+
+void initWindDebugFlag() {
+  // Always log first wind call during debugging
+  gLogFirstWindCall.store(true);
 }
 
 }  // namespace
@@ -366,6 +379,10 @@ void clear_wind_field()
 // Description: see header file
 void initialize_wind_field(SimpleXMLTransfer* el)
 {
+  initWindDebugFlag();
+  gFirstWindCallPending.store(true);
+  gWindResetCounter.fetch_add(1);
+
   int loop;
   Thermal *temp_thermal;
   int xloop,yloop;
@@ -405,7 +422,7 @@ void initialize_wind_field(SimpleXMLTransfer* el)
     num_thermals = (int)(pow(occupancy_grid_size*occupancy_grid_res,2)*
                          dDensity);
 
-    num_thermals = 0;  // Force disable thermals for determinism testing
+    // REMOVED: num_thermals = 0;  // Testing thermal determinism
   }
 
 #if THERMAL_TEST != 0
@@ -481,8 +498,13 @@ void initialize_wind_field(SimpleXMLTransfer* el)
     temp_thermal->next_thermal = thermals;
     thermals = temp_thermal;
   }
-  
+
   therm_quadric = gluNewQuadric();
+
+  // CRITICAL: Reset turbulence and thermal RNG objects after thermal creation
+  // This ensures all RandGauss objects have clean phase=0 state regardless of
+  // how many RNG calls were consumed during thermal initialization
+  initialize_gust();
 }
 
 SimpleXMLTransfer* GetDefaultConf_Thermal()
@@ -792,6 +814,13 @@ void initialize_gust()
   eta2.Reset();
   eta3.Reset();
   eta4.Reset();
+
+  // CRITICAL: Also reset thermal RandGauss objects
+  // These can retain phase state from initial windfield setup, causing
+  // cross-process non-determinism when workers are restarted
+  rnd_radius.Reset();
+  rnd_strength.Reset();
+  rnd_lifetime.Reset();
 }
 
 // Description: see header file

@@ -75,7 +75,6 @@ If you'd like to help with CRRCSIM, then send me an email!
 #include "mod_fdm/xmlmodelfile.h"
 #include "mod_misc/crrc_rand.h"
 #include <cstdlib>
-static bool gAutocDeterministicMode = (std::getenv("AUTOC_DETERMINISTIC") != nullptr);
 #include "mod_video/glconsole.h"
 #include "crrc_fdm.h"
 #include "mod_misc/ls_constants.h"
@@ -495,13 +494,19 @@ void write_globals_into_config()
 /*****************************************************************************/
 void initializeRandomNumberGenerator()
 {
-  // TEMPORARY: Hard-code deterministic seed for autoc troubleshooting
-  // Instead of: time_t sometime = time(0); srand((unsigned int) sometime);
-  srand(42);  // Fixed seed for determinism across all processes
+  // Initialize RNG with deterministic seed (42) for reproducibility
+  // For random behavior, uncomment the time-based seed below:
+  // time_t sometime = time(0);
+  // CRRC_Random::reset((unsigned int)sometime);
+
+  // Use deterministic seed for reproducibility
+  CRRC_Random::reset(42);
+
   const char* ctx = CRRC_Random::pushTraceContext("initializeRandomNumberGenerator.seed");
   CRRC_Random::insertData(CRRC_Random::rand());
   CRRC_Random::popTraceContext(ctx);
-  std::cout << "RAND_MAX = " << RAND_MAX << "\n";
+
+  std::cout << "RNG initialized with Park-Miller LCG" << std::endl;
 }
 
 /*****************************************************************************/
@@ -939,9 +944,11 @@ int main(int argc,char **argv)
       Global::Simulation->doIdle(&Global::inputs, crrc_time->update());
 
       Global::inputs.ClearKeys();
-      
-      // random data (skip when deterministic mode enforced)
-      if (!gAutocDeterministicMode) {
+
+      // Insert random data for additional entropy
+      // Skip in autoc mode to preserve determinism - autoc resets the RNG with a specific seed
+      // and any insertData() calls would corrupt the deterministic sequence
+      if (Global::TXInterface->inputMethod() != T_TX_Interface::eIM_autoc) {
         CRRC_Random::insertData(SDL_GetTicks());
         CRRC_Random::insertData(Global::inputs.getRandNum());
       }

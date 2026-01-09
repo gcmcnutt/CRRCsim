@@ -204,7 +204,7 @@ class CRRC_AirplaneSim_Larcsim : public EOM01
    SCALAR flap_lift;
    SCALAR flap_moment;
    SCALAR flap_eff_ratio;  // flap effectiveness at full deflection reduces by this ratio to account for non linearity at large 
-                           // deflection angles. Suggested value: 1.0 for travel < 10°, down to 0.5-0.0 for 30°-60° travel
+                           // deflection angles. Suggested value: 1.0 for travel < 10ï¿½, down to 0.5-0.0 for 30ï¿½-60ï¿½ travel
    SCALAR spoiler_drag;
    SCALAR spoiler_lift;
    SCALAR spoiler_moment;
@@ -260,11 +260,17 @@ class CRRC_AirplaneSim_Larcsim : public EOM01
             
    /// @name written by aero
    //@{
-   int stalling;   
-         
-   double flight_CL;   
+   int stalling;
+
+   double flight_CL;
    //@}
-         
+
+   /// @name Gust state for physics trace
+   //@{
+   CRRCMath::Vector3 dbg_V_gust_body;        // Linear gust velocity (body frame)
+   CRRCMath::Vector3 dbg_R_omega_gust_body;  // Rotational gust rates (body frame)
+   //@}
+
 };
 
 #endif
