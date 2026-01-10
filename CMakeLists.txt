@@ -27,6 +27,7 @@ find_package(Boost REQUIRED COMPONENTS thread system serialization)
 add_definitions(-DGP_BUILD)
 
 option(ENABLE_PROFILING "Build with frame pointers and debug info for perf/FlameGraph" OFF)
+option(PERFORMANCE_BUILD "Build with high performance flags (keeps debug symbols for core dumps)" ON)
 
 # uncomment to get verbose output
 #set (CMAKE_VERBOSE_MAKEFILE ON)
@@ -191,6 +192,20 @@ if(ENABLE_PROFILING)
   message(STATUS "Enabling profiling-friendly compiler flags for crrcsim")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O2 -fno-omit-frame-pointer -fno-optimize-sibling-calls")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O2 -fno-omit-frame-pointer -fno-optimize-sibling-calls")
+endif()
+
+if(PERFORMANCE_BUILD)
+  message(STATUS "Enabling performance-optimized build for crrcsim (with debug symbols)")
+  # -O3: Aggressive optimization
+  # -g: Debug symbols for core dump analysis (doesn't affect runtime)
+  # -march=native: Use AVX-512/AVX2 and other CPU-specific instructions
+  # -mtune=native: Optimize instruction scheduling for this CPU
+  # -ffast-math: Allow FP optimizations (slightly non-IEEE compliant)
+  # -funroll-loops: Better SIMD utilization
+  # -flto: Link-time optimization for whole-program analysis
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -g -march=native -mtune=native -ffast-math -funroll-loops -flto")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -g -march=native -mtune=native -ffast-math -funroll-loops -flto")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -flto")
 endif()
 
 set(CRRCSIM_INCDIRS ${SDL_INCLUDE_DIR}
