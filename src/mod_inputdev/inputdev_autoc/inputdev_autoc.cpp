@@ -44,7 +44,7 @@ using boost::asio::ip::tcp;
 
 // Define to enable determinism debugging (physics traces for autoc comparison)
 // Comment out for production builds to improve performance
-#define DETERMINISM_DEBUG
+// #define DETERMINISM_DEBUG
 
 // DETAILED_LOGGING controls noisy RNG trace output - leave undefined for normal use
 
@@ -160,7 +160,22 @@ extern "C" void capturePhysicsTrace(
     double elevator, double aileron, double rudder, double throttle,
     uint16_t rngState16, uint32_t rngState32,
     int32_t pathIndex) {
-
+#ifndef PHYSICS_TRACE_ENABLED
+  // Physics trace disabled - no-op
+  (void)step; (void)simTimeMsec; (void)dtSec; (void)workerId; (void)workerPid; (void)evalCounter;
+  (void)pos; (void)vel; (void)acc; (void)accPast; (void)quat; (void)quatDotPast;
+  (void)omegaBody; (void)omegaDotBody; (void)rate; (void)ratePast;
+  (void)alpha; (void)beta; (void)vRelWind; (void)velRelGround; (void)velRelAir;
+  (void)vLocal; (void)vLocalDot; (void)cosAlpha; (void)sinAlpha; (void)cosBeta;
+  (void)CL; (void)CD; (void)CL_left; (void)CL_cent; (void)CL_right; (void)CL_wing;
+  (void)Cl; (void)Cm; (void)Cn; (void)QS; (void)forceBody; (void)momentBody;
+  (void)wind; (void)localAirmass; (void)gustBody; (void)density; (void)gravity;
+  (void)geocentricLat; (void)geocentricLon; (void)geocentricR;
+  (void)pitchCommand; (void)rollCommand; (void)throttleCommand;
+  (void)elevator; (void)aileron; (void)rudder; (void)throttle;
+  (void)rngState16; (void)rngState32; (void)pathIndex;
+  return;
+#else
   PhysicsTraceEntry entry;
   entry.step = step;
   entry.simTimeMsec = simTimeMsec;
@@ -227,6 +242,7 @@ extern "C" void capturePhysicsTrace(
   entry.pathIndex = pathIndex;
 
   gCurrentPhysicsTrace.push_back(entry);
+#endif  // PHYSICS_TRACE_ENABLED
 }
 
 // Single pending command to model compute latency between sensor sample and applied outputs
@@ -427,7 +443,9 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       }
       evalResults.scenarioList.clear();
       evalResults.scenarioList.reserve(evalData.scenarioList.size());
+#ifdef PHYSICS_TRACE_ENABLED
       evalResults.debugSamples.clear();
+#endif
       evalResults.workerId = workerIndex;
       evalResults.workerPid = workerPid;
       evalResults.workerEvalCounter = evalCounter;
@@ -778,12 +796,14 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       std::vector<AircraftState> aircraftStatesCopy = aircraftStates;
       evalResults.aircraftStateList.push_back(aircraftStatesCopy);
       aircraftStates.clear();
+#ifdef PHYSICS_TRACE_ENABLED
       if (!debugSamplesCurrentPath.empty()) {
         evalResults.debugSamples.push_back(debugSamplesCurrentPath);
         debugSamplesCurrentPath.clear();
       } else {
         evalResults.debugSamples.emplace_back();
       }
+#endif
 
 #ifdef DETAILED_LOGGING
       // Dump ordered RandGauss event log for this path (noisy)
