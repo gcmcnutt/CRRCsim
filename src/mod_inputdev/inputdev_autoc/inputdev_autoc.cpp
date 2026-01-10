@@ -42,6 +42,12 @@ using namespace std::chrono;
 using namespace std;
 using boost::asio::ip::tcp;
 
+// Define to enable determinism debugging (physics traces for autoc comparison)
+// Comment out for production builds to improve performance
+#define DETERMINISM_DEBUG
+
+// DETAILED_LOGGING controls noisy RNG trace output - leave undefined for normal use
+
 namespace {
 
 // Hash serialized data instead of raw memory to avoid padding issues
@@ -113,9 +119,11 @@ static bool gInDeterministicTest = false;
 // Reference to the global aircraftState used by GP evaluation (from autoc-eval.cc)
 extern AircraftState aircraftState;
 
+#ifdef DETERMINISM_DEBUG
 // Thread-local physics trace buffer for collecting detailed FDM state
 // Cleared at start of each evaluation, sent back with EvalResults
 thread_local std::vector<PhysicsTraceEntry> gCurrentPhysicsTrace;
+#endif
 
 // Extern globals defined in fdm_larcsim.cpp for trace capture
 // We set these so the FDM can access worker identity when capturing traces
@@ -515,7 +523,9 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       pathIndex = 0;
       gPendingCommand = PendingCommand{};
       aircraftStates.clear();
+#ifdef DETERMINISM_DEBUG
       gCurrentPhysicsTrace.clear();  // Clear physics trace for new path
+#endif
 
       // Set worker identity globals for FDM trace capture
       gTraceWorkerId = workerIndex;
@@ -524,8 +534,10 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       gTracePathIndex = pathSelector;
       gPhysicsStepCounter = 0;  // Reset step counter for new path
 
-      // Start ordered event logging for this path
+#ifdef DETAILED_LOGGING
+      // Start ordered event logging for this path (noisy RNG trace)
       RandGaussTrace::startEventLog(1000);
+#endif
 #ifdef DETAILED_LOGGING
       std::cerr << "AUTOC deterministic path start pathSelector=" << pathSelector
                 << " pathVariant=" << activeScenario.pathVariantIndex
@@ -773,9 +785,12 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
         evalResults.debugSamples.emplace_back();
       }
 
-      // Dump ordered RandGauss event log for this path
+#ifdef DETAILED_LOGGING
+      // Dump ordered RandGauss event log for this path (noisy)
       RandGaussTrace::dumpAndClearEventLog();
+#endif
 
+#ifdef DETERMINISM_DEBUG
       // Add physics trace for this path
       if (!gCurrentPhysicsTrace.empty()) {
         evalResults.physicsTrace.push_back(gCurrentPhysicsTrace);
@@ -783,6 +798,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       } else {
         evalResults.physicsTrace.emplace_back();
       }
+#endif
 
       // Dtest logging disabled
 

@@ -505,8 +505,6 @@ void initializeRandomNumberGenerator()
   const char* ctx = CRRC_Random::pushTraceContext("initializeRandomNumberGenerator.seed");
   CRRC_Random::insertData(CRRC_Random::rand());
   CRRC_Random::popTraceContext(ctx);
-
-  std::cout << "RNG initialized with Park-Miller LCG" << std::endl;
 }
 
 /*****************************************************************************/
