@@ -42,9 +42,6 @@ using namespace std::chrono;
 using namespace std;
 using boost::asio::ip::tcp;
 
-// Define to enable determinism debugging (physics traces for autoc comparison)
-// Comment out for production builds to improve performance
-// #define DETERMINISM_DEBUG
 
 // DETAILED_LOGGING controls noisy RNG trace output - leave undefined for normal use
 
@@ -119,11 +116,9 @@ static bool gInDeterministicTest = false;
 // Reference to the global aircraftState used by GP evaluation (from autoc-eval.cc)
 extern AircraftState aircraftState;
 
-#ifdef DETERMINISM_DEBUG
-// Thread-local physics trace buffer for collecting detailed FDM state
-// Cleared at start of each evaluation, sent back with EvalResults
-thread_local std::vector<PhysicsTraceEntry> gCurrentPhysicsTrace;
-#endif
+// Physics trace buffer for collecting detailed FDM state
+// Cleared at start of each evaluation, sent back with EvalResults only for elite reeval
+std::vector<PhysicsTraceEntry> gCurrentPhysicsTrace;
 
 // Extern globals defined in fdm_larcsim.cpp for trace capture
 // We set these so the FDM can access worker identity when capturing traces
@@ -133,6 +128,7 @@ extern "C" {
   extern int32_t gTraceEvalCounter;
   extern int32_t gTracePathIndex;
   extern uint32_t gPhysicsStepCounter;
+  extern bool gTraceIsEliteReeval;  // Only collect trace when true
 }
 
 // Helper function to capture current FDM state into physics trace
@@ -160,22 +156,10 @@ extern "C" void capturePhysicsTrace(
     double elevator, double aileron, double rudder, double throttle,
     uint16_t rngState16, uint32_t rngState32,
     int32_t pathIndex) {
-#ifndef PHYSICS_TRACE_ENABLED
-  // Physics trace disabled - no-op
-  (void)step; (void)simTimeMsec; (void)dtSec; (void)workerId; (void)workerPid; (void)evalCounter;
-  (void)pos; (void)vel; (void)acc; (void)accPast; (void)quat; (void)quatDotPast;
-  (void)omegaBody; (void)omegaDotBody; (void)rate; (void)ratePast;
-  (void)alpha; (void)beta; (void)vRelWind; (void)velRelGround; (void)velRelAir;
-  (void)vLocal; (void)vLocalDot; (void)cosAlpha; (void)sinAlpha; (void)cosBeta;
-  (void)CL; (void)CD; (void)CL_left; (void)CL_cent; (void)CL_right; (void)CL_wing;
-  (void)Cl; (void)Cm; (void)Cn; (void)QS; (void)forceBody; (void)momentBody;
-  (void)wind; (void)localAirmass; (void)gustBody; (void)density; (void)gravity;
-  (void)geocentricLat; (void)geocentricLon; (void)geocentricR;
-  (void)pitchCommand; (void)rollCommand; (void)throttleCommand;
-  (void)elevator; (void)aileron; (void)rudder; (void)throttle;
-  (void)rngState16; (void)rngState32; (void)pathIndex;
-  return;
-#else
+  // Only collect trace for elite reeval to save CPU
+  if (!gTraceIsEliteReeval) {
+    return;
+  }
   PhysicsTraceEntry entry;
   entry.step = step;
   entry.simTimeMsec = simTimeMsec;
@@ -242,7 +226,6 @@ extern "C" void capturePhysicsTrace(
   entry.pathIndex = pathIndex;
 
   gCurrentPhysicsTrace.push_back(entry);
-#endif  // PHYSICS_TRACE_ENABLED
 }
 
 // Single pending command to model compute latency between sensor sample and applied outputs
@@ -443,9 +426,8 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       }
       evalResults.scenarioList.clear();
       evalResults.scenarioList.reserve(evalData.scenarioList.size());
-#ifdef PHYSICS_TRACE_ENABLED
       evalResults.debugSamples.clear();
-#endif
+      evalResults.physicsTrace.clear();
       evalResults.workerId = workerIndex;
       evalResults.workerPid = workerPid;
       evalResults.workerEvalCounter = evalCounter;
@@ -541,9 +523,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       pathIndex = 0;
       gPendingCommand = PendingCommand{};
       aircraftStates.clear();
-#ifdef DETERMINISM_DEBUG
       gCurrentPhysicsTrace.clear();  // Clear physics trace for new path
-#endif
 
       // Set worker identity globals for FDM trace capture
       gTraceWorkerId = workerIndex;
@@ -551,6 +531,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       gTraceEvalCounter = evalCounter;
       gTracePathIndex = pathSelector;
       gPhysicsStepCounter = 0;  // Reset step counter for new path
+      gTraceIsEliteReeval = evalData.isEliteReeval;  // Only collect trace for elite reeval
 
 #ifdef DETAILED_LOGGING
       // Start ordered event logging for this path (noisy RNG trace)
@@ -796,28 +777,26 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       std::vector<AircraftState> aircraftStatesCopy = aircraftStates;
       evalResults.aircraftStateList.push_back(aircraftStatesCopy);
       aircraftStates.clear();
-#ifdef PHYSICS_TRACE_ENABLED
-      if (!debugSamplesCurrentPath.empty()) {
-        evalResults.debugSamples.push_back(debugSamplesCurrentPath);
-        debugSamplesCurrentPath.clear();
-      } else {
-        evalResults.debugSamples.emplace_back();
+      // Only send physics trace data for elite reeval (expensive, only needed for divergence analysis)
+      if (evalData.isEliteReeval) {
+        if (!debugSamplesCurrentPath.empty()) {
+          evalResults.debugSamples.push_back(debugSamplesCurrentPath);
+        } else {
+          evalResults.debugSamples.emplace_back();
+        }
+        if (!gCurrentPhysicsTrace.empty()) {
+          evalResults.physicsTrace.push_back(gCurrentPhysicsTrace);
+        } else {
+          evalResults.physicsTrace.emplace_back();
+        }
       }
-#endif
+      // Always clear trace buffers (whether sent or not)
+      debugSamplesCurrentPath.clear();
+      gCurrentPhysicsTrace.clear();
 
 #ifdef DETAILED_LOGGING
       // Dump ordered RandGauss event log for this path (noisy)
       RandGaussTrace::dumpAndClearEventLog();
-#endif
-
-#ifdef DETERMINISM_DEBUG
-      // Add physics trace for this path
-      if (!gCurrentPhysicsTrace.empty()) {
-        evalResults.physicsTrace.push_back(gCurrentPhysicsTrace);
-        gCurrentPhysicsTrace.clear();
-      } else {
-        evalResults.physicsTrace.emplace_back();
-      }
 #endif
 
       // Dtest logging disabled

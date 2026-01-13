@@ -288,7 +288,15 @@ include_directories(${CRRCSIM_INCDIRS}
 
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in ${CMAKE_BINARY_DIR}/crrc_config.h)
 
-add_executable (crrcsim WIN32 ${CRRCSIM_SRCS})
+# Track external headers from autoc as dependencies
+# CMake doesn't automatically track headers outside the source tree
+set(AUTOC_HEADERS
+  $ENV{HOME}/GP/autoc/minisim.h
+  $ENV{HOME}/GP/autoc/gp_bytecode.h
+  $ENV{HOME}/GP/autoc/autoc.h
+)
+
+add_executable (crrcsim WIN32 ${CRRCSIM_SRCS} ${AUTOC_HEADERS})
 
 option(USE_SANITIZER "Build with Address Sanitizer" OFF)
 if(USE_SANITIZER)

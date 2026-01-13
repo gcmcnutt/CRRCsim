@@ -35,6 +35,7 @@
 #include "global.h"
 #include "aircraft.h"
 #include "crrc_main.h"
+#include "config.h"
 #include "crrc_soundserver.h"
 #include "global_video.h"
 #include "SimStateHandler.h"
@@ -48,6 +49,9 @@
 #include "record.h"
 #include "mod_misc/lib_conversions.h"
 
+// Physics step counter for deterministic simulation time
+// Defined in fdm_larcsim.cpp, reset on path changes in inputdev_autoc.cpp
+extern "C" uint32_t gPhysicsStepCounter;
 
 /**
  * Advance the simulation by the specified number om milliseconds
@@ -61,18 +65,36 @@ void idle(TSimInputs* inputs, int nDeltaTicks)
   if (Global::Simulation->getState() == STATE_RESUMING)
     Global::Simulation->setState(STATE_RUN);
 
-  // How many times the flight model shall be calculated 
-  // given it advances the simulation dt seconds for every step
-  multiloop = (int)((nDeltaTicks/1000.0 - dDeltaT)/Global::dt + 0.5);
-  
+  // In headless mode (video.enabled=0), use deterministic physics stepping
+  // without frame timing correction. The dDeltaT accumulator causes
+  // non-determinism because it persists across resets.
+  bool headlessMode = (cfgfile->getInt("video.enabled", 1) == 0);
+
+  if (headlessMode)
+  {
+    // Deterministic: fixed multiloop based on nDeltaTicks and dt
+    multiloop = (int)(nDeltaTicks/1000.0/Global::dt + 0.5);
+  }
+  else
+  {
+    // Video mode: apply frame timing correction for smooth display
+    // How many times the flight model shall be calculated
+    // given it advances the simulation dt seconds for every step
+    multiloop = (int)((nDeltaTicks/1000.0 - dDeltaT)/Global::dt + 0.5);
+  }
+
   // alter simulation time scale if slow motion is active
   if (Global::slowMotion)
     timeScale = Global::slowTimeScale;
   else
     timeScale = 1.0;
-    
+
   multiloop /= timeScale;
-  dDeltaT += multiloop*Global::dt - nDeltaTicks/1000.0/timeScale;
+
+  if (!headlessMode)
+  {
+    dDeltaT += multiloop*Global::dt - nDeltaTicks/1000.0/timeScale;
+  }
 
   Global::Simulation->incSimSteps(multiloop);
   

@@ -78,6 +78,7 @@ extern "C" {
   int32_t gTraceWorkerPid = 0;
   int32_t gTraceEvalCounter = 0;
   int32_t gTracePathIndex = 0;
+  bool gTraceIsEliteReeval = false;  // Only collect trace when true (saves CPU)
 }
 
 /**
@@ -745,10 +746,9 @@ void CRRC_AirplaneSim_Larcsim::aero(TSimInputs* inputs,
       dbg_R_omega_gust_body.r[0], dbg_R_omega_gust_body.r[1], dbg_R_omega_gust_body.r[2]
     };
 
-    // Use sub-frame time to capture individual 3ms physics steps (0, 3, 6, 9... 39ms)
-    // This shows which specific step within the multiloop introduces divergence
-    extern double gSubFrameTime;
-    double simTimeMsec = gSubFrameTime * 1000.0;  // Convert seconds to milliseconds
+    // Use actual simulation time since reset (not sub-frame time which resets each update())
+    // This gives us the true simulation timestamp for each physics step
+    double simTimeMsec = static_cast<double>(Global::Simulation->getSimulationTimeSinceReset());
 
     // Call capture function with all physics state
     capturePhysicsTrace(
