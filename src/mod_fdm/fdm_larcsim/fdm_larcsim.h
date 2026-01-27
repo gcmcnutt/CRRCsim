@@ -219,7 +219,14 @@ class CRRC_AirplaneSim_Larcsim : public EOM01
     * Vector containing all hard points/wheels
     */
    WheelSystem wheels;
-         
+
+   /**
+    * Flag to enable/disable gear physics (default: true)
+    * Set via <wheels enabled="0"> in aircraft XML to skip gear calculations
+    * for aircraft that don't need ground contact physics (e.g., gliders in flight)
+    */
+   bool gearEnabled_;
+
    //@}
 
    /// @name Propeller and wing/fuselage/tail interaction

@@ -218,7 +218,14 @@ void CRRC_AirplaneSim_Larcsim::update(TSimInputs* inputs,
 #endif
 
     engine(dt, &myInputs, v_F_engine, v_M_engine);
-    gear(&myInputs, v_F_gear, v_M_gear);
+
+    // Skip gear physics if disabled (e.g., for gliders/flying wings in flight)
+    if (gearEnabled_) {
+      gear(&myInputs, v_F_gear, v_M_gear);
+    } else {
+      v_F_gear = CRRCMath::Vector3();
+      v_M_gear = CRRCMath::Vector3();
+    }
 
     // Only a fraction of the total rolling torque is not cancelled
     // by the aero effect of the prop wash on fuselage, wing and tail
@@ -383,6 +390,16 @@ void CRRC_AirplaneSim_Larcsim::LoadFromXML(SimpleXMLTransfer* xml, int nVerbosit
   }
   
   wheels.init(xml, B_ref);
+
+  // Check if gear physics should be enabled (default: true for backwards compatibility)
+  // Set <wheels enabled="0"> in aircraft XML to disable for aircraft without landing gear
+  {
+    SimpleXMLTransfer* wheelsXml = xml->getChild("wheels");
+    gearEnabled_ = (wheelsXml->getInt("enabled", 1) != 0);
+    if (!gearEnabled_) {
+      std::cout << "Gear physics disabled for this aircraft" << std::endl;
+    }
+  }
 
   // calculate velocity in trimmed flight,
   // approximately since Gravity & Density are yet unknown.
