@@ -149,7 +149,7 @@ void activate_test_mode()
   
   // enter testmode
   CRRCMath::Vector3 ppos = Global::scenery->getPlayerPosition();
-  CRRCMath::Vector3 planepos(ppos.r[0] - distance, ppos.r[1], ppos.r[2]);
+  CRRCMath::Vector3 planepos(ppos(0) - distance, ppos(1), ppos(2));
   Global::aircraft->enterTestmode(planepos); 
   initialize_flight_model();
   Global::aircraft->getFDMInterface()->update(&inp, 0, 0);
@@ -209,14 +209,14 @@ void initialize_flight_model()
     // default relative position is similar to what has been used on original 'Cape Cod' and 'Davis':
     double launchx = cfgfile->getDouble("launch.rel_front", MODELSTART_REL_FRONT);
     double launchy = cfgfile->getDouble("launch.rel_right", MODELSTART_REL_RIGHT);
-    posX = -player_pos.r[2] + launchx*cos(wind_direction) - launchy*sin(wind_direction);
-    posY =  player_pos.r[0] + launchx*sin(wind_direction) + launchy*cos(wind_direction);
+    posX = -player_pos(2) + launchx*cos(wind_direction) - launchy*sin(wind_direction);
+    posY =  player_pos(0) + launchx*sin(wind_direction) + launchy*cos(wind_direction);
   }
   else
   {
     CRRCMath::Vector3 start_pos = Global::scenery->getStartPosition(CurrentStartPositionName);
-    posX = -start_pos.r[2];
-    posY =  start_pos.r[0];
+    posX = -start_pos(2);
+    posY =  start_pos(0);
   }
   double phi,theta,psi,height;
   float plane[4];
@@ -932,7 +932,7 @@ int main(int argc,char **argv)
       
       if (Global::training_mode)
       {
-        Global::inputs.heli_fixed_z = -Global::scenery->getPlayerPosition().r[1];
+        Global::inputs.heli_fixed_z = -Global::scenery->getPlayerPosition()(1);
       }
       else
       {
@@ -953,7 +953,7 @@ int main(int argc,char **argv)
 
       // get aircraft position from FDM
       CRRCMath::Vector3 aircraft_pos = Video::FDM2Graphics(Global::aircraft->getPos());
-      float distance_to_model = (aircraft_pos - player_pos).length();
+      float distance_to_model = (aircraft_pos - player_pos).norm();
       
       field_of_view = zoom_calc(distance_to_model);
       if (Global::gui)
@@ -962,9 +962,9 @@ int main(int argc,char **argv)
       }
       
       #if 0
-      Global::verboseString += " X: " + ftoStr(vFdmPos.r[0], 2, 2, true, false);
-      Global::verboseString += " Y: " + ftoStr(vFdmPos.r[1], 2, 2, true, false);
-      Global::verboseString += " Z: " + ftoStr(vFdmPos.r[2], 2, 2, true, false);
+      Global::verboseString += " X: " + ftoStr(vFdmPos(0), 2, 2, true, false);
+      Global::verboseString += " Y: " + ftoStr(vFdmPos(1), 2, 2, true, false);
+      Global::verboseString += " Z: " + ftoStr(vFdmPos(2), 2, 2, true, false);
       Global::verboseString += " Phi: " + ftoStr(Global::aircraft->getFDM()->getPhi() * SG_RADIANS_TO_DEGREES, 2, 2, true, false);
       Global::verboseString += " Theta: " + ftoStr(Global::aircraft->getFDM()->getTheta() * SG_RADIANS_TO_DEGREES, 2, 2, true, false);
       Global::verboseString += " Psi: " + ftoStr(Global::aircraft->getFDM()->getPsi() * SG_RADIANS_TO_DEGREES, 2, 2, true, false);
@@ -1060,7 +1060,7 @@ int main(int argc,char **argv)
       {
         soundUpdate3D(distance_to_model,
                       Global::aircraft->getFDM()->getPropFreq(),
-                      aircraft_pos.r[1],
+                      aircraft_pos(1),
                       Global::aircraft->getFDM()->getVRelAirmass()/Global::aircraft->getFDM()->getTrimmedFlightVelocity());
       }
     }

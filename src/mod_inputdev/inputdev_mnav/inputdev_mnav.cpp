@@ -105,8 +105,8 @@ void T_TX_InterfaceMNAV::getInputData(TSimInputs* inputs)
     psi    = Global::aircraft->getFDM()->getPsi();
     vel    = Global::aircraft->getFDM()->getVel();
     waccel = Global::aircraft->getFDM()->getAccel();
-    waccel.r[2] += 0.03 / FEET2METERS; // correct for bias
-    waccel.r[2] -= 9.80665 / FEET2METERS; // include acceleration due to gravity
+    waccel(2) += 0.03 / FEET2METERS; // correct for bias
+    waccel(2) -= 9.80665 / FEET2METERS; // include acceleration due to gravity
     pqr    = Global::aircraft->getFDM()->getPQR();
 
     // fix orientations by multiples of 2*PI
@@ -142,22 +142,22 @@ void T_TX_InterfaceMNAV::getInputData(TSimInputs* inputs)
     r31 = -sthe;
     r32 = cthe * sphi;
     r33 = cthe * cphi;
-    accel.r[0] = r11 * waccel.r[0] + r21 * waccel.r[1] + r31 * waccel.r[2];
-    accel.r[1] = r12 * waccel.r[0] + r22 * waccel.r[1] + r32 * waccel.r[2];
-    accel.r[2] = r13 * waccel.r[0] + r23 * waccel.r[1] + r33 * waccel.r[2];
+    accel(0) = r11 * waccel(0) + r21 * waccel(1) + r31 * waccel(2);
+    accel(1) = r12 * waccel(0) + r22 * waccel(1) + r32 * waccel(2);
+    accel(2) = r13 * waccel(0) + r23 * waccel(1) + r33 * waccel(2);
     //NOTE: looks like angular rates are already in body frame
   
-    imudata.p        = pqr.r[0]; // angular velocities (radians/sec)
-    imudata.q        = pqr.r[1];
-    imudata.r        = pqr.r[2];
-    imudata.ax       = accel.r[0] * FEET2METERS; // acceleration (m/s^2)
-    imudata.ay       = accel.r[1] * FEET2METERS;
-    imudata.az       = accel.r[2] * FEET2METERS;
+    imudata.p        = pqr(0); // angular velocities (radians/sec)
+    imudata.q        = pqr(1);
+    imudata.r        = pqr(2);
+    imudata.ax       = accel(0) * FEET2METERS; // acceleration (m/s^2)
+    imudata.ay       = accel(1) * FEET2METERS;
+    imudata.az       = accel(2) * FEET2METERS;
     imudata.hx       = -r11 / 2.0; // magnetic field
     imudata.hy       = -r12 / 2.0; //NOTE: all of these negated because MNAV magnetic sensor is negated
     imudata.hz       = -r13 / 2.0;
     imudata.Ps       = Global::aircraft->getFDM()->getAlt() * FEET2METERS; // static pressure (altitude in m)
-    imudata.Pt       = sqrt(vel.r[0]*vel.r[0] + vel.r[1]*vel.r[1] + vel.r[2]*vel.r[2]) * FEET2METERS; // pitot pressure (m/s): sent and displayed, but not used
+    imudata.Pt       = sqrt(vel(0)*vel(0) + vel(1)*vel(1) + vel(2)*vel(2)) * FEET2METERS; // pitot pressure (m/s): sent and displayed, but not used
     imudata.Tx       = 0; // temperature (sent but not used)
     imudata.Ty       = 0;
     imudata.Tz       = 0;
@@ -172,9 +172,9 @@ void T_TX_InterfaceMNAV::getInputData(TSimInputs* inputs)
     gpsdata.lon      = Global::aircraft->getFDM()->getLon() * 180.0 / PI; // degrees
     //gpsdata.lon     += -71.3980; //FIXME: location really should include proper lat/lon
     gpsdata.alt      = Global::aircraft->getFDM()->getAlt() * FEET2METERS; // m
-    gpsdata.ve       = vel.r[1] * FEET2METERS; // m/s
-    gpsdata.vn       = vel.r[0] * FEET2METERS;
-    gpsdata.vd       = vel.r[2] * FEET2METERS;
+    gpsdata.ve       = vel(1) * FEET2METERS; // m/s
+    gpsdata.vn       = vel(0) * FEET2METERS;
+    gpsdata.vd       = vel(2) * FEET2METERS;
     gpsdata.ITOW     = (uint16_t)current_time;
     gpsdata.err_type = 0; // not sent
     gpsdata.time     = (double)current_time * 0.001;

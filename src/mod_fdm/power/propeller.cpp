@@ -91,14 +91,14 @@ void Power::Propeller::CalcDownthrust(SimpleXMLTransfer* xml)
     // Evaluate rolling, pitching and yawing moment produced by thrust
     // due to distance from CG    
     mulForce  = dirThrust;
-    mulMoment = CRRCMath::Vector3(  dirThrust.r[2]*pos.r[1] - dirThrust.r[1]*pos.r[2],
-                                  - dirThrust.r[2]*pos.r[0] + dirThrust.r[0]*pos.r[2], 
-                                    dirThrust.r[1]*pos.r[0] - dirThrust.r[0]*pos.r[1]);    
+    mulMoment = CRRCMath::Vector3(  dirThrust(2)*pos(1) - dirThrust(1)*pos(2),
+                                  - dirThrust(2)*pos(0) + dirThrust(0)*pos(2), 
+                                    dirThrust(1)*pos(0) - dirThrust(0)*pos(1));    
   }
 
   std::cout << "Prop pos   : ";
-  mulForce.print("mulForce=", ", ");
-  mulMoment.print("mulMoment=", "\n");
+  CRRCMath::print(mulForce, "mulForce=", ", ");
+  CRRCMath::print(mulMoment, "mulMoment=", "\n");
 }
 
 void Power::Propeller::ReloadParams(SimpleXMLTransfer* xml)
@@ -117,8 +117,8 @@ void Power::Propeller::ReloadParams(SimpleXMLTransfer* xml)
   }
       
   // Note: fdm_heli01 & fdm_mcopter01 only use:
-  // a) x component of prop force (force.r[0]) i.e. axial traction
-  // b) x component of prop moment (moment.r[0]) i.e. torque moment
+  // a) x component of prop force (force(0)) i.e. axial traction
+  // b) x component of prop moment (moment(0)) i.e. torque moment
   // Thus propeller's "pos" parameters (x,y,downthrust,rightthrust)
   // shall not be used.
   // Additionally for multicopter the propeller's "rotation" parameter 
@@ -169,11 +169,11 @@ void Power::Propeller::step(PowerValuesStep* values)
     {
       double V_p = values->inputs->pitch * H * n;
       // small down/right thrust angle approximation applied
-      double V_X = values->VRelAir.r[0];
-      double V_w = sqrt(values->VRelAir.r[1]*values->VRelAir.r[1]
-                      + values->VRelAir.r[2]*values->VRelAir.r[2]);
-      double V_y = values->VRelAir.r[1] - rightthrust*V_X;
-      double V_z = values->VRelAir.r[2] - downthrust*V_X;
+      double V_X = values->VRelAir(0);
+      double V_w = sqrt(values->VRelAir(1)*values->VRelAir(1)
+                      + values->VRelAir(2)*values->VRelAir(2));
+      double V_y = values->VRelAir(1) - rightthrust*V_X;
+      double V_z = values->VRelAir(2) - downthrust*V_X;
       CRRCMath::Vector3 mulPfac(0, V_y, V_z);
 
       // thrust force
@@ -290,5 +290,5 @@ void Power::Propeller::InitStates(CRRCMath::Vector3 vInitialVelocity, double& dO
   filter.init(0, 0);
   fFolded = true;
   if (omega_fold < 0)
-    dOmega = 2 * M_PI * vInitialVelocity.r[0] / H;
+    dOmega = 2 * M_PI * vInitialVelocity(0) / H;
 }

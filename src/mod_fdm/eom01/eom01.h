@@ -140,19 +140,19 @@ public:
     // Clear Adams-Bashforth integrator history
     // CRITICAL: Must clear BOTH past and current derivatives to prevent
     // leftover values from previous path evaluation causing divergence
-    v_V_dot_past = CRRCMath::Vector3();
-    v_V_dot_local = CRRCMath::Vector3();  // Clear current linear acceleration
+    v_V_dot_past = CRRCMath::Vector3::Zero();
+    v_V_dot_local = CRRCMath::Vector3::Zero();  // Clear current linear acceleration
     latitude_dot_past = longitude_dot_past = radius_dot_past  = 0.0;
-    v_R_omega_dot_body_past = CRRCMath::Vector3();
-    v_R_omega_dot_body = CRRCMath::Vector3();  // Clear current angular acceleration
+    v_R_omega_dot_body_past = CRRCMath::Vector3::Zero();
+    v_R_omega_dot_body = CRRCMath::Vector3::Zero();  // Clear current angular acceleration
     e_dot_0_past = e_dot_1_past = e_dot_2_past = e_dot_3_past = 0.0;
 
     // Clear debug state that may affect subsequent calculations
     // (These shouldn't affect physics, but clear them to prevent any possibility)
-    dbg_V_local_airmass = CRRCMath::Vector3();
-    dbg_V_gust_body = CRRCMath::Vector3();
-    dbg_force_body = CRRCMath::Vector3();
-    dbg_moment_body = CRRCMath::Vector3();
+    dbg_V_local_airmass = CRRCMath::Vector3::Zero();
+    dbg_V_gust_body = CRRCMath::Vector3::Zero();
+    dbg_force_body = CRRCMath::Vector3::Zero();
+    dbg_moment_body = CRRCMath::Vector3::Zero();
   }
   
   virtual double getLat();

@@ -119,15 +119,15 @@ void CRRC_AirplaneSim_Larcsim::initAirplaneState(double dRelVel,
     // horizontal velocity
     float flVHor = flVelocity * cos(dTheta);
     // horizontal velocity has to be upwind:
-    v_V_local.r[0]  = cos(Psi)*flVHor;      // local x-velocity (north)   [ft/s]
-    v_V_local.r[1]  = sin(Psi)*flVHor;      // local y-velocity (east)    [ft/s]
+    v_V_local(0)  = cos(Psi)*flVHor;      // local x-velocity (north)   [ft/s]
+    v_V_local(1)  = sin(Psi)*flVHor;      // local y-velocity (east)    [ft/s]
     
-    v_V_local_rel_ground.r[1] = v_V_local.r[1];
+    v_V_local_rel_ground(1) = v_V_local(1);
   }
-  v_V_local.r[2]         = flVelocity * sin(-dTheta);          // local z-velocity (down)     [ft/s]
+  v_V_local(2)         = flVelocity * sin(-dTheta);          // local z-velocity (down)     [ft/s]
   
   v_R_omega_body    = CRRCMath::Vector3(R_X, R_Y, R_Z); // body rate   [rad/s]  
-  v_V_dot_local     = CRRCMath::Vector3(); // local acceleration   [ft/s^2]
+  v_V_dot_local     = CRRCMath::Vector3::Zero(); // local acceleration   [ft/s^2]
   
   CD_stall        = 0.05;   // drag coeff. during stalling    []
 
@@ -152,8 +152,8 @@ void CRRC_AirplaneSim_Larcsim::update(TSimInputs* inputs,
   CRRCMath::Vector3 v_M_aero, v_M_engine, v_M_gear; // l/m/n <-> roll/pitch/yaw
 
   int nAircraftOutsideWindfieldSim =
-    env->CalculateWind(v_P_CG_Rwy.r[0],        v_P_CG_Rwy.r[1],        v_P_CG_Rwy.r[2],
-                       v_V_local_airmass.r[0], v_V_local_airmass.r[1], v_V_local_airmass.r[2]);
+    env->CalculateWind(v_P_CG_Rwy(0),        v_P_CG_Rwy(1),        v_P_CG_Rwy(2),
+                       v_V_local_airmass(0), v_V_local_airmass(1), v_V_local_airmass(2));
 
   /**
    * Using a length of about roughly one half of the aircraft's
@@ -163,7 +163,7 @@ void CRRC_AirplaneSim_Larcsim::update(TSimInputs* inputs,
   double delta_space = 0.5*getWingspan();
 
   nAircraftOutsideWindfieldSim |=
-    env->CalculateWindGrad(v_P_CG_Rwy.r[0], v_P_CG_Rwy.r[1], v_P_CG_Rwy.r[2], delta_space,
+    env->CalculateWindGrad(v_P_CG_Rwy(0), v_P_CG_Rwy(1), v_P_CG_Rwy(2), delta_space,
                            m_V_local_airmass_grad);
 
   if (nAircraftOutsideWindfieldSim)
@@ -179,9 +179,9 @@ void CRRC_AirplaneSim_Larcsim::update(TSimInputs* inputs,
     logNewline();
     
 #if FDM_LOG_POS != 0
-    logVal(v_P_CG_Rwy.r[0]);
-    logVal(v_P_CG_Rwy.r[1]);
-    logVal(v_P_CG_Rwy.r[2]);
+    logVal(v_P_CG_Rwy(0));
+    logVal(v_P_CG_Rwy(1));
+    logVal(v_P_CG_Rwy(2));
     logVal(getPhi());    
     logVal(getTheta());
     logVal(getPsi());    
@@ -198,7 +198,7 @@ void CRRC_AirplaneSim_Larcsim::update(TSimInputs* inputs,
     gSubFrameTime += dt;
 
     // update wind turbulence linear & rotational velocities
-    env->CalculateWindGust(dt, getAlt(), v_V_local_rel_airmass.length(), getWingspan(),
+    env->CalculateWindGust(dt, getAlt(), v_V_local_rel_airmass.norm(), getWingspan(),
                            v_V_local_airmass, LocalToBody,
                            v_V_gust_body, v_R_omega_gust_body);
 
@@ -223,13 +223,13 @@ void CRRC_AirplaneSim_Larcsim::update(TSimInputs* inputs,
     if (gearEnabled_) {
       gear(&myInputs, v_F_gear, v_M_gear);
     } else {
-      v_F_gear = CRRCMath::Vector3();
-      v_M_gear = CRRCMath::Vector3();
+      v_F_gear = CRRCMath::Vector3::Zero();
+      v_M_gear = CRRCMath::Vector3::Zero();
     }
 
     // Only a fraction of the total rolling torque is not cancelled
     // by the aero effect of the prop wash on fuselage, wing and tail
-    v_M_engine.r[0] *= effectivePropellerTorqueFactor;
+    v_M_engine(0) *= effectivePropellerTorqueFactor;
 
     // Sum forces and moments at reference point (center of gravity)
     ls_accel(v_F_aero + v_F_engine + v_F_gear, v_M_aero + v_M_engine + v_M_gear);
@@ -487,8 +487,8 @@ void CRRC_AirplaneSim_Larcsim::gear(TSimInputs* inputs, CRRCMath::Vector3& v_F, 
 
 void CRRC_AirplaneSim_Larcsim::engine( SCALAR dt, TSimInputs* inputs, CRRCMath::Vector3& v_F, CRRCMath::Vector3& v_M)
 {
-  v_F = CRRCMath::Vector3();
-  v_M = CRRCMath::Vector3();
+  v_F = CRRCMath::Vector3::Zero();
+  v_M = CRRCMath::Vector3::Zero();
   
   inputs->pitch = 1;
   power->step(dt, inputs, v_V_wind_body*FT_TO_M, &v_F, &v_M);
@@ -558,20 +558,20 @@ void CRRC_AirplaneSim_Larcsim::aero(TSimInputs* inputs,
   gear_ext = 1.0 - inputs->retract;
 
   /* transform wind velocity gradient from local to body frame */
-  m_V_body = LocalToBody * (m_V_atmo_rwy * LocalToBody.trans());
+  m_V_body = LocalToBody * (m_V_atmo_rwy * LocalToBody.transpose());
   
   /* set rotation rates of airmass motion includin wind turbulence effect */
-  v_R_omega_atmo.r[0] =  m_V_body.v[2][1] + v_R_omega_gust_body.r[0];
-  v_R_omega_atmo.r[1] = -m_V_body.v[2][0] + v_R_omega_gust_body.r[1];
-  v_R_omega_atmo.r[2] =  m_V_body.v[1][0] + v_R_omega_gust_body.r[2];
+  v_R_omega_atmo(0) =  m_V_body(2,1) + v_R_omega_gust_body(0);
+  v_R_omega_atmo(1) = -m_V_body(2,0) + v_R_omega_gust_body(1);
+  v_R_omega_atmo(2) =  m_V_body(1,0) + v_R_omega_gust_body(2);
 
   if (V_rel_wind != 0)
   {
     /* set net effective dimensionless rotation rates */
     // jww: the comment above is misleading. The unit of those values must be rad!
-    Phat = (v_R_omega_body.r[0] - v_R_omega_atmo.r[0]) * B_ref / (2.0*V_rel_wind);
-    Qhat = (v_R_omega_body.r[1] - v_R_omega_atmo.r[1]) * C_ref / (2.0*V_rel_wind);
-    Rhat = (v_R_omega_body.r[2] - v_R_omega_atmo.r[2]) * B_ref / (2.0*V_rel_wind);
+    Phat = (v_R_omega_body(0) - v_R_omega_atmo(0)) * B_ref / (2.0*V_rel_wind);
+    Qhat = (v_R_omega_body(1) - v_R_omega_atmo(1)) * C_ref / (2.0*V_rel_wind);
+    Rhat = (v_R_omega_body(2) - v_R_omega_atmo(2)) * B_ref / (2.0*V_rel_wind);
   }
   else
   {
@@ -704,9 +704,9 @@ void CRRC_AirplaneSim_Larcsim::aero(TSimInputs* inputs,
       + 0.25*dCD_left + 0.5*dCD_cent + 0.25*dCD_right;
 
   /* total forces in body axes */
-  C_xyz.r[0] = -CD*Cos_alpha + CL*Sin_alpha*Cos_beta*Cos_beta;
-  C_xyz.r[2] = -CD*Sin_alpha - CL*Cos_alpha*Cos_beta*Cos_beta;
-  C_xyz.r[1] = CY_b*Beta  + CY_p*Phat + CY_r*Rhat + CY_dr*rudder;
+  C_xyz(0) = -CD*Cos_alpha + CL*Sin_alpha*Cos_beta*Cos_beta;
+  C_xyz(2) = -CD*Sin_alpha - CL*Cos_alpha*Cos_beta*Cos_beta;
+  C_xyz(1) = CY_b*Beta  + CY_p*Phat + CY_r*Rhat + CY_dr*rudder;
 
   /* total moments in body axes */
   // Flap contribution to Cm zeroed if stalling, since major
@@ -728,9 +728,9 @@ void CRRC_AirplaneSim_Larcsim::aero(TSimInputs* inputs,
 
   v_F = C_xyz * QS;
 
-  v_M.r[0] = Cl * QS * B_ref;
-  v_M.r[1] = Cm * QS * C_ref;
-  v_M.r[2] = Cn * QS * B_ref;
+  v_M(0) = Cl * QS * B_ref;
+  v_M(1) = Cm * QS * C_ref;
+  v_M(2) = Cn * QS * B_ref;
 
   // Capture physics trace for first N steps
   if (gPhysicsStepCounter < MAX_TRACE_STEPS) {
@@ -759,8 +759,8 @@ void CRRC_AirplaneSim_Larcsim::aero(TSimInputs* inputs,
     CRRCMath::Vector3 localAirmass = getLastLocalAirmass();
     // Capture BOTH linear and rotational gust components (6 values total)
     double gustData[6] = {
-      dbg_V_gust_body.r[0], dbg_V_gust_body.r[1], dbg_V_gust_body.r[2],
-      dbg_R_omega_gust_body.r[0], dbg_R_omega_gust_body.r[1], dbg_R_omega_gust_body.r[2]
+      dbg_V_gust_body(0), dbg_V_gust_body(1), dbg_V_gust_body(2),
+      dbg_R_omega_gust_body(0), dbg_R_omega_gust_body(1), dbg_R_omega_gust_body(2)
     };
 
     // Use actual simulation time since reset (not sub-frame time which resets each update())
@@ -775,19 +775,19 @@ void CRRC_AirplaneSim_Larcsim::aero(TSimInputs* inputs,
         gTraceWorkerId,
         gTraceWorkerPid,
         gTraceEvalCounter,
-        pos.r, vel.r, acc.r, accPast.r,
+        pos.data(), vel.data(), acc.data(), accPast.data(),
         quat, quatDotPast_arr,
-        omegaBody.r, omegaDotBody.r,
-        pqr.r, omegaDotPast.r,
+        omegaBody.data(), omegaDotBody.data(),
+        pqr.data(), omegaDotPast.data(),
         getAlpha(), getBeta(), getVRelWind(),
-        velRelGround.r, velRelAir.r,
-        vLocal.r, vLocalDot.r,
+        velRelGround.data(), velRelAir.data(),
+        vLocal.data(), vLocalDot.data(),
         Cos_alpha, Sin_alpha, Cos_beta,
         flight_CL, CD,
         CL_left, CL_cent, CL_right, CL_wing,
         Cl, Cm, Cn, QS,
-        v_F.r, v_M.r,
-        wind.r, localAirmass.r, gustData,
+        v_F.data(), v_M.data(),
+        wind.data(), localAirmass.data(), gustData,
         getDensity(), getGravity(),
         getLatGeocentric(), getLonGeocentric(), getRadiusToVehicle(),
         static_cast<double>(inputs->pitch),
@@ -808,7 +808,7 @@ void CRRC_AirplaneSim_Larcsim::aero(TSimInputs* inputs,
     double ail = 0.8*(inputs->aileron);
     double rud = 0.8*(0.5*inputs->aileron);
    
-    v_F = CRRCMath::Vector3();
+    v_F = CRRCMath::Vector3::Zero();
     v_M = CRRCMath::Vector3(ail, ele, rud);
     stalling = 0;
   }
@@ -827,9 +827,9 @@ void CRRC_AirplaneSim_Larcsim::ls_step_init()
   EOM01::ls_step_init();
   
   /*    Initialize vehicle model                        */
-  ls_aux(CRRCMath::Vector3(), CRRCMath::Vector3());
+  ls_aux(CRRCMath::Vector3::Zero(), CRRCMath::Vector3::Zero());
 
-  aero(&ZeroInput, CRRCMath::Matrix33(), CRRCMath::Vector3(), v_F_aero, v_M_aero);
+  aero(&ZeroInput, CRRCMath::Matrix33::Zero(), CRRCMath::Vector3::Zero(), v_F_aero, v_M_aero);
   engine(0, &ZeroInput, v_F_engine, v_M_engine);
   gear(&ZeroInput, v_F_gear, v_M_gear);
 
@@ -837,7 +837,7 @@ void CRRC_AirplaneSim_Larcsim::ls_step_init()
   ls_accel(v_F_aero + v_F_engine + v_F_gear, v_M_aero + v_M_engine + v_M_gear);
 
   /* Initialize auxiliary variables */
-  ls_aux(CRRCMath::Vector3(), CRRCMath::Vector3());
+  ls_aux(CRRCMath::Vector3::Zero(), CRRCMath::Vector3::Zero());
 }
 
 

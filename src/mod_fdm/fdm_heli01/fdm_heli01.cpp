@@ -69,18 +69,18 @@ void CRRC_AirplaneSim_Heli01::initAirplaneState(double dRelVel,
     Altitude  = -1*Z;
   }
 
-  v_V_local.r[0] = 0;      // local x-velocity (north)   [ft/s]
-  v_V_local.r[1] = 0;      // local y-velocity (east)    [ft/s]
-  v_V_local.r[2] = 0;      // local z-velocity (down)     [ft/s]
+  v_V_local(0) = 0;      // local x-velocity (north)   [ft/s]
+  v_V_local(1) = 0;      // local y-velocity (east)    [ft/s]
+  v_V_local(2) = 0;      // local z-velocity (down)     [ft/s]
     
-  v_V_local_rel_ground.r[1] = v_V_local.r[1];
+  v_V_local_rel_ground(1) = v_V_local(1);
   
   v_R_omega_body    = CRRCMath::Vector3(R_X, R_Y, R_Z); // body rate   [rad/s]  
-  v_V_dot_local     = CRRCMath::Vector3(); // local acceleration   [ft/s^2]
+  v_V_dot_local     = CRRCMath::Vector3::Zero(); // local acceleration   [ft/s^2]
 
   dHeadingHoldInt = 0;
   
-  power->InitStates(CRRCMath::Vector3());
+  power->InitStates(CRRCMath::Vector3::Zero());
   
   ls_step_init();
 }
@@ -91,10 +91,10 @@ void CRRC_AirplaneSim_Heli01::update(TSimInputs* inputs,
                                      int         multiloop) 
 {
   CRRCMath::Vector3 v_V_local_airmass;
-  CRRCMath::Vector3 v_V_gust_body = CRRCMath::Vector3();
+  CRRCMath::Vector3 v_V_gust_body = CRRCMath::Vector3::Zero();
   
-  env->CalculateWind(v_P_CG_Rwy.r[0],        v_P_CG_Rwy.r[1],        v_P_CG_Rwy.r[2],
-                     v_V_local_airmass.r[0], v_V_local_airmass.r[1], v_V_local_airmass.r[2]);
+  env->CalculateWind(v_P_CG_Rwy(0),        v_P_CG_Rwy(1),        v_P_CG_Rwy(2),
+                     v_V_local_airmass(0), v_V_local_airmass(1), v_V_local_airmass(2));
   
   CRRCMath::Vector3 v_F_aero, v_F_engine, v_F_gear; // Force x/y/z
   CRRCMath::Vector3 v_M_aero, v_M_engine, v_M_gear; // l/m/n <-> roll/pitch/yaw
@@ -104,9 +104,9 @@ void CRRC_AirplaneSim_Heli01::update(TSimInputs* inputs,
     logNewline();
     
 #if FDM_LOG_POS != 0
-    logVal(v_P_CG_Rwy.r[0]);
-    logVal(v_P_CG_Rwy.r[1]);
-    logVal(v_P_CG_Rwy.r[2]);
+    logVal(v_P_CG_Rwy(0));
+    logVal(v_P_CG_Rwy(1));
+    logVal(v_P_CG_Rwy(2));
     logVal(getPhi());    
     logVal(getTheta());
     logVal(getPsi());    
@@ -289,12 +289,12 @@ void CRRC_AirplaneSim_Heli01::LoadFromXML(SimpleXMLTransfer* xml, int nVerbosity
     if (fFixedPitch)
     {
       // ask the power system about the throttle input needed to stay level
-      cp_off = lp->Sim_GetThrottle(CRRCMath::Vector3(), FLevel, PITCH_FIXED_PITCH, torque);
+      cp_off = lp->Sim_GetThrottle(CRRCMath::Vector3::Zero(), FLevel, PITCH_FIXED_PITCH, torque);
     }
     else
     {
       // ask the power system about the pitch input needed to stay level
-      cp_off = lp->Sim_GetPitch(CRRCMath::Vector3(), FLevel, THROTTLE_COLLECTIVE_PITCH, torque);
+      cp_off = lp->Sim_GetPitch(CRRCMath::Vector3::Zero(), FLevel, THROTTLE_COLLECTIVE_PITCH, torque);
     }
     
     std::cout << "Automagically set config.aero.cp.off=" << cp_off << "\n";
@@ -316,7 +316,7 @@ void CRRC_AirplaneSim_Heli01::LoadFromXML(SimpleXMLTransfer* xml, int nVerbosity
     
     if (fFixedPitch)
     {
-      inp.throttle  = lp->Sim_GetThrottle(CRRCMath::Vector3(), FLevel, PITCH_FIXED_PITCH, torqueA);
+      inp.throttle  = lp->Sim_GetThrottle(CRRCMath::Vector3::Zero(), FLevel, PITCH_FIXED_PITCH, torqueA);
       throttle_usrA = (inp.throttle - cp_off) / (1-cp_off) * 0.5;
 
       float maxthrottle = 1.0;
@@ -326,7 +326,7 @@ void CRRC_AirplaneSim_Heli01::LoadFromXML(SimpleXMLTransfer* xml, int nVerbosity
     }
     else
     {
-      inp.pitch     = lp->Sim_GetPitch(CRRCMath::Vector3(), FLevel, THROTTLE_COLLECTIVE_PITCH, torqueA);
+      inp.pitch     = lp->Sim_GetPitch(CRRCMath::Vector3::Zero(), FLevel, THROTTLE_COLLECTIVE_PITCH, torqueA);
       throttle_usrA = (inp.pitch - cp_off) / cp_ctrl;
 
       float maxpitch = cp_ctrl * 0.5 + cp_off;
@@ -346,7 +346,7 @@ void CRRC_AirplaneSim_Heli01::LoadFromXML(SimpleXMLTransfer* xml, int nVerbosity
       do
       {
         lp->Sim_UntilStable(&inp, CRRCMath::Vector3(V_X, 0, 0), 0.0001, &force, &torqueB);
-        force_res = force.length() - FLevel;
+        force_res = force.norm() - FLevel;
         
         // std::cout << V_X << " " << force_res << " " << (V_X*V_X*speed_damp) << "\n";
                 
@@ -360,13 +360,13 @@ void CRRC_AirplaneSim_Heli01::LoadFromXML(SimpleXMLTransfer* xml, int nVerbosity
     // note: -0.5 has been left out, throttle_usrX has been calculated accordingly
     //   yc = yaw_off + cp_to_yaw * throttle_usr
     // here:
-    //   torque.r[0] * yaw_moment_mul = yaw_off + cp_to_yaw * throttle_usr
-    torqueA.r[0] *= yaw_moment_mul;
-    torqueB.r[0] *= yaw_moment_mul;
-    //   torque.r[0] = yaw_off + cp_to_yaw * throttle_usr
+    //   torque(0) * yaw_moment_mul = yaw_off + cp_to_yaw * throttle_usr
+    torqueA(0) *= yaw_moment_mul;
+    torqueB(0) *= yaw_moment_mul;
+    //   torque(0) = yaw_off + cp_to_yaw * throttle_usr
     float f = throttle_usrB / throttle_usrA;
-    yaw_off   = (torqueB.r[0] - torqueA.r[0] * f) / (1 - f);
-    cp_to_yaw = (torqueA.r[0] - yaw_off) / throttle_usrA;
+    yaw_off   = (torqueB(0) - torqueA(0) * f) / (1 - f);
+    cp_to_yaw = (torqueA(0) - yaw_off) / throttle_usrA;
 
     std::cout << "Automagically set config.aero.yaw.off      =" << yaw_off   << "\n";
     std::cout << "Automagically set config.aero.yaw.cp_to_yaw=" << cp_to_yaw << "\n";
@@ -474,8 +474,8 @@ float CRRC_AirplaneSim_Heli01::GroundEffect(float dRotorToGround)
 
 void CRRC_AirplaneSim_Heli01::engine( SCALAR dt, TSimInputs* inputs, CRRCMath::Vector3& v_F, CRRCMath::Vector3& v_M)
 {
-  v_F = CRRCMath::Vector3();
-  v_M = CRRCMath::Vector3();
+  v_F = CRRCMath::Vector3::Zero();
+  v_M = CRRCMath::Vector3::Zero();
   
   if (fFixedPitch)
   {
@@ -500,23 +500,23 @@ void CRRC_AirplaneSim_Heli01::engine( SCALAR dt, TSimInputs* inputs, CRRCMath::V
   }
   
   power->step(dt, inputs, 
-              CRRCMath::Vector3(-v_V_wind_body.r[2],
-                                v_V_wind_body.r[1],
-                                v_V_wind_body.r[0]
+              CRRCMath::Vector3(-v_V_wind_body(2),
+                                v_V_wind_body(1),
+                                v_V_wind_body(0)
                                 )*FT_TO_M,
               &v_F, &v_M);
   
-  v_M = CRRCMath::Vector3(0, 0, -v_M.r[0] * yaw_moment_mul);
+  v_M = CRRCMath::Vector3(0, 0, -v_M(0) * yaw_moment_mul);
 
-  v_F = CRRCMath::Vector3(0, 0, -v_F.r[0]);
+  v_F = CRRCMath::Vector3(0, 0, -v_F(0));
   
   // --- Ground effect -------------------
   double dGEMul = GroundEffect(Altitude - dRotorZ);
   // Transform from body to local frame
-  v_F = LocalToBody.multrans(v_F);
+  v_F = CRRCMath::multrans(LocalToBody, v_F);
   // apply
-  if (v_F.r[2] < 0)
-    v_F.r[2] *= dGEMul;
+  if (v_F(2) < 0)
+    v_F(2) *= dGEMul;
   // Transform from local to body frame
   v_F = LocalToBody * v_F;
 
@@ -534,7 +534,7 @@ void CRRC_AirplaneSim_Heli01::aero(double dt, TSimInputs* inputs, CRRCMath::Vect
   
   CRRCMath::Vector3 v_V_wind_body_SI    = v_V_wind_body * FT_TO_M;
   // some forces and moments are proportional to v^2:
-  CRRCMath::Vector3 v_V_wind_body_SI_sq = v_V_wind_body * v_V_wind_body.length() * FT_TO_M * FT_TO_M;
+  CRRCMath::Vector3 v_V_wind_body_SI_sq = v_V_wind_body * v_V_wind_body.norm() * FT_TO_M * FT_TO_M;
   
   v_F = v_V_wind_body_SI_sq * (-speed_damp);
   
@@ -556,20 +556,20 @@ void CRRC_AirplaneSim_Heli01::aero(double dt, TSimInputs* inputs, CRRCMath::Vect
   double yc;
   if (fabs(dHeadingHold) > 1.0E-8)
   {
-    dHeadingHoldInt += dHeadingHold*(-yaw_ctrl * inputs->rudder - v_R_omega_body.r[2]);
+    dHeadingHoldInt += dHeadingHold*(-yaw_ctrl * inputs->rudder - v_R_omega_body(2));
     yc = dHeadingHoldInt;
   }
   else
     yc = yaw_off - yaw_ctrl * inputs->rudder + cp_to_yaw * (inputs->throttle - 0.5);
   
   v_M = CRRCMath::Vector3(  roll_ctrl  * inputs->aileron
-                          - roll_damp  * v_R_omega_body.r[0] * fabs(v_R_omega_body.r[0])
+                          - roll_damp  * v_R_omega_body(0) * fabs(v_R_omega_body(0))
                           + roll_dist  * filt_rnd_roll.val * dGEMul,
                           - pitch_ctrl * inputs->elevator
-                          - pitch_damp * v_R_omega_body.r[1] * fabs(v_R_omega_body.r[1])
+                          - pitch_damp * v_R_omega_body(1) * fabs(v_R_omega_body(1))
                           + pitch_dist * filt_rnd_pitch.val * dGEMul,
                           yc
-                          - yd         * v_R_omega_body.r[2]           // yaw damping is linear (gyro!)
+                          - yd         * v_R_omega_body(2)           // yaw damping is linear (gyro!)
                           + yaw_dist   * filt_rnd_yaw.val * dGEMul);
 
   // When not hovering and not being a coaxial rotor, relative wind velocity adds 
@@ -577,14 +577,14 @@ void CRRC_AirplaneSim_Heli01::aero(double dt, TSimInputs* inputs, CRRCMath::Vect
   // direction.
   // Project relative wind velocity onto rotor disc: we already have that in
   // v_V_wind_body. So just apply this:
-  v_M += CRRCMath::Vector3(v_V_wind_body_SI.r[0] * dForwardToRoll,
-                           v_V_wind_body_SI.r[1] * dForwardToRoll,
+  v_M += CRRCMath::Vector3(v_V_wind_body_SI(0) * dForwardToRoll,
+                           v_V_wind_body_SI(1) * dForwardToRoll,
                            0);
   
   // vane effect
   v_M += CRRCMath::Vector3(0,
-                           -pitch_vane * v_V_wind_body_SI_sq.r[2],
-                           yaw_vane    * v_V_wind_body_SI_sq.r[1]);
+                           -pitch_vane * v_V_wind_body_SI_sq(2),
+                           yaw_vane    * v_V_wind_body_SI_sq(1));
     
   // Convert SI to that other buggy system.
   v_F *= N_TO_LBF;
@@ -602,7 +602,7 @@ void CRRC_AirplaneSim_Heli01::ls_step_init()
   EOM01::ls_step_init();
     
   /*    Initialize vehicle model                        */
-  ls_aux(CRRCMath::Vector3(), CRRCMath::Vector3());
+  ls_aux(CRRCMath::Vector3::Zero(), CRRCMath::Vector3::Zero());
 
   aero(0, &ZeroInput, v_F_aero, v_M_aero);
   engine(0, &ZeroInput, v_F_engine, v_M_engine);
@@ -613,7 +613,7 @@ void CRRC_AirplaneSim_Heli01::ls_step_init()
            EOM01_FIXED_Z_OFF, fFixedHorizon);
 
   /* Initialize auxiliary variables */
-  ls_aux(CRRCMath::Vector3(), CRRCMath::Vector3());
+  ls_aux(CRRCMath::Vector3::Zero(), CRRCMath::Vector3::Zero());
 }
 
 double CRRC_AirplaneSim_Heli01::getPropFreq() 

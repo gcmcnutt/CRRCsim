@@ -59,9 +59,9 @@ HardPointRotation::HardPointRotation(SimpleXMLTransfer *xml, TSimInputs const& i
     {
       // found a <hinge> child
       CRRCMath::Vector3 pos;
-      pos.r[0] = (float)(child->getDouble("x", 0.0));
-      pos.r[1] = (float)(child->getDouble("y", 0.0));
-      pos.r[2] = (float)(child->getDouble("z", 0.0));
+      pos(0) = (float)(child->getDouble("x", 0.0));
+      pos(1) = (float)(child->getDouble("y", 0.0));
+      pos(2) = (float)(child->getDouble("z", 0.0));
       if (num_hinges < 2)
       {
         hinge[num_hinges] = pos;
@@ -155,7 +155,7 @@ HardPointRotation::HardPointRotation(SimpleXMLTransfer *xml, TSimInputs const& i
       fprintf(stderr, "HardPointRotation: Ignoring excessive hinge tag(s).\n");
     }
     axis = hinge[1] - hinge[0];
-    if (axis.length() < 0.001)
+    if (axis.norm() < 0.001)
     {
       fprintf(stderr, "HardPointRotation: Insufficient spacing between hinges!\n");
       failed = true;
@@ -324,7 +324,7 @@ void Wheel::update( FDMEnviroment* env,
 
   /* then converting to local (North-East-Down) axes... */
 
-  v_P_wheel_cg_local = LocalToBody.multrans(v_P_wheel_cg_body);
+  v_P_wheel_cg_local = CRRCMath::multrans(LocalToBody, v_P_wheel_cg_body);
   
   /* Add wheel offset to cg location in local axes */
 
@@ -336,11 +336,11 @@ void Wheel::update( FDMEnviroment* env,
 
   /* contribution due to angular rates */
 
-  temp3a = v_R_omega_body * v_P_wheel_cg_body;
+  temp3a = v_R_omega_body.cross(v_P_wheel_cg_body);
 
   /* transform into local axes */
 
-  temp3b = LocalToBody.multrans(temp3a);
+  temp3b = CRRCMath::multrans(LocalToBody, temp3a);
 
   /* plus contribution due to cg velocities */
 
@@ -363,26 +363,26 @@ void Wheel::update( FDMEnviroment* env,
   cos_wheel_hdg_angle = cos(tmp_angle);
   sin_wheel_hdg_angle = sin(tmp_angle);
 
-  v_wheel_forward  = v_V_wheel_local.r[0]*cos_wheel_hdg_angle
-                   + v_V_wheel_local.r[1]*sin_wheel_hdg_angle;
-  v_wheel_sideward = v_V_wheel_local.r[1]*cos_wheel_hdg_angle
-                   - v_V_wheel_local.r[0]*sin_wheel_hdg_angle;    
+  v_wheel_forward  = v_V_wheel_local(0)*cos_wheel_hdg_angle
+                   + v_V_wheel_local(1)*sin_wheel_hdg_angle;
+  v_wheel_sideward = v_V_wheel_local(1)*cos_wheel_hdg_angle
+                   - v_V_wheel_local(0)*sin_wheel_hdg_angle;    
 
   /* Calculate normal load force (simple spring constant) */
 
   reaction_normal_force = 0.;
 
-  SCALAR z_earth = -1*env->GetSceneryHeight(v_P_wheel_rwy_local.r[0], v_P_wheel_rwy_local.r[1]);
+  SCALAR z_earth = -1*env->GetSceneryHeight(v_P_wheel_rwy_local(0), v_P_wheel_rwy_local(1));
   
-  if (v_P_wheel_rwy_local.r[2] > z_earth)
+  if (v_P_wheel_rwy_local(2) > z_earth)
   {
     // Forces are in lbf here, lengths in ft, velocities in ft/s. 
     // So:
     // 1 slug * 1 ft / s^2 = spring_constant * 1 ft - 1 ft/s  * spring_damping
     // spring_constant  = slug / s^2 = lbf / ft
     // spring_damping   = slug / s   = lbf * s / ft
-    reaction_normal_force = spring_constant*(z_earth-v_P_wheel_rwy_local.r[2])
-                           - v_V_wheel_local.r[2]*spring_damping;
+    reaction_normal_force = spring_constant*(z_earth-v_P_wheel_rwy_local(2))
+                           - v_V_wheel_local(2)*spring_damping;
   }
   
   /* Crash detection. Normal force is negative. */
@@ -417,11 +417,11 @@ void Wheel::update( FDMEnviroment* env,
 
   /* Rotate into local (N-E-D) axes */
 
-  v_F_wheel_local.r[0] = forward_wheel_force *cos_wheel_hdg_angle
+  v_F_wheel_local(0) = forward_wheel_force *cos_wheel_hdg_angle
                        - sideward_wheel_force*sin_wheel_hdg_angle;
-  v_F_wheel_local.r[1] = forward_wheel_force *sin_wheel_hdg_angle
+  v_F_wheel_local(1) = forward_wheel_force *sin_wheel_hdg_angle
                        + sideward_wheel_force*cos_wheel_hdg_angle;
-  v_F_wheel_local.r[2] = reaction_normal_force;
+  v_F_wheel_local(2) = reaction_normal_force;
 
   /* Convert reaction force from local (N-E-D) axes to body (X-Y-Z) */
 
@@ -429,7 +429,7 @@ void Wheel::update( FDMEnviroment* env,
 
   /* Calculate moments from force and offsets in body axes */
 
-  tempM = v_P_wheel_cg_body * tempF;
+  tempM = v_P_wheel_cg_body.cross(tempF);
 
 }
 
@@ -466,8 +466,8 @@ void WheelSystem::update( TSimInputs* inputs,
    */
   wheel_inputs = *inputs;
 
-  v_Forces  = CRRCMath::Vector3();  /* Initialize sum of forces... */
-  v_Moments = CRRCMath::Vector3();  /* ...and moments  */
+  v_Forces  = CRRCMath::Vector3::Zero();  /* Initialize sum of forces... */
+  v_Moments = CRRCMath::Vector3::Zero();  /* ...and moments  */
       
   for (i=0;i<num_wheels;i++)     /* Loop for each wheel */
   {
@@ -496,8 +496,8 @@ void WheelSystem::update( TSimInputs* inputs,
   {
     hpt->transform(v_P_wheel_cg_body);
   }
-  double x = X + v_P_wheel_cg_body.r[0]*cos(rPsi) + v_P_wheel_cg_body.r[1]*sin(rPsi);
-  double y = Y - v_P_wheel_cg_body.r[0]*sin(rPsi) + v_P_wheel_cg_body.r[1]*cos(rPsi);
+  double x = X + v_P_wheel_cg_body(0)*cos(rPsi) + v_P_wheel_cg_body(1)*sin(rPsi);
+  double y = Y - v_P_wheel_cg_body(0)*sin(rPsi) + v_P_wheel_cg_body(1)*cos(rPsi);
  
   double z_earth = -1;///////*Global::scenery->getHeight(x,y);
   return z_earth;
@@ -559,9 +559,9 @@ void WheelSystem::init(SimpleXMLTransfer *ModelFile, SCALAR  def_span)
   if (ModelFile->indexOfChild("CG") >= 0)
   {
     i = ModelFile->getChild("CG");
-    pCG.r[0] = i->attributeAsDouble("x", 0);
-    pCG.r[1] = i->attributeAsDouble("y", 0);
-    pCG.r[2] = i->attributeAsDouble("z", 0);
+    pCG(0) = i->attributeAsDouble("x", 0);
+    pCG(1) = i->attributeAsDouble("y", 0);
+    pCG(2) = i->attributeAsDouble("z", 0);
     
     if (i->attributeAsInt("units") == 1)
       pCG *= M_TO_FT;
@@ -603,9 +603,9 @@ void WheelSystem::init(SimpleXMLTransfer *ModelFile, SCALAR  def_span)
     
     e = i->getChildAt(n);
     
-    x = e->getDouble("pos.x") * to_ft - pCG.r[0];
-    y = e->getDouble("pos.y") * to_ft - pCG.r[1];
-    z = e->getDouble("pos.z") * to_ft - pCG.r[2];
+    x = e->getDouble("pos.x") * to_ft - pCG(0);
+    y = e->getDouble("pos.y") * to_ft - pCG(1);
+    z = e->getDouble("pos.z") * to_ft - pCG(2);
     wheel.v_P = CRRCMath::Vector3(x, y, z);
     
     // let's see if this wheel is coupled to an animation

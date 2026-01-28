@@ -72,20 +72,20 @@ void CRRC_AirplaneSim_MCopter01::initAirplaneState(double dRelVel,
     Altitude  = -1*Z;
   }
 
-  v_V_local.r[0] = 0;      // local x-velocity (north)   [ft/s]
-  v_V_local.r[1] = 0;      // local y-velocity (east)    [ft/s]
-  v_V_local.r[2] = 0;      // local z-velocity (down)     [ft/s]
+  v_V_local(0) = 0;      // local x-velocity (north)   [ft/s]
+  v_V_local(1) = 0;      // local y-velocity (east)    [ft/s]
+  v_V_local(2) = 0;      // local z-velocity (down)     [ft/s]
     
-  v_V_local_rel_ground.r[1] = v_V_local.r[1];
+  v_V_local_rel_ground(1) = v_V_local(1);
   
   v_R_omega_body    = CRRCMath::Vector3(R_X, R_Y, R_Z); // body rate   [rad/s]  
-  v_V_dot_local     = CRRCMath::Vector3(); // local acceleration   [ft/s^2]
+  v_V_dot_local     = CRRCMath::Vector3::Zero(); // local acceleration   [ft/s^2]
 
   for (unsigned int n=0; n<controllers.size(); n++)
     controllers[n]->Reset();
   
   for (unsigned int n=0; n<power.size(); n++)
-    power[n]->InitStates(CRRCMath::Vector3());
+    power[n]->InitStates(CRRCMath::Vector3::Zero());
   
   ls_step_init();
 }
@@ -96,10 +96,10 @@ void CRRC_AirplaneSim_MCopter01::update(TSimInputs* inputs,
                                         int         multiloop) 
 {
   CRRCMath::Vector3 v_V_local_airmass;
-  CRRCMath::Vector3 v_V_gust_body = CRRCMath::Vector3();
+  CRRCMath::Vector3 v_V_gust_body = CRRCMath::Vector3::Zero();
   
-  env->CalculateWind(v_P_CG_Rwy.r[0],        v_P_CG_Rwy.r[1],        v_P_CG_Rwy.r[2],
-                     v_V_local_airmass.r[0], v_V_local_airmass.r[1], v_V_local_airmass.r[2]);
+  env->CalculateWind(v_P_CG_Rwy(0),        v_P_CG_Rwy(1),        v_P_CG_Rwy(2),
+                     v_V_local_airmass(0), v_V_local_airmass(1), v_V_local_airmass(2));
   
   CRRCMath::Vector3 v_F_aero, v_F_engine, v_F_gear; // Force x/y/z
   CRRCMath::Vector3 v_M_aero, v_M_engine, v_M_gear; // l/m/n <-> roll/pitch/yaw
@@ -124,7 +124,7 @@ void CRRC_AirplaneSim_MCopter01::update(TSimInputs* inputs,
     }
     else
     {
-      v_URel = CRRCMath::Vector3();
+      v_URel = CRRCMath::Vector3::Zero();
       for (unsigned int n=0; n<controllers.size(); n++)
         controllers[n]->Reset();
     }
@@ -259,7 +259,7 @@ void CRRC_AirplaneSim_MCopter01::LoadFromXML(SimpleXMLTransfer* xml, int nVerbos
 void CRRC_AirplaneSim_MCopter01::InitStates()
 {
   for (unsigned int n=0; n<power.size(); n++)
-    power[n]->InitStates(CRRCMath::Vector3());
+    power[n]->InitStates(CRRCMath::Vector3::Zero());
   filt_rnd_yaw.init(0);
   filt_rnd_roll.init(0);
   filt_rnd_pitch.init(0);
@@ -319,8 +319,8 @@ void CRRC_AirplaneSim_MCopter01::engine(SCALAR             dt,
 {
   CRRCMath::Vector3 F, M;
   
-  v_F = CRRCMath::Vector3();
-  v_M = CRRCMath::Vector3();
+  v_F = CRRCMath::Vector3::Zero();
+  v_M = CRRCMath::Vector3::Zero();
 
   inputs->pitch = PITCH_FIXED_PITCH;
   double thr_in = inputs->throttle;
@@ -334,9 +334,9 @@ void CRRC_AirplaneSim_MCopter01::engine(SCALAR             dt,
     double mul_q = x/l;
     
     double thr = thr_in
-      + v_URel.r[0] * mul_p
-      + v_URel.r[1] * mul_q
-      + v_URel.r[2] * props[n].mul_r;
+      + v_URel(0) * mul_p
+      + v_URel(1) * mul_q
+      + v_URel(2) * props[n].mul_r;
     
     if (thr < 0)
       thr = 0;
@@ -350,17 +350,17 @@ void CRRC_AirplaneSim_MCopter01::engine(SCALAR             dt,
     //   UDiff = t * omega * ki * dURef
     // aus.
     
-    F = CRRCMath::Vector3();
-    M = CRRCMath::Vector3();
+    F = CRRCMath::Vector3::Zero();
+    M = CRRCMath::Vector3::Zero();
     power[n]->step(dt, inputs, 
-                   CRRCMath::Vector3(-v_V_wind_body.r[2],
-                                     v_V_wind_body.r[1],
-                                     v_V_wind_body.r[0]
+                   CRRCMath::Vector3(-v_V_wind_body(2),
+                                     v_V_wind_body(1),
+                                     v_V_wind_body(0)
                                      )*FT_TO_M,
                    &F, &M);
     
-    v_F += CRRCMath::Vector3(0, 0, -F.r[0]);    
-    v_M += CRRCMath::Vector3(y*F.r[0], x*F.r[0], -M.r[0] * props[n].mul_r);
+    v_F += CRRCMath::Vector3(0, 0, -F(0));    
+    v_M += CRRCMath::Vector3(y*F(0), x*F(0), -M(0) * props[n].mul_r);
     
     //std::cout << inputs->throttle << " " << power[n]->getPropFreq() << " ";
   }
@@ -369,10 +369,10 @@ void CRRC_AirplaneSim_MCopter01::engine(SCALAR             dt,
   // --- Ground effect -------------------
   double dGEMul = GroundEffect(Altitude - dRotorZ);
   // Transform from body to local frame
-  v_F = LocalToBody.multrans(v_F);
+  v_F = CRRCMath::multrans(LocalToBody, v_F);
   // apply
-  if (v_F.r[2] < 0)
-    v_F.r[2] *= dGEMul;
+  if (v_F(2) < 0)
+    v_F(2) *= dGEMul;
   // Transform from local to body frame
   v_F = LocalToBody * v_F;
 
@@ -389,7 +389,7 @@ void CRRC_AirplaneSim_MCopter01::aero(double dt, CRRCMath::Vector3& v_F, CRRCMat
   double dGEMul = 1 + dGEDistMul * (GroundEffect(Altitude - dRotorZ) - 1);
   
   // some forces and moments are proportional to v^2:
-  CRRCMath::Vector3 v_V_wind_body_SI_sq = v_V_wind_body * v_V_wind_body.length() * FT_TO_M * FT_TO_M;
+  CRRCMath::Vector3 v_V_wind_body_SI_sq = v_V_wind_body * v_V_wind_body.norm() * FT_TO_M * FT_TO_M;
   
   v_F = v_V_wind_body_SI_sq * (-speed_damp);
   
@@ -406,9 +406,9 @@ void CRRC_AirplaneSim_MCopter01::aero(double dt, CRRCMath::Vector3& v_F, CRRCMat
   filt_rnd_roll.step(dt, in_rnd_roll);
   filt_rnd_pitch.step(dt, in_rnd_pitch);
   
-  v_M = CRRCMath::Vector3(roll_dist  * filt_rnd_roll.val  * dGEMul - roll_damp1 * v_R_omega_body.r[0] - roll_damp2 * v_R_omega_body.r[0] * fabs(v_R_omega_body.r[0]),
-                          pitch_dist * filt_rnd_pitch.val * dGEMul - roll_damp1 * v_R_omega_body.r[1] - roll_damp2 * v_R_omega_body.r[1] * fabs(v_R_omega_body.r[1]),
-                          yaw_dist   * filt_rnd_yaw.val   * dGEMul - yaw_damp1  * v_R_omega_body.r[2] - yaw_damp2  * v_R_omega_body.r[2] * fabs(v_R_omega_body.r[2]));
+  v_M = CRRCMath::Vector3(roll_dist  * filt_rnd_roll.val  * dGEMul - roll_damp1 * v_R_omega_body(0) - roll_damp2 * v_R_omega_body(0) * fabs(v_R_omega_body(0)),
+                          pitch_dist * filt_rnd_pitch.val * dGEMul - roll_damp1 * v_R_omega_body(1) - roll_damp2 * v_R_omega_body(1) * fabs(v_R_omega_body(1)),
+                          yaw_dist   * filt_rnd_yaw.val   * dGEMul - yaw_damp1  * v_R_omega_body(2) - yaw_damp2  * v_R_omega_body(2) * fabs(v_R_omega_body(2)));
 
   // Convert SI to that other buggy system.
   v_F *= N_TO_LBF;
@@ -425,10 +425,10 @@ void CRRC_AirplaneSim_MCopter01::ls_step_init()
   
   EOM01::ls_step_init();
   
-  v_V_local = CRRCMath::Vector3();
+  v_V_local = CRRCMath::Vector3::Zero();
   
   /*    Initialize vehicle model                        */
-  ls_aux(CRRCMath::Vector3(), CRRCMath::Vector3());
+  ls_aux(CRRCMath::Vector3::Zero(), CRRCMath::Vector3::Zero());
 
   aero(0, v_F_aero, v_M_aero);
   gear(&ZeroInput, v_F_gear, v_M_gear);
@@ -437,7 +437,7 @@ void CRRC_AirplaneSim_MCopter01::ls_step_init()
   ls_accel(v_F_aero + v_F_gear, v_M_aero + v_M_gear);
 
   /* Initialize auxiliary variables */
-  ls_aux(CRRCMath::Vector3(), CRRCMath::Vector3());
+  ls_aux(CRRCMath::Vector3::Zero(), CRRCMath::Vector3::Zero());
 }
 
 double CRRC_AirplaneSim_MCopter01::getPropFreq() 

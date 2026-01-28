@@ -412,16 +412,16 @@ void Scenery::drawWindField(CRRCMath::Vector3 pos, int mode)
   if (MOVING_ARRAY)
   {
     // the array of vectors moves with the model
-    X_rwy = pos.r[0];
-    Y_rwy = pos.r[1];
-    Z_rwy = pos.r[2];
+    X_rwy = pos(0);
+    Y_rwy = pos(1);
+    Z_rwy = pos(2);
   }
   else
   {
     // the array of vectors is fixed to the ground
-    X_rwy = int(pos.r[0]/SPACING + (pos.r[0] >= 0 ? 0.5 : -0.5))*SPACING;
-    Y_rwy = int(pos.r[1]/SPACING + (pos.r[1] >= 0 ? 0.5 : -0.5))*SPACING;
-    Z_rwy = pos.r[2];
+    X_rwy = int(pos(0)/SPACING + (pos(0) >= 0 ? 0.5 : -0.5))*SPACING;
+    Y_rwy = int(pos(1)/SPACING + (pos(1) >= 0 ? 0.5 : -0.5))*SPACING;
+    Z_rwy = pos(2);
   }
   float flWindVel = cfg->wind->getVelocity(); // freestream wind
   
@@ -460,28 +460,28 @@ void Scenery::drawWindField(CRRCMath::Vector3 pos, int mode)
         {
           CRRCMath::Vector3 pnt(x, y, z);
           CRRCMath::Vector3 dist = pnt - pos;
-          float distance = dist.length()/fade_distance;
+          float distance = dist.norm()/fade_distance;
 
           if (distance < 1.)
           {
             float alpha = 0.5*(1. - distance);
             
             CRRCMath::Vector3 vel;
-            int err = calculate_wind(x, y, z, vel.r[0], vel.r[1], vel.r[2]);
+            int err = calculate_wind(x, y, z, vel(0), vel(1), vel(2));
             if (!err)
             {
-              float velocity = vel.length()/flWindVel;
-              float heading = -atan2(vel.r[1],vel.r[0]);
-              float pitch = -atan2(vel.r[2],sqrt(vel.r[0]*vel.r[0] + vel.r[1]*vel.r[1]));
+              float velocity = vel.norm()/flWindVel;
+              float heading = -atan2(vel(1),vel(0));
+              float pitch = -atan2(vel(2),sqrt(vel(0)*vel(0) + vel(1)*vel(1)));
               
               glPushMatrix();
-              glTranslatef(pnt.r[1], -pnt.r[2], -pnt.r[0]);
+              glTranslatef(pnt(1), -pnt(2), -pnt(0));
               glRotatef(SG_RADIANS_TO_DEGREES*heading, 0., 1., 0.);
               glRotatef(SG_RADIANS_TO_DEGREES*pitch,   1., 0., 0.);
               if (mode == 1)
                 setColorFromScale(velocity, SCALE_V_MIN, SCALE_V_MAX, alpha);
               else
-                setColorFromScale(-vel.r[2]/flWindVel, SCALE_VZ_MIN, SCALE_VZ_MAX, alpha);
+                setColorFromScale(-vel(2)/flWindVel, SCALE_VZ_MIN, SCALE_VZ_MAX, alpha);
               gluCylinder(quadric, 0., RADIUS_SCALE*velocity, VECTOR_SCALE*velocity, 8, 1);
               glPopMatrix();
             }

@@ -50,7 +50,7 @@ Power::Power::Power(SimpleXMLTransfer* xml, int nVerbosity)
   ReloadParams(xml, nVerbosity);
   
   // --- init states -----------------------------------
-  InitStates(CRRCMath::Vector3());
+  InitStates(CRRCMath::Vector3::Zero());
 }
 
 void Power::Power::ReloadParams(SimpleXMLTransfer* xml, int nVerbosity)
@@ -138,8 +138,8 @@ void Power::Power::step(double             dt,
   const int       mul = 2;
   unsigned int    size = batteries.size();
   PowerValuesStep values;
-  CRRCMath::Vector3         f = CRRCMath::Vector3();
-  CRRCMath::Vector3         m = CRRCMath::Vector3();
+  CRRCMath::Vector3         f = CRRCMath::Vector3::Zero();
+  CRRCMath::Vector3         m = CRRCMath::Vector3::Zero();
 
   values.force          = &f;
   values.moment         = &m;
@@ -191,24 +191,24 @@ void Power::Power::Sim_UntilStable(TSimInputs*        inputs,
                                    CRRCMath::Vector3* moment)
 {
   bool fRun = true;
-  CRRCMath::Vector3 f_o = CRRCMath::Vector3();
-  CRRCMath::Vector3 m_o = CRRCMath::Vector3();
+  CRRCMath::Vector3 f_o = CRRCMath::Vector3::Zero();
+  CRRCMath::Vector3 m_o = CRRCMath::Vector3::Zero();
   
   while (fRun)
   {
-    *force  = CRRCMath::Vector3();
-    *moment = CRRCMath::Vector3();
+    *force  = CRRCMath::Vector3::Zero();
+    *moment = CRRCMath::Vector3::Zero();
     
     step(POWER_DT, inputs, VRelAir, force, moment);
     
     fRun = false;
     
-    if (moment->length())
-      if (fabs((*moment - m_o).length()) / moment->length() > lim)
+    if (moment->norm())
+      if (fabs((*moment - m_o).norm()) / moment->norm() > lim)
         fRun = true;
-    
-    if (force->length())
-      if (fabs((*force - f_o).length()) / force->length() > lim)
+
+    if (force->norm())
+      if (fabs((*force - f_o).norm()) / force->norm() > lim)
         fRun = true;
     
     f_o = *force;
@@ -228,11 +228,11 @@ float Power::Power::Sim_GetThrottle(CRRCMath::Vector3  VRelAir, float force, flo
   // use binary search method
   while (stepsize > 0.0001)
   {
-    F = CRRCMath::Vector3();
-    torque = CRRCMath::Vector3();
+    F = CRRCMath::Vector3::Zero();
+    torque = CRRCMath::Vector3::Zero();
     Sim_UntilStable(&inp, VRelAir, 0.00001, &F, &torque);
     
-    if (F.length() > force)
+    if (F.norm() > force)
       inp.throttle -= stepsize;
     else
       inp.throttle += stepsize;
@@ -253,11 +253,11 @@ float Power::Power::Sim_GetPitch(CRRCMath::Vector3  VRelAir, float force, float 
   // use binary search method
   while (stepsize > 0.0001)
   {
-    F = CRRCMath::Vector3();
-    torque = CRRCMath::Vector3();
+    F = CRRCMath::Vector3::Zero();
+    torque = CRRCMath::Vector3::Zero();
     Sim_UntilStable(&inp, VRelAir, 0.00001, &F, &torque);
     
-    if (F.length() > force)
+    if (F.norm() > force)
       inp.pitch -= stepsize;
     else
       inp.pitch += stepsize;

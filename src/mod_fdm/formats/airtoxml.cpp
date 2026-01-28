@@ -1000,9 +1000,9 @@ int air_to_xml_file(std::string filename)
         
         i3 = new SimpleXMLTransfer();
         i3->setName("pos");
-        i3->setAttribute("x", doubleToString(air->wheels[uCnt].v_P.r[0]));
-        i3->setAttribute("y", doubleToString(air->wheels[uCnt].v_P.r[1]));
-        i3->setAttribute("z", doubleToString(air->wheels[uCnt].v_P.r[2]));
+        i3->setAttribute("x", doubleToString(air->wheels[uCnt].v_P(0)));
+        i3->setAttribute("y", doubleToString(air->wheels[uCnt].v_P(1)));
+        i3->setAttribute("z", doubleToString(air->wheels[uCnt].v_P(2)));
         i2->addChild(i3);
         
         i3 = new SimpleXMLTransfer();

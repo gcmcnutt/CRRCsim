@@ -123,21 +123,21 @@ void CRRC_AirplaneSim_DisplayMode::decodePacket(char* buf)
   Altitude  = alt * M_TO_FT;
   
   ls_geod_to_geoc( Latitude, Altitude, &Sea_level_radius, &Lat_geocentric);
-  v_P_CG_Rwy.r[0] = Sea_level_radius * Latitude;
-  v_P_CG_Rwy.r[1] = Sea_level_radius * Longitude;
-  v_P_CG_Rwy.r[2] = -Altitude;
+  v_P_CG_Rwy(0) = Sea_level_radius * Latitude;
+  v_P_CG_Rwy(1) = Sea_level_radius * Longitude;
+  v_P_CG_Rwy(2) = -Altitude;
   
-  v_V_local_rel_ground.r[0] = 0.0;
-  v_V_local_rel_ground.r[1] = 0.0;
-  v_V_local_rel_ground.r[2] = 0.0;
+  v_V_local_rel_ground(0) = 0.0;
+  v_V_local_rel_ground(1) = 0.0;
+  v_V_local_rel_ground(2) = 0.0;
   
-  v_V_dot_local.r[0] = 0.0;
-  v_V_dot_local.r[1] = 0.0;
-  v_V_dot_local.r[2] = 0.0;
+  v_V_dot_local(0) = 0.0;
+  v_V_dot_local(1) = 0.0;
+  v_V_dot_local(2) = 0.0;
   
-  v_R_omega_body.r[0] = 0.0;
-  v_R_omega_body.r[1] = 0.0;
-  v_R_omega_body.r[2] = 0.0;
+  v_R_omega_body(0) = 0.0;
+  v_R_omega_body(1) = 0.0;
+  v_R_omega_body(2) = 0.0;
 }
 
 

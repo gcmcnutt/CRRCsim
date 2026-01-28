@@ -99,28 +99,28 @@ void CRRC_AirplaneSim_002::initAirplaneState(double dRelVel,
                  CRRCMath::Vector3(dPhi, dTheta, dPsi),
                  CRRCMath::Vector3(flVelocity, 0, 0),
                  Mass,
-                 CRRCMath::Matrix33( I_xx,    0,    -I_xz,
-                                     0,       I_yy,  0,
-                                    -I_xz,    0,     I_zz));
+                 CRRCMath::make_matrix33( I_xx,    0,    -I_xz,
+                                          0,       I_yy,  0,
+                                         -I_xz,    0,     I_zz));
 
 #if (EOM_TEST != 0)
   eom.setGravity(0);
 #else
-  eom.setGravity(env->GetG(-eom.pos.val.r[2]));
+  eom.setGravity(env->GetG(-eom.pos.val(2)));
 #endif
   
-  v_V_local_airmass = CRRCMath::Vector3(); // local velocity of steady airmass   [ft/s]
+  v_V_local_airmass = CRRCMath::Vector3::Zero(); // local velocity of steady airmass   [ft/s]
   
   // jwtodo: seems this can be used to simulate wind gusts
-  v_V_gust_local  = CRRCMath::Vector3();
+  v_V_gust_local  = CRRCMath::Vector3::Zero();
   
   CD_stall        = 0.05;   // drag coeff. during stalling    []
   
-  m_V_atmo_rwy = CRRCMath::Matrix33();
+  m_V_atmo_rwy = CRRCMath::Matrix33::Zero();
   
   aero_init();
   
-  power->InitStates(CRRCMath::Vector3()); // todo
+  power->InitStates(CRRCMath::Vector3::Zero()); // todo
 }
 
 
@@ -146,20 +146,20 @@ void CRRC_AirplaneSim_002::update(TSimInputs* inputs,
   CRRCMath::Vector3 v_P_CG_Rwy = eom.pos.val;
   
   int   nAircraftOutsideWindfieldSim =
-    env->CalculateWind(v_P_CG_Rwy.r[0]+delta_space, v_P_CG_Rwy.r[1],             v_P_CG_Rwy.r[2],
+    env->CalculateWind(v_P_CG_Rwy(0)+delta_space, v_P_CG_Rwy(1),             v_P_CG_Rwy(2),
                        V_north_xp,                  V_east_xp,                   V_down_xp) |
-    env->CalculateWind(v_P_CG_Rwy.r[0],             v_P_CG_Rwy.r[1]+delta_space, v_P_CG_Rwy.r[2],
+    env->CalculateWind(v_P_CG_Rwy(0),             v_P_CG_Rwy(1)+delta_space, v_P_CG_Rwy(2),
                        V_north_yp,                  V_east_yp,                   V_down_yp) |
-    env->CalculateWind(v_P_CG_Rwy.r[0],             v_P_CG_Rwy.r[1],             v_P_CG_Rwy.r[2]+delta_space,
+    env->CalculateWind(v_P_CG_Rwy(0),             v_P_CG_Rwy(1),             v_P_CG_Rwy(2)+delta_space,
                        V_north_zp,                  V_east_zp,                   V_down_zp) |
-    env->CalculateWind(v_P_CG_Rwy.r[0]-delta_space, v_P_CG_Rwy.r[1],             v_P_CG_Rwy.r[2],
+    env->CalculateWind(v_P_CG_Rwy(0)-delta_space, v_P_CG_Rwy(1),             v_P_CG_Rwy(2),
                        V_north_xm,                  V_east_xm,                   V_down_xm) |
-    env->CalculateWind(v_P_CG_Rwy.r[0],             v_P_CG_Rwy.r[1]-delta_space, v_P_CG_Rwy.r[2],
+    env->CalculateWind(v_P_CG_Rwy(0),             v_P_CG_Rwy(1)-delta_space, v_P_CG_Rwy(2),
                        V_north_ym,                  V_east_ym,                   V_down_ym) |
-    env->CalculateWind(v_P_CG_Rwy.r[0],             v_P_CG_Rwy.r[1],             v_P_CG_Rwy.r[2]-delta_space,
+    env->CalculateWind(v_P_CG_Rwy(0),             v_P_CG_Rwy(1),             v_P_CG_Rwy(2)-delta_space,
                        V_north_zm,                  V_east_zm,                   V_down_zm) |
-    env->CalculateWind(v_P_CG_Rwy.r[0],             v_P_CG_Rwy.r[1],             v_P_CG_Rwy.r[2],
-                       v_V_local_airmass.r[0],      v_V_local_airmass.r[1],      v_V_local_airmass.r[2]);
+    env->CalculateWind(v_P_CG_Rwy(0),             v_P_CG_Rwy(1),             v_P_CG_Rwy(2),
+                       v_V_local_airmass(0),      v_V_local_airmass(1),      v_V_local_airmass(2));
   
   if (nAircraftOutsideWindfieldSim)
   {
@@ -167,15 +167,15 @@ void CRRC_AirplaneSim_002::update(TSimInputs* inputs,
   }
   
   // Gradients are calculated from symmetric pairs to get symmetric behaviour.
-  m_V_atmo_rwy.v[0][0] = (V_north_xp - V_north_xm)/(2*delta_space);
-  m_V_atmo_rwy.v[0][1] = (V_north_yp - V_north_ym)/(2*delta_space);
-  m_V_atmo_rwy.v[0][2] = (V_north_zp - V_north_zm)/(2*delta_space);
-  m_V_atmo_rwy.v[1][0] = (V_east_xp  - V_east_xm) /(2*delta_space);
-  m_V_atmo_rwy.v[1][1] = (V_east_yp  - V_east_ym) /(2*delta_space);
-  m_V_atmo_rwy.v[1][2] = (V_east_zp  - V_east_zm) /(2*delta_space);
-  m_V_atmo_rwy.v[2][0] = (V_down_xp  - V_down_xm) /(2*delta_space);
-  m_V_atmo_rwy.v[2][1] = (V_down_yp  - V_down_ym) /(2*delta_space);
-  m_V_atmo_rwy.v[2][2] = (V_down_zp  - V_down_zm) /(2*delta_space);
+  m_V_atmo_rwy(0,0) = (V_north_xp - V_north_xm)/(2*delta_space);
+  m_V_atmo_rwy(0,1) = (V_north_yp - V_north_ym)/(2*delta_space);
+  m_V_atmo_rwy(0,2) = (V_north_zp - V_north_zm)/(2*delta_space);
+  m_V_atmo_rwy(1,0) = (V_east_xp  - V_east_xm) /(2*delta_space);
+  m_V_atmo_rwy(1,1) = (V_east_yp  - V_east_ym) /(2*delta_space);
+  m_V_atmo_rwy(1,2) = (V_east_zp  - V_east_zm) /(2*delta_space);
+  m_V_atmo_rwy(2,0) = (V_down_xp  - V_down_xm) /(2*delta_space);
+  m_V_atmo_rwy(2,1) = (V_down_yp  - V_down_ym) /(2*delta_space);
+  m_V_atmo_rwy(2,2) = (V_down_zp  - V_down_zm) /(2*delta_space);
 
 #if (EOM_TEST == 2)
   switch (nStep)
@@ -225,8 +225,8 @@ void CRRC_AirplaneSim_002::update(TSimInputs* inputs,
 #endif
     
     {
-      v_F_engine = CRRCMath::Vector3();
-      v_M_engine = CRRCMath::Vector3();
+      v_F_engine = CRRCMath::Vector3::Zero();
+      v_M_engine = CRRCMath::Vector3::Zero();
 
 #if (EOM_TEST != 2)
       power->step(dt, &myInputs, v_V_body*FT_TO_M, &v_F_engine, &v_M_engine);
@@ -290,8 +290,8 @@ void CRRC_AirplaneSim_002::update(TSimInputs* inputs,
     
 //    v_F *= 0;
 
-    v_F.print("F=", ", ");
-    v_M_cg.print("M=", "\n");
+    CRRCMath::print(v_F, "F=", ", ");
+    CRRCMath::print(v_M_cg, "M=", "\n");
     
     eom.step(dt, v_F, v_M_cg);
     eom.conv.updateEuler();
@@ -365,9 +365,9 @@ void CRRC_AirplaneSim_002::update(TSimInputs* inputs,
   pos->d_y = inputs->aileron*30;
   pos->d_z = -0.5*sqrt(pos->d_x*pos->d_x + pos->d_y*pos->d_y);
   
-  eom.conv.euler.r[0] = (M_PI/2) -1.0 *atan2(pos->d_x, pos->d_y);
-  eom.conv.euler.r[1] = (3.0*M_PI/4.0); // (M_PI/2) -1.0 *atan2(pos->d_x, pos->d_y);
-  eom.conv.euler.r[2] = (M_PI/2); // (M_PI/2) -1.0 *atan2(pos->d_x, pos->d_y);
+  eom.conv.euler(0) = (M_PI/2) -1.0 *atan2(pos->d_x, pos->d_y);
+  eom.conv.euler(1) = (3.0*M_PI/4.0); // (M_PI/2) -1.0 *atan2(pos->d_x, pos->d_y);
+  eom.conv.euler(2) = (M_PI/2); // (M_PI/2) -1.0 *atan2(pos->d_x, pos->d_y);
     */
   
   // fChange = true;
@@ -376,7 +376,7 @@ void CRRC_AirplaneSim_002::update(TSimInputs* inputs,
   if (fChange)
   {
     std::cout << pos->d_x << " " << pos->d_y << " " << pos->d_z << " "
-      << eom.conv.euler.r[0] << " " << eom.conv.euler.r[1] << " " << eom.conv.euler.r[2] << "\n";
+      << eom.conv.euler(0) << " " << eom.conv.euler(1) << " " << eom.conv.euler(2) << "\n";
   }
   */
   
@@ -565,17 +565,17 @@ CRRC_AirplaneSim_002::~CRRC_AirplaneSim_002()
 
 double CRRC_AirplaneSim_002::getPhi()
 {
-  return(eom.conv.euler.r[0]);
+  return(eom.conv.euler(0));
 }
 
 double CRRC_AirplaneSim_002::getTheta()
 {
-  return(eom.conv.euler.r[1]);
+  return(eom.conv.euler(1));
 }
 
 double CRRC_AirplaneSim_002::getPsi()
 {
-  return(eom.conv.euler.r[2]);
+  return(eom.conv.euler(2));
 }
 
 CRRCMath::Vector3 CRRC_AirplaneSim_002::getPos()
@@ -621,7 +621,7 @@ void CRRC_AirplaneSim_002::gear(TSimInputs* inputs)
                   eom.pos.val,
                   eom.angvel.val,
                   eom.conv.local(eom.vel.val),
-                  eom.conv.euler.r[2]);
+                  eom.conv.euler(2));
   
   v_F_gear = wheelsys.getForces();
   v_M_gear = wheelsys.getMoments();
@@ -685,19 +685,19 @@ void CRRC_AirplaneSim_002::aero(SCALAR dt, TSimInputs* inputs)
   // velocity of body relative to airmass
   v_V_body = eom.vel.val - V_airmass_body;
 
-  V_rel_wind = v_V_body.length();
+  V_rel_wind = v_V_body.norm();
 
   /* Calculate alpha and beta */
 
-  if (v_V_body.r[0] == 0)
+  if (v_V_body(0) == 0)
     Alpha = 0;
   else
-    Alpha = atan2( v_V_body.r[2], v_V_body.r[0] );
+    Alpha = atan2( v_V_body(2), v_V_body(0) );
 
   if (V_rel_wind == 0)
     Beta = 0;
   else
-    Beta = asin( v_V_body.r[1]/ V_rel_wind );
+    Beta = asin( v_V_body(1)/ V_rel_wind );
 
   
 //  std::cout << Alpha << " ";
@@ -712,7 +712,7 @@ void CRRC_AirplaneSim_002::aero(SCALAR dt, TSimInputs* inputs)
       G_11  =  dU_local/dx_body
       G_12  =  dU_local/dy_body   etc.  */
 
-  G = m_V_atmo_rwy * eom.conv.mat.trans();
+  G = m_V_atmo_rwy * eom.conv.mat.transpose();
 
   /* now compute gradients of Body velocities w.r.t. Body coordinates */
   /*  U_body_x  =  dU_body/dx_body   etc.  */
@@ -720,16 +720,16 @@ void CRRC_AirplaneSim_002::aero(SCALAR dt, TSimInputs* inputs)
   m_V_body = eom.conv.mat * G;
   
   /* set rotation rates of airmass motion */
-  v_R_omega_atmo.r[0] =  m_V_body.v[2][0];
-  v_R_omega_atmo.r[1] = -m_V_body.v[2][1];
-  v_R_omega_atmo.r[2] =  m_V_body.v[1][2];
+  v_R_omega_atmo(0) =  m_V_body(2,0);
+  v_R_omega_atmo(1) = -m_V_body(2,1);
+  v_R_omega_atmo(2) =  m_V_body(1,2);
 
   if (V_rel_wind != 0)
   {
     /* set net effective dimensionless rotation rates */
-    Phat = (eom.angvel.val.r[0] - v_R_omega_atmo.r[0]) * B_ref / (2.0*V_rel_wind);
-    Qhat = (eom.angvel.val.r[1] - v_R_omega_atmo.r[1]) * C_ref / (2.0*V_rel_wind);
-    Rhat = (eom.angvel.val.r[2] - v_R_omega_atmo.r[2]) * B_ref / (2.0*V_rel_wind);
+    Phat = (eom.angvel.val(0) - v_R_omega_atmo(0)) * B_ref / (2.0*V_rel_wind);
+    Qhat = (eom.angvel.val(1) - v_R_omega_atmo(1)) * C_ref / (2.0*V_rel_wind);
+    Rhat = (eom.angvel.val(2) - v_R_omega_atmo(2)) * B_ref / (2.0*V_rel_wind);
   }
   else
   {
@@ -851,9 +851,9 @@ void CRRC_AirplaneSim_002::aero(SCALAR dt, TSimInputs* inputs)
   //std::cout << Cl_w << " " << CD << " ";
   
   /* total forces in body axes */
-  C_xyz.r[0] = -CD*Cos_alpha + CL*Sin_alpha*Cos_beta*Cos_beta;
-  C_xyz.r[2] = -CD*Sin_alpha - CL*Cos_alpha*Cos_beta*Cos_beta;
-  C_xyz.r[1] = CY_b*Beta  + CY_p*Phat + CY_r*Rhat + CY_dr*rudder;
+  C_xyz(0) = -CD*Cos_alpha + CL*Sin_alpha*Cos_beta*Cos_beta;
+  C_xyz(2) = -CD*Sin_alpha - CL*Cos_alpha*Cos_beta*Cos_beta;
+  C_xyz(1) = CY_b*Beta  + CY_p*Phat + CY_r*Rhat + CY_dr*rudder;
 
   //std::cout << Cx << " " << Cz << " " << Cy << " ";
 
@@ -867,7 +867,7 @@ void CRRC_AirplaneSim_002::aero(SCALAR dt, TSimInputs* inputs)
 
   /* set dimensional forces and moments */
   {
-    double DENSITY = env->GetRho(-eom.pos.val.r[2]);
+    double DENSITY = env->GetRho(-eom.pos.val(2));
     QS = 0.5*DENSITY*V_rel_wind*V_rel_wind * S_ref;
   }
 
@@ -891,11 +891,11 @@ void CRRC_AirplaneSim_002::aero(SCALAR dt, TSimInputs* inputs)
   
 #if (EOM_TEST == 1)
   {
-    double ele = 1.8*(-inputs->elevator-eom.angvel.val.r[1]);
-    double ail = 1.8*(inputs->aileron-eom.angvel.val.r[0]);
-    double rud = 1.8*(0.5*inputs->aileron-eom.angvel.val.r[2]);
+    double ele = 1.8*(-inputs->elevator-eom.angvel.val(1));
+    double ail = 1.8*(inputs->aileron-eom.angvel.val(0));
+    double rud = 1.8*(0.5*inputs->aileron-eom.angvel.val(2));
    
-    v_F_aero = CRRCMath::Vector3(4*inputs->throttle-0.8*eom.vel.val.r[0], -2.8*eom.vel.val.r[1], -2.8*eom.vel.val.r[2]);
+    v_F_aero = CRRCMath::Vector3(4*inputs->throttle-0.8*eom.vel.val(0), -2.8*eom.vel.val(1), -2.8*eom.vel.val(2));
     v_M_aero = CRRCMath::Vector3(ail, ele, rud);
     stalling = 0;
   }
@@ -916,8 +916,8 @@ void CRRC_AirplaneSim_002::aero(SCALAR dt, TSimInputs* inputs)
 void CRRC_AirplaneSim_002::aero_init() 
 {
   stalling = 0;
-  v_F_aero = CRRCMath::Vector3();
-  v_M_aero = CRRCMath::Vector3();
+  v_F_aero = CRRCMath::Vector3::Zero();
+  v_M_aero = CRRCMath::Vector3::Zero();
 }
 
 

@@ -299,9 +299,9 @@ void CGUIViewWindDialog::viewWind2D(puObject *obj, int dx, int dy, int color_mod
   float ddx = width/n;
   glScalef(w,w,1);
      
-  float orig_x = player_pos.r[2] + position*sinu;
-  float orig_y = player_pos.r[0] + position*cosi;
-  float orig_z = player_pos.r[1];
+  float orig_x = player_pos(2) + position*sinu;
+  float orig_y = player_pos(0) + position*cosi;
+  float orig_z = player_pos(1);
   float height[n+1];
 
   //draw slope profile, player position is centered

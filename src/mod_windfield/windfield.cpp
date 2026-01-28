@@ -816,21 +816,21 @@ int calculate_wind_grad(double X_cg, double Y_cg, double Z_cg, double delta_spac
   // Gradients are calculated from symmetric pairs to get symmetric behaviour.
   if (!err_x)
   {
-    m_V_grad.v[0][0] = (V_north_xp - V_north_xm)/(2*delta_space);
-    m_V_grad.v[1][0] = (V_east_xp  - V_east_xm) /(2*delta_space);
-    m_V_grad.v[2][0] = (V_down_xp  - V_down_xm) /(2*delta_space);
+    m_V_grad(0,0) = (V_north_xp - V_north_xm)/(2*delta_space);
+    m_V_grad(1,0) = (V_east_xp  - V_east_xm) /(2*delta_space);
+    m_V_grad(2,0) = (V_down_xp  - V_down_xm) /(2*delta_space);
   }
   if (!err_y)
   {
-    m_V_grad.v[0][1] = (V_north_yp - V_north_ym)/(2*delta_space);
-    m_V_grad.v[1][1] = (V_east_yp  - V_east_ym) /(2*delta_space);
-    m_V_grad.v[2][1] = (V_down_yp  - V_down_ym) /(2*delta_space);
+    m_V_grad(0,1) = (V_north_yp - V_north_ym)/(2*delta_space);
+    m_V_grad(1,1) = (V_east_yp  - V_east_ym) /(2*delta_space);
+    m_V_grad(2,1) = (V_down_yp  - V_down_ym) /(2*delta_space);
   }
   if (!err_z)
   {
-    m_V_grad.v[0][2] = (V_north_zp - V_north_zm)/(2*delta_space);
-    m_V_grad.v[1][2] = (V_east_zp  - V_east_zm) /(2*delta_space);
-    m_V_grad.v[2][2] = (V_down_zp  - V_down_zm) /(2*delta_space);
+    m_V_grad(0,2) = (V_north_zp - V_north_zm)/(2*delta_space);
+    m_V_grad(1,2) = (V_east_zp  - V_east_zm) /(2*delta_space);
+    m_V_grad(2,2) = (V_down_zp  - V_down_zm) /(2*delta_space);
   }
 
   return (err_x | err_y | err_z);
@@ -839,10 +839,10 @@ int calculate_wind_grad(double X_cg, double Y_cg, double Z_cg, double delta_spac
 // Description: see header file
 void initialize_gust()
 {
-  v_V_gust_body_.r[0] = v_V_gust_body_.r[1] = v_V_gust_body_.r[2] = 0.0;
+  v_V_gust_body_(0) = v_V_gust_body_(1) = v_V_gust_body_(2) = 0.0;
   v_V_gust_body_old_ = v_V_gust_body_;
 
-  v_R_omega_gust_body_.r[0] = v_R_omega_gust_body_.r[1] = v_R_omega_gust_body_.r[2] = 0.0;
+  v_R_omega_gust_body_(0) = v_R_omega_gust_body_(1) = v_R_omega_gust_body_(2) = 0.0;
 
   // CRITICAL: Reset the Dryden turbulence Gaussian RNGs to ensure determinism
   // These are global static objects that persist across simulation resets
@@ -867,7 +867,7 @@ void calculate_gust(double dt, double altitude, double V_rel_wind, double b,
                     CRRCMath::Vector3& v_R_omega_gust_body)
 {
   double intensity = cfg->wind->getTurbulence();
-  double V_wind = v_V_local_airmass.length();
+  double V_wind = v_V_local_airmass.norm();
 
   // no wind turbulence if wind velocity is zero or
   // relative turbulence intensity has been set to zero
@@ -875,8 +875,9 @@ void calculate_gust(double dt, double altitude, double V_rel_wind, double b,
     return;
   
   v_V_local_airmass.normalize();
-  CRRCMath::Matrix33 WindToLocal(v_V_local_airmass.r[0], -v_V_local_airmass.r[1], 0.,
-                                 v_V_local_airmass.r[1],  v_V_local_airmass.r[0], 0.,
+  CRRCMath::Matrix33 WindToLocal = CRRCMath::make_matrix33(
+                                 v_V_local_airmass(0), -v_V_local_airmass(1), 0.,
+                                 v_V_local_airmass(1),  v_V_local_airmass(0), 0.,
                                  0.,                      0.,                     1.);
   
   // linear and rotational gust velocity estimated using digital filter 
@@ -902,25 +903,27 @@ void calculate_gust(double dt, double altitude, double V_rel_wind, double b,
   
   // align length scale "u" with wind direction, then
   // transform length scale from local to body frame
-  CRRCMath::Matrix33 L_tensor(Lu, 0., 0.,
+  CRRCMath::Matrix33 L_tensor = CRRCMath::make_matrix33(
+                              Lu, 0., 0.,
                               0., Lv, 0.,
                               0., 0., Lw);
-  L_tensor = WindToLocal*(L_tensor*WindToLocal.trans());
-  L_tensor = LocalToBody*(L_tensor*LocalToBody.trans());
-  Lu = L_tensor.v[0][0];
-  Lv = L_tensor.v[1][1];
-  Lw = L_tensor.v[2][2];
+  L_tensor = WindToLocal*(L_tensor*WindToLocal.transpose());
+  L_tensor = LocalToBody*(L_tensor*LocalToBody.transpose());
+  Lu = L_tensor(0,0);
+  Lv = L_tensor(1,1);
+  Lw = L_tensor(2,2);
 
   // align sigma "u" with wind direction, then
   // transform sigma from local to body frame
-  CRRCMath::Matrix33 s_tensor(sigu, 0., 0.,
+  CRRCMath::Matrix33 s_tensor = CRRCMath::make_matrix33(
+                              sigu, 0., 0.,
                               0., sigv, 0.,
                               0., 0., sigw);
-  s_tensor = WindToLocal*(s_tensor*WindToLocal.trans());
-  s_tensor = LocalToBody*(s_tensor*LocalToBody.trans());
-  sigu = s_tensor.v[0][0];
-  sigv = s_tensor.v[1][1];
-  sigw = s_tensor.v[2][2];
+  s_tensor = WindToLocal*(s_tensor*WindToLocal.transpose());
+  s_tensor = LocalToBody*(s_tensor*LocalToBody.transpose());
+  sigu = s_tensor(0,0);
+  sigv = s_tensor(1,1);
+  sigw = s_tensor(2,2);
 
   double temp = sqrt(2.0*Lw*b);
   double Lp   = temp/2.6;
@@ -933,22 +936,22 @@ void calculate_gust(double dt, double altitude, double V_rel_wind, double b,
   double aq_dt = pid4b*V_dt;
   double ar_dt = pid3b*V_dt;
   
-  v_V_gust_body_.r[0]       = (1.0 - au_dt)*v_V_gust_body_.r[0] 
+  v_V_gust_body_(0)       = (1.0 - au_dt)*v_V_gust_body_(0) 
                               + sqrt(2.0*au_dt)*sigu*eta1.Get();
-  v_V_gust_body_.r[1]       = (1.0 - av_dt)*v_V_gust_body_.r[1]
+  v_V_gust_body_(1)       = (1.0 - av_dt)*v_V_gust_body_(1)
                               + sqrt(2.0*av_dt)*sigv*eta2.Get();
-  v_V_gust_body_.r[2]       = (1.0 - aw_dt)*v_V_gust_body_.r[2]
+  v_V_gust_body_(2)       = (1.0 - aw_dt)*v_V_gust_body_(2)
                               + sqrt(2.0*aw_dt)*sigw*eta3.Get();                             
 
   // NB: signs for q and r (airmass turbulence rotation around body y and z)
   //     are consistent with airmass rotation computed from airmass velocity
   //     gradient (see e.g. fdm_larcsim.cpp). Sign for p is arbitrary.
-  v_R_omega_gust_body_.r[0] = (1.0 - ap_dt)*v_R_omega_gust_body_.r[0] 
+  v_R_omega_gust_body_(0) = (1.0 - ap_dt)*v_R_omega_gust_body_(0) 
                               + sqrt(2.0*ap_dt)*sigp*eta4.Get();
-  v_R_omega_gust_body_.r[1] = (1.0 - aq_dt)*v_R_omega_gust_body_.r[1]
-                              - pid4b*(v_V_gust_body_.r[2] - v_V_gust_body_old_.r[2]);
-  v_R_omega_gust_body_.r[2] = (1.0 - ar_dt)*v_R_omega_gust_body_.r[2]
-                              + pid3b*(v_V_gust_body_.r[1] - v_V_gust_body_old_.r[1]);
+  v_R_omega_gust_body_(1) = (1.0 - aq_dt)*v_R_omega_gust_body_(1)
+                              - pid4b*(v_V_gust_body_(2) - v_V_gust_body_old_(2));
+  v_R_omega_gust_body_(2) = (1.0 - ar_dt)*v_R_omega_gust_body_(2)
+                              + pid3b*(v_V_gust_body_(1) - v_V_gust_body_old_(1));
                              
   v_V_gust_body = v_V_gust_body_ * intensity;
   v_R_omega_gust_body = v_R_omega_gust_body_ * intensity;
@@ -959,9 +962,9 @@ void draw_thermals(CRRCMath::Vector3 pos)
 {
   Thermal* thermal_ptr;
 
-  double X_cg_rwy =  pos.r[0];
-  double Y_cg_rwy =  pos.r[1];
-  double H_cg_rwy = -pos.r[2];
+  double X_cg_rwy =  pos(0);
+  double Y_cg_rwy =  pos(1);
+  double H_cg_rwy = -pos(2);
 
   if (nDrawThermalsFromGrid)
   {
@@ -1141,13 +1144,13 @@ void windfield_thermalScreenshot(CRRCMath::Vector3 pos)
 
   for (int nX=-nSteps; nX<nSteps; nX++)
   {
-    double x = pos.r[0] + nX*dStep;
+    double x = pos(0) + nX*dStep;
 
     for (int nY=-nSteps; nY<nSteps; nY++)
     {
-      double y = pos.r[1] + nY*dStep;
+      double y = pos(1) + nY*dStep;
 
-      calculate_wind(x, y, pos.r[2], dVNorth, dVEast, dVDown);
+      calculate_wind(x, y, pos(2), dVNorth, dVEast, dVDown);
 
 # if (DEBUG_THERMAL_SCRSHOT_FORMAT == 0) || (DEBUG_THERMAL_SCRSHOT_FORMAT == 2) || (DEBUG_THERMAL_SCRSHOT_FORMAT == 3)
       tf_up << -1*dVDown << " ";

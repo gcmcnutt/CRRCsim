@@ -43,23 +43,23 @@ public:
    * The world coordinate vector vWorld is transformed
    * to body coordinates and returned.
    */
-  virtual CRRCMath::Vector3 WorldToBody(CRRCMath::Vector3 vWorld) { return(CRRCMath::Vector3()); };
+  virtual CRRCMath::Vector3 WorldToBody(CRRCMath::Vector3 vWorld) { return(CRRCMath::Vector3::Zero()); };
   
   virtual CRRCMath::Vector3 getPos() { return(v3Pos); };
   
-  virtual double getPhi()      { return(v3Euler.r[0]); };
-  virtual double getTheta()    { return(v3Euler.r[1]); };
-  virtual double getPsi()      { return(v3Euler.r[2]); };
+  virtual double getPhi()      { return(v3Euler(0)); };
+  virtual double getTheta()    { return(v3Euler(1)); };
+  virtual double getPsi()      { return(v3Euler(2)); };
   virtual bool   isStalling()  { return(false); };
   virtual double getFlightCL() { return(0.0); };
   
   /**
    * returns velocity w.r.t. earth surface
    */
-  virtual CRRCMath::Vector3 getVel()   { return(CRRCMath::Vector3()); };
-  virtual CRRCMath::Vector3 getAccel() { return(CRRCMath::Vector3()); };
+  virtual CRRCMath::Vector3 getVel()   { return(CRRCMath::Vector3::Zero()); };
+  virtual CRRCMath::Vector3 getAccel() { return(CRRCMath::Vector3::Zero()); };
   
-  virtual CRRCMath::Vector3 getPQR()   { return(CRRCMath::Vector3()); };
+  virtual CRRCMath::Vector3 getPQR()   { return(CRRCMath::Vector3::Zero()); };
   
   virtual double getLon() { return(-1.0); };
   virtual double getLat() { return(-1.0); };

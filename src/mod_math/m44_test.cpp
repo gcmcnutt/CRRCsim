@@ -48,7 +48,7 @@ int main()
     // transposing, test 1: identity^T = identity
     CRRCMath::Matrix44f  tmp;
     
-    tmp = id.trans();
+    tmp = id.transpose();
     if (tmp.isEqualTo(id))
     {
       pass++;
@@ -74,7 +74,7 @@ int main()
                               9, 10, 11, 12,
                               13, 14, 15, 16);
   
-    if (tmp.isEqualTo(tmp2.trans()))
+    if (tmp.isEqualTo(tmp2.transpose()))
     {
       pass++;
     }
@@ -84,7 +84,7 @@ int main()
       std::cout << "transpose test 2 failed.\ntmp =\n";
       tmp.print();
       std::cout << "tmp should be\n";
-      tmp2.trans().print();
+      tmp2.transpose().print();
     }
   }
   
@@ -119,9 +119,9 @@ int main()
     // identity matrix ctor. Therefore this test also validates
     // the two ctor implementations.
     CRRCMath::Matrix44f expected(true);
-    expected.v[0][3] = -5.0f;
-    expected.v[1][3] = -6.0f;
-    expected.v[2][3] =  3.0f;
+    expected(0,3) = -5.0f;
+    expected(1,3) = -6.0f;
+    expected(2,3) =  3.0f;
 
     tmp = tmp.inv();
     
@@ -147,7 +147,7 @@ int main()
     CRRCMath::Vector3 v(1, 1, 0);
     // rotate the vector. expected result: (-1, 1, 0)
     CRRCMath::Vector3 result = tmp * v;
-    float difference = CRRCMath::Vector3(result - CRRCMath::Vector3(-1, 1, 0)).length();
+    float difference = CRRCMath::Vector3(result - CRRCMath::Vector3(-1, 1, 0)).norm();
     if (difference < 0.0001)
     {
       pass++;
@@ -156,7 +156,7 @@ int main()
     {
       fail++;
       std::cout << "rotating, test 1 failed.\n";
-      result.print("result = ", "\n");
+      CRRCMath::print(result, "result = ", "\n");
       std::cout << "result should be (-1|1|0)\n";
       std::cout << "difference = " << difference << " (should be 0)" << std::endl;
     }
@@ -189,9 +189,9 @@ int main()
     
     // transform (1|4|0). expected: (1|4|2)
     CRRCMath::Vector3 result = xform * CRRCMath::Vector3(1, 4, 0);
-    //~ result.print("result = ", "\n");
+    //~ CRRCMath::print(result, "result = ", "\n");
     
-    float difference = CRRCMath::Vector3(result - CRRCMath::Vector3(1, 4, 2)).length();
+    float difference = CRRCMath::Vector3(result - CRRCMath::Vector3(1, 4, 2)).norm();
     if (difference < 0.0001)
     {
       pass++;
@@ -200,7 +200,7 @@ int main()
     {
       fail++;
       std::cout << "rotating, test 2 failed.\n";
-      result.print("result = ", "\n");
+      CRRCMath::print(result, "result = ", "\n");
       std::cout << "result should be (1|4|2)\n";
       std::cout << "difference = " << difference << " (should be 0)" << std::endl;
     }

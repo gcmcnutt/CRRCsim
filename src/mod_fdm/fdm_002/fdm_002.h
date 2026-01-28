@@ -71,7 +71,7 @@ class CRRC_AirplaneSim_002 : public FDMBase
    /**
     * Returns velocity relative to airmass [ft/s].
     */
-   virtual double getVRelAirmass() { return(v_V_body.length()); };
+   virtual double getVRelAirmass() { return(v_V_body.norm()); };
 
    /**
     * Returns relative battery capacity/fuel left (0..1).

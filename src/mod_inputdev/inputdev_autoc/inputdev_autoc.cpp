@@ -546,9 +546,9 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       
       // Record initial aircraft state at time 0 to match path start
       // Get initial position and orientation after reset
-      gp_vec3 initialPos{static_cast<gp_scalar>(Global::aircraft->getPos().r[0] * FEET_TO_METERS),
-                                static_cast<gp_scalar>(Global::aircraft->getPos().r[1] * FEET_TO_METERS),
-                                static_cast<gp_scalar>(Global::aircraft->getPos().r[2] * FEET_TO_METERS)};
+      gp_vec3 initialPos{static_cast<gp_scalar>(Global::aircraft->getPos()(0) * FEET_TO_METERS),
+                                static_cast<gp_scalar>(Global::aircraft->getPos()(1) * FEET_TO_METERS),
+                                static_cast<gp_scalar>(Global::aircraft->getPos()(2) * FEET_TO_METERS)};
       
       EOM01* eom01 = dynamic_cast<EOM01*>(Global::aircraft->getFDM());
       gp_quat initialQuat;
@@ -561,9 +561,9 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       
       CRRCMath::Vector3 fdm_velocity = Global::aircraft->getFDM()->getVel();
       gp_vec3 initialVel{
-          static_cast<gp_scalar>(fdm_velocity.r[0] * FEET_TO_METERS),
-          static_cast<gp_scalar>(fdm_velocity.r[1] * FEET_TO_METERS), 
-          static_cast<gp_scalar>(fdm_velocity.r[2] * FEET_TO_METERS)
+          static_cast<gp_scalar>(fdm_velocity(0) * FEET_TO_METERS),
+          static_cast<gp_scalar>(fdm_velocity(1) * FEET_TO_METERS), 
+          static_cast<gp_scalar>(fdm_velocity(2) * FEET_TO_METERS)
       };
       gp_scalar initialSpeed = initialVel.norm();
       
@@ -603,24 +603,24 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
         if (eom01) {
           CRRCMath::Vector3 vLocal = eom01->getVLocal();
           sample.vLocal = gp_vec3{
-              static_cast<gp_scalar>(vLocal.r[0] * FEET_TO_METERS),
-              static_cast<gp_scalar>(vLocal.r[1] * FEET_TO_METERS),
-              static_cast<gp_scalar>(vLocal.r[2] * FEET_TO_METERS)};
+              static_cast<gp_scalar>(vLocal(0) * FEET_TO_METERS),
+              static_cast<gp_scalar>(vLocal(1) * FEET_TO_METERS),
+              static_cast<gp_scalar>(vLocal(2) * FEET_TO_METERS)};
           CRRCMath::Vector3 vLocalDot = eom01->getVLocalDot();
           sample.vLocalDot = gp_vec3{
-              static_cast<gp_scalar>(vLocalDot.r[0] * FEET_TO_METERS),
-              static_cast<gp_scalar>(vLocalDot.r[1] * FEET_TO_METERS),
-              static_cast<gp_scalar>(vLocalDot.r[2] * FEET_TO_METERS)};
+              static_cast<gp_scalar>(vLocalDot(0) * FEET_TO_METERS),
+              static_cast<gp_scalar>(vLocalDot(1) * FEET_TO_METERS),
+              static_cast<gp_scalar>(vLocalDot(2) * FEET_TO_METERS)};
           CRRCMath::Vector3 omegaBody = eom01->getOmegaBody();
           sample.omegaBody = gp_vec3{
-              static_cast<gp_scalar>(omegaBody.r[0]),
-              static_cast<gp_scalar>(omegaBody.r[1]),
-              static_cast<gp_scalar>(omegaBody.r[2])};
+              static_cast<gp_scalar>(omegaBody(0)),
+              static_cast<gp_scalar>(omegaBody(1)),
+              static_cast<gp_scalar>(omegaBody(2))};
           CRRCMath::Vector3 omegaDotBody = eom01->getOmegaDot();
           sample.omegaDotBody = gp_vec3{
-              static_cast<gp_scalar>(omegaDotBody.r[0]),
-              static_cast<gp_scalar>(omegaDotBody.r[1]),
-              static_cast<gp_scalar>(omegaDotBody.r[2])};
+              static_cast<gp_scalar>(omegaDotBody(0)),
+              static_cast<gp_scalar>(omegaDotBody(1)),
+              static_cast<gp_scalar>(omegaDotBody(2))};
           sample.latGeoc = static_cast<gp_scalar>(eom01->getLatGeocentric());
           sample.lonGeoc = static_cast<gp_scalar>(eom01->getLonGeocentric());
           sample.radiusToVehicle = static_cast<gp_scalar>(eom01->getRadiusToVehicle() * FEET_TO_METERS);
@@ -669,9 +669,9 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     // get actual velocity vector from FDM (in feet/s, convert to m/s) - ground speed
     CRRCMath::Vector3 fdm_velocity = Global::aircraft->getFDM()->getVel();
     gp_vec3 velocity_vector{
-        fdm_velocity.r[0] * FEET_TO_METERS,  // North
-        fdm_velocity.r[1] * FEET_TO_METERS,  // East
-        fdm_velocity.r[2] * FEET_TO_METERS   // Down
+        fdm_velocity(0) * FEET_TO_METERS,  // North
+        fdm_velocity(1) * FEET_TO_METERS,  // East
+        fdm_velocity(2) * FEET_TO_METERS   // Down
     };
     if (isnan(velocity_vector[0]) || isnan(velocity_vector[1]) || isnan(velocity_vector[2]))
     {
@@ -711,9 +711,9 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     q.normalize();
 
     // position
-    gp_vec3 p{static_cast<gp_scalar>(Global::aircraft->getPos().r[0] * FEET_TO_METERS),
-              static_cast<gp_scalar>(Global::aircraft->getPos().r[1] * FEET_TO_METERS),
-              static_cast<gp_scalar>(Global::aircraft->getPos().r[2] * FEET_TO_METERS)};
+    gp_vec3 p{static_cast<gp_scalar>(Global::aircraft->getPos()(0) * FEET_TO_METERS),
+              static_cast<gp_scalar>(Global::aircraft->getPos()(1) * FEET_TO_METERS),
+              static_cast<gp_scalar>(Global::aircraft->getPos()(2) * FEET_TO_METERS)};
     if (isnan(p[0]) || isnan(p[1]) || isnan(p[2]))
     {
       p = gp_vec3::Zero();
@@ -963,14 +963,14 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       if (eom01) {
         CRRCMath::Vector3 vGround = eom01->getVelRelGroundVec();
         sample.velRelGround = gp_vec3{
-            static_cast<gp_scalar>(vGround.r[0] * FEET_TO_METERS),
-            static_cast<gp_scalar>(vGround.r[1] * FEET_TO_METERS),
-            static_cast<gp_scalar>(vGround.r[2] * FEET_TO_METERS)};
+            static_cast<gp_scalar>(vGround(0) * FEET_TO_METERS),
+            static_cast<gp_scalar>(vGround(1) * FEET_TO_METERS),
+            static_cast<gp_scalar>(vGround(2) * FEET_TO_METERS)};
         CRRCMath::Vector3 vAir = eom01->getVelRelAirmassVec();
         sample.velRelAirmass = gp_vec3{
-            static_cast<gp_scalar>(vAir.r[0] * FEET_TO_METERS),
-            static_cast<gp_scalar>(vAir.r[1] * FEET_TO_METERS),
-            static_cast<gp_scalar>(vAir.r[2] * FEET_TO_METERS)};
+            static_cast<gp_scalar>(vAir(0) * FEET_TO_METERS),
+            static_cast<gp_scalar>(vAir(1) * FEET_TO_METERS),
+            static_cast<gp_scalar>(vAir(2) * FEET_TO_METERS)};
       } else {
         sample.velRelGround = velocity_vector;
         sample.velRelAirmass = gp_vec3::Zero();
@@ -980,24 +980,24 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       if (eom01) {
         CRRCMath::Vector3 accelFdm = eom01->getAccel();
         sample.acceleration = gp_vec3{
-            static_cast<gp_scalar>(accelFdm.r[0] * FEET_TO_METERS),
-            static_cast<gp_scalar>(accelFdm.r[1] * FEET_TO_METERS),
-            static_cast<gp_scalar>(accelFdm.r[2] * FEET_TO_METERS)};
+            static_cast<gp_scalar>(accelFdm(0) * FEET_TO_METERS),
+            static_cast<gp_scalar>(accelFdm(1) * FEET_TO_METERS),
+            static_cast<gp_scalar>(accelFdm(2) * FEET_TO_METERS)};
         CRRCMath::Vector3 accelPast = eom01->getAccelPast();
         sample.accelPast = gp_vec3{
-            static_cast<gp_scalar>(accelPast.r[0] * FEET_TO_METERS),
-            static_cast<gp_scalar>(accelPast.r[1] * FEET_TO_METERS),
-            static_cast<gp_scalar>(accelPast.r[2] * FEET_TO_METERS)};
+            static_cast<gp_scalar>(accelPast(0) * FEET_TO_METERS),
+            static_cast<gp_scalar>(accelPast(1) * FEET_TO_METERS),
+            static_cast<gp_scalar>(accelPast(2) * FEET_TO_METERS)};
         CRRCMath::Vector3 pqr = eom01->getPQR();
         sample.angularRates = gp_vec3{
-            static_cast<gp_scalar>(pqr.r[0]),
-            static_cast<gp_scalar>(pqr.r[1]),
-            static_cast<gp_scalar>(pqr.r[2])};
+            static_cast<gp_scalar>(pqr(0)),
+            static_cast<gp_scalar>(pqr(1)),
+            static_cast<gp_scalar>(pqr(2))};
         CRRCMath::Vector3 omegaDotPast = eom01->getOmegaDotPast();
         sample.angularAccelPast = gp_vec3{
-            static_cast<gp_scalar>(omegaDotPast.r[0]),
-            static_cast<gp_scalar>(omegaDotPast.r[1]),
-            static_cast<gp_scalar>(omegaDotPast.r[2])};
+            static_cast<gp_scalar>(omegaDotPast(0)),
+            static_cast<gp_scalar>(omegaDotPast(1)),
+            static_cast<gp_scalar>(omegaDotPast(2))};
         double quatDotArr[4]; eom01->getQuatDotPast(quatDotArr);
         sample.quatDotPast = gp_quat(
             static_cast<gp_scalar>(quatDotArr[0]),
@@ -1006,9 +1006,9 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
             static_cast<gp_scalar>(quatDotArr[3]));
         CRRCMath::Vector3 windBodyFdm = eom01->getWindBody();
         sample.windBody = gp_vec3{
-            static_cast<gp_scalar>(windBodyFdm.r[0] * FEET_TO_METERS),
-            static_cast<gp_scalar>(windBodyFdm.r[1] * FEET_TO_METERS),
-            static_cast<gp_scalar>(windBodyFdm.r[2] * FEET_TO_METERS)};
+            static_cast<gp_scalar>(windBodyFdm(0) * FEET_TO_METERS),
+            static_cast<gp_scalar>(windBodyFdm(1) * FEET_TO_METERS),
+            static_cast<gp_scalar>(windBodyFdm(2) * FEET_TO_METERS)};
         sample.massKg = static_cast<gp_scalar>(eom01->getMass());
         sample.density = static_cast<gp_scalar>(eom01->getDensity());
         sample.gravity = static_cast<gp_scalar>(eom01->getGravity());
@@ -1017,47 +1017,47 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
         sample.vRelWind = static_cast<gp_scalar>(eom01->getVRelWind());
         CRRCMath::Vector3 vLocal = eom01->getVLocal();
         sample.vLocal = gp_vec3{
-            static_cast<gp_scalar>(vLocal.r[0] * FEET_TO_METERS),
-            static_cast<gp_scalar>(vLocal.r[1] * FEET_TO_METERS),
-            static_cast<gp_scalar>(vLocal.r[2] * FEET_TO_METERS)};
+            static_cast<gp_scalar>(vLocal(0) * FEET_TO_METERS),
+            static_cast<gp_scalar>(vLocal(1) * FEET_TO_METERS),
+            static_cast<gp_scalar>(vLocal(2) * FEET_TO_METERS)};
         CRRCMath::Vector3 vLocalDot = eom01->getVLocalDot();
         sample.vLocalDot = gp_vec3{
-            static_cast<gp_scalar>(vLocalDot.r[0] * FEET_TO_METERS),
-            static_cast<gp_scalar>(vLocalDot.r[1] * FEET_TO_METERS),
-            static_cast<gp_scalar>(vLocalDot.r[2] * FEET_TO_METERS)};
+            static_cast<gp_scalar>(vLocalDot(0) * FEET_TO_METERS),
+            static_cast<gp_scalar>(vLocalDot(1) * FEET_TO_METERS),
+            static_cast<gp_scalar>(vLocalDot(2) * FEET_TO_METERS)};
         CRRCMath::Vector3 omegaBody = eom01->getOmegaBody();
         sample.omegaBody = gp_vec3{
-            static_cast<gp_scalar>(omegaBody.r[0]),
-            static_cast<gp_scalar>(omegaBody.r[1]),
-            static_cast<gp_scalar>(omegaBody.r[2])};
+            static_cast<gp_scalar>(omegaBody(0)),
+            static_cast<gp_scalar>(omegaBody(1)),
+            static_cast<gp_scalar>(omegaBody(2))};
         CRRCMath::Vector3 omegaDotBody = eom01->getOmegaDot();
         sample.omegaDotBody = gp_vec3{
-            static_cast<gp_scalar>(omegaDotBody.r[0]),
-            static_cast<gp_scalar>(omegaDotBody.r[1]),
-            static_cast<gp_scalar>(omegaDotBody.r[2])};
+            static_cast<gp_scalar>(omegaDotBody(0)),
+            static_cast<gp_scalar>(omegaDotBody(1)),
+            static_cast<gp_scalar>(omegaDotBody(2))};
         sample.latGeoc = static_cast<gp_scalar>(eom01->getLatGeocentric());
         sample.lonGeoc = static_cast<gp_scalar>(eom01->getLonGeocentric());
         sample.radiusToVehicle = static_cast<gp_scalar>(eom01->getRadiusToVehicle() * FEET_TO_METERS);
         CRRCMath::Vector3 localAirmass = eom01->getLastLocalAirmass();
         sample.localAirmass = gp_vec3{
-            static_cast<gp_scalar>(localAirmass.r[0] * FEET_TO_METERS),
-            static_cast<gp_scalar>(localAirmass.r[1] * FEET_TO_METERS),
-            static_cast<gp_scalar>(localAirmass.r[2] * FEET_TO_METERS)};
+            static_cast<gp_scalar>(localAirmass(0) * FEET_TO_METERS),
+            static_cast<gp_scalar>(localAirmass(1) * FEET_TO_METERS),
+            static_cast<gp_scalar>(localAirmass(2) * FEET_TO_METERS)};
         CRRCMath::Vector3 gustBody = eom01->getLastGustBody();
         sample.gustBody = gp_vec3{
-            static_cast<gp_scalar>(gustBody.r[0] * FEET_TO_METERS),
-            static_cast<gp_scalar>(gustBody.r[1] * FEET_TO_METERS),
-            static_cast<gp_scalar>(gustBody.r[2] * FEET_TO_METERS)};
+            static_cast<gp_scalar>(gustBody(0) * FEET_TO_METERS),
+            static_cast<gp_scalar>(gustBody(1) * FEET_TO_METERS),
+            static_cast<gp_scalar>(gustBody(2) * FEET_TO_METERS)};
         CRRCMath::Vector3 forceBody = eom01->getLastForceBody();
         sample.forceBody = gp_vec3{
-            static_cast<gp_scalar>(forceBody.r[0] * FEET_TO_METERS),
-            static_cast<gp_scalar>(forceBody.r[1] * FEET_TO_METERS),
-            static_cast<gp_scalar>(forceBody.r[2] * FEET_TO_METERS)};
+            static_cast<gp_scalar>(forceBody(0) * FEET_TO_METERS),
+            static_cast<gp_scalar>(forceBody(1) * FEET_TO_METERS),
+            static_cast<gp_scalar>(forceBody(2) * FEET_TO_METERS)};
         CRRCMath::Vector3 momentBody = eom01->getLastMomentBody();
         sample.momentBody = gp_vec3{
-            static_cast<gp_scalar>(momentBody.r[0]),
-            static_cast<gp_scalar>(momentBody.r[1]),
-            static_cast<gp_scalar>(momentBody.r[2])};
+            static_cast<gp_scalar>(momentBody(0)),
+            static_cast<gp_scalar>(momentBody(1)),
+            static_cast<gp_scalar>(momentBody(2))};
         sample.latDotPast = static_cast<gp_scalar>(eom01->getLatDotPast());
         sample.lonDotPast = static_cast<gp_scalar>(eom01->getLonDotPast());
         sample.radiusDotPast = static_cast<gp_scalar>(eom01->getRadiusDotPast());

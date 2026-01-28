@@ -559,7 +559,7 @@ void oscillo()
 CRRCMath::Vector3 FDM2Graphics(CRRCMath::Vector3 const& v)
 {
   // This coordinate transformation works in both headless and video modes
-  return CRRCMath::Vector3(v.r[1], -v.r[2], -v.r[0]);
+  return CRRCMath::Vector3(v(1), -v(2), -v(0));
 }
 
 
@@ -568,7 +568,7 @@ CRRCMath::Vector3 FDM2Graphics(CRRCMath::Vector3 const& v)
  */
 CRRCMath::Vector3 Graphics2FDM(CRRCMath::Vector3 const& v)
 {
-  return CRRCMath::Vector3(-v.r[2], v.r[0], -v.r[1]);
+  return CRRCMath::Vector3(-v(2), v(0), -v(1));
 }
 
 
@@ -608,8 +608,8 @@ void display()
 
     // Set up the viewing transformation (for SSG drawing)
     sgVec3 vPlayerPos, vLookingPos, vUp;
-    sgSetVec3(vPlayerPos, player_pos.r[0], player_pos.r[1], player_pos.r[2]);                
-    sgSetVec3(vLookingPos, looking_pos.r[0], looking_pos.r[1], looking_pos.r[2]);
+    sgSetVec3(vPlayerPos, player_pos(0), player_pos(1), player_pos(2));                
+    sgSetVec3(vLookingPos, looking_pos(0), looking_pos(1), looking_pos(2));
     sgSetVec3(vUp, 0.0, 1.0, 0.0);  
     context->setCameraLookAt(vPlayerPos, vLookingPos, vUp);
 
@@ -667,8 +667,8 @@ void display()
     // so we have to set up our own viewing transformation to
     // properly rendere following optional items.
     // NB: light & fog are left unchanged, so they are still ok.
-    gluLookAt(player_pos.r[0], player_pos.r[1], player_pos.r[2],
-              looking_pos.r[0], looking_pos.r[1], looking_pos.r[2],
+    gluLookAt(player_pos(0), player_pos(1), player_pos(2),
+              looking_pos(0), looking_pos(1), looking_pos(2),
               0.0, 1.0, 0.0);
     context->forceBasicState();
     
@@ -699,7 +699,7 @@ void display()
       
       // compute model-view field of view    
       // remember: tan(fieldOfView/2) * distance = aircraftSize
-      float distance_to_model = (aircraft_pos - player_pos).length();
+      float distance_to_model = (aircraft_pos - player_pos).norm();
       float modelFieldOfView = 180.0/M_PI*2.*atan(aircraftSize/distance_to_model);
       modelFieldOfView *= (1.0 + MODEL_VIEW_FOV_MARGIN);
       
@@ -744,7 +744,7 @@ void display()
         // Set up the viewing transformation (for SSG drawing)
         // camera looking straight at the model
         sgVec3 vPlanePos;
-        sgSetVec3(vPlanePos, plane_pos.r[0], plane_pos.r[1], plane_pos.r[2]);                
+        sgSetVec3(vPlanePos, plane_pos(0), plane_pos(1), plane_pos(2));                
         context->setCameraLookAt(vPlayerPos, vPlanePos, vUp);
               
         // clear zbuffer in the close-view window
@@ -780,8 +780,8 @@ void display()
 
   // Overlay: wind direction indicator
   {
-    double dx  = (plane_pos.r[2] - player_pos.r[2]);
-    double dy  = (player_pos.r[0] - plane_pos.r[0]);
+    double dx  = (plane_pos(2) - player_pos(2));
+    double dy  = (player_pos(0) - plane_pos(0));
     double dir = atan2(dy, dx);
 
     GlOverlay::setupRenderingState(window_xsize, window_ysize);
@@ -1321,10 +1321,10 @@ void InitSmartCamera()
   CRRCMath::Vector3 plane_pos = FDM2Graphics(Global::aircraft->getPos());
   CRRCMath::Vector3 plane_dir = plane_pos - player_pos;
   CRRCMath::Vector3 plane_dir_FDM = Graphics2FDM(plane_dir);
-  flSmartCam_center_w = atan2(plane_dir_FDM.r[1], plane_dir_FDM.r[0]); 
+  flSmartCam_center_w = atan2(plane_dir_FDM(1), plane_dir_FDM(0)); 
   
-  double dist = sqrt(plane_dir_FDM.r[0]*plane_dir_FDM.r[0] + plane_dir_FDM.r[1]*plane_dir_FDM.r[1]) + 1.;
-  flSmartCam_center_h = atan(plane_dir_FDM.r[2]/dist);
+  double dist = sqrt(plane_dir_FDM(0)*plane_dir_FDM(0) + plane_dir_FDM(1)*plane_dir_FDM(1)) + 1.;
+  flSmartCam_center_h = atan(plane_dir_FDM(2)/dist);
   
   flSmartCam_var_w = 0.;
   flSmartCam_var_h = 0.;
@@ -1344,9 +1344,9 @@ void UpdateCamera(float flDeltaT)
   CRRCMath::Vector3 plane_pos = FDM2Graphics(Global::aircraft->getPos());
   CRRCMath::Vector3 plane_dir = plane_pos - player_pos;
   CRRCMath::Vector3 plane_dir_FDM = Graphics2FDM(plane_dir);
-  double phi_w = atan2(plane_dir_FDM.r[1], plane_dir_FDM.r[0]);  
-  double dist = sqrt(plane_dir_FDM.r[0]*plane_dir_FDM.r[0] + plane_dir_FDM.r[1]*plane_dir_FDM.r[1]) + 1.;
-  double phi_h = atan(plane_dir_FDM.r[2]/dist);
+  double phi_w = atan2(plane_dir_FDM(1), plane_dir_FDM(0));  
+  double dist = sqrt(plane_dir_FDM(0)*plane_dir_FDM(0) + plane_dir_FDM(1)*plane_dir_FDM(1)) + 1.;
+  double phi_h = atan(plane_dir_FDM(2)/dist);
 
   if (!Global::testmode)
   {
@@ -1412,8 +1412,8 @@ void UpdateCamera(float flDeltaT)
       // rotate plane_dir_FDM towards look_dir_FDM along Z axis 
       double cc = cos(dphi);
       double ss = sin(dphi);
-      look_dir_FDM.r[0] =  cc*plane_dir_FDM.r[0] + ss*plane_dir_FDM.r[1];
-      look_dir_FDM.r[1] = -ss*plane_dir_FDM.r[0] + cc*plane_dir_FDM.r[1];
+      look_dir_FDM(0) =  cc*plane_dir_FDM(0) + ss*plane_dir_FDM(1);
+      look_dir_FDM(1) = -ss*plane_dir_FDM(0) + cc*plane_dir_FDM(1);
     }
 
     // set look_dir elevation
@@ -1424,7 +1424,7 @@ void UpdateCamera(float flDeltaT)
         dphi = sign*dphimax_h0*sin(pi_half*fabs(dphi)/range_h);
       else
         dphi = sign*dphimax_h0;
-      look_dir_FDM.r[2] = dist*tan(phi_h - dphi);
+      look_dir_FDM(2) = dist*tan(phi_h - dphi);
     }
     
     // set looking position
@@ -1438,21 +1438,24 @@ void UpdateCamera(float flDeltaT)
     CRRCMath::Vector3 look_dir  = looking_pos - player_pos;
     CRRCMath::Vector3 plane_dir = plane_pos - player_pos;
     
-    if (plane_dir.angle_cos_sqr(look_dir) < max)
+    // angle_cos_sqr computes (cos(angle))^2 = (a.b)^2 / (|a|^2 * |b|^2)
+    double angle_cos_sqr_val = (plane_dir.dot(look_dir) * plane_dir.dot(look_dir)) /
+                               (plane_dir.dot(plane_dir) * look_dir.dot(look_dir));
+    if (angle_cos_sqr_val < max)
     {
       // Adjust the length of look_dir so that plane_dir, look_dir and
       // (look_dir - plane_dir) form a right angle triangle.
-      double k = (plane_dir.inner(plane_dir)) / (plane_dir.inner(look_dir));
+      double k = (plane_dir.dot(plane_dir)) / (plane_dir.dot(look_dir));
       look_dir = look_dir * k;
       // Calculate the difference vector...
       CRRCMath::Vector3 diff_dir = look_dir - plane_dir;
-      double ddl = diff_dir.length();
+      double ddl = diff_dir.norm();
       if (ddl > 0.001)
       {
         // ...and adjust its length (the right angle triangle remains!) so that
         // the angle between look_dir and plane_dir equals phimax.
         double tan_phi = fabs(tan(acos(sqrt(max))));
-        look_dir = plane_dir + diff_dir*(plane_dir.length()*tan_phi/ddl);
+        look_dir = plane_dir + diff_dir*(plane_dir.norm()*tan_phi/ddl);
         looking_pos = look_dir + player_pos;
       }
     }

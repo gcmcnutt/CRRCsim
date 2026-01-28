@@ -355,12 +355,12 @@ int T_TX_InterfaceParallel::init_parallel_interface(int lpt)
   {
     ask_for_data();
     wait_until_data_ready(&data);
-    if (errMsg.length())
+    if (errMsg.norm())
       return(-1);
     
     acknowledge_got_data();
     wait_until_interface_is_idle(&data);
-    if (errMsg.length())
+    if (errMsg.norm())
       return(-1);
   }
   while((data & 0x08) == 0);

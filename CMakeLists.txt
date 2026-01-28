@@ -242,6 +242,14 @@ set(CRRCSIM_SRCS
  src/zoom.cpp
   )
 
+# Set up include directories BEFORE add_subdirectory so they're inherited
+include_directories(${CRRCSIM_INCDIRS}
+  ${EIGEN3_INCLUDE_DIRS}
+  $ENV{HOME}/GP/autoc
+  $ENV{HOME}/GP/include
+)
+message(STATUS "Eigen3 include dirs: ${EIGEN3_INCLUDE_DIRS}")
+
 add_subdirectory(src/mod_chardevice)
 add_subdirectory(src/GUI)
 add_subdirectory(src/mod_cntrl)
@@ -279,12 +287,6 @@ set (CRRCSIM_LIBS
   ${JPEG_LIBRARIES}
   ${PLIB_LIBRARIES}
   )
-
-include_directories(${CRRCSIM_INCDIRS}
-  ${EIGEN3_INCLUDE_DIR}
-  $ENV{HOME}/GP/autoc
-  $ENV{HOME}/GP/include
-)
 
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in ${CMAKE_BINARY_DIR}/crrc_config.h)
 

@@ -103,9 +103,9 @@ void idle(TSimInputs* inputs, int nDeltaTicks)
   Global::aircraft->getFDMInterface()->update(inputs, Global::dt, multiloop);
   Global::aircraft->getModel()->update(Global::aircraft->getFDM());
   
-  double X_cg_rwy =    Global::aircraft->getPos().r[0];
-  double Y_cg_rwy =    Global::aircraft->getPos().r[1];
-  double H_cg_rwy = -1*Global::aircraft->getPos().r[2];
+  double X_cg_rwy =    Global::aircraft->getPos()(0);
+  double Y_cg_rwy =    Global::aircraft->getPos()(1);
+  double H_cg_rwy = -1*Global::aircraft->getPos()(2);
 
   Global::gameHandler->update(X_cg_rwy,Y_cg_rwy,H_cg_rwy, Global::recorder, Global::robots);
   

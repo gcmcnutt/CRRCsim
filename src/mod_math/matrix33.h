@@ -2,102 +2,79 @@
  * CRRCsim - the Charles River Radio Control Club Flight Simulator Project
  *   Copyright (C) 2005, 2008 - Jens Wilhelm Wulf (original author)
  *   Copyright (C) 2008 - Jan Reucker
+ *   Copyright (C) 2026 - Eigen migration for SIMD vectorization
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
- *
  */
 #ifndef MATRIX33_H
-# define MATRIX33_H
+#define MATRIX33_H
 
-# include "vector3.h"
+#include <Eigen/Dense>
+#include "vector3.h"
 
 namespace CRRCMath
 {
   /**
-   * A 3x3 matrix of double values.
+   * Matrix33 is now a typedef to Eigen::Matrix3d for SIMD vectorization.
    *
-   * @author Jens Wilhelm Wulf
+   * IMPORTANT: Eigen uses COLUMN-MAJOR storage by default, but the old code
+   * used ROW-MAJOR with v[row][col] access. Using RowMajor here for compatibility.
+   *
+   * Old access: matrix.v[row][col]
+   * New access: matrix(row, col)
    */
-  class Matrix33 /*{{{*/
+  using Matrix33 = Eigen::Matrix<double, 3, 3, Eigen::RowMajor>;
+
+  /**
+   * Factory function to create Matrix33 from 9 values (row-major order).
+   * Replaces the old Matrix33(r00,r01,r02, r10,r11,r12, r20,r21,r22) constructor.
+   */
+  inline Matrix33 make_matrix33(
+      double r00, double r01, double r02,
+      double r10, double r11, double r12,
+      double r20, double r21, double r22)
   {
-    public:
-     double v[3][3];
+    Matrix33 m;
+    m << r00, r01, r02,
+         r10, r11, r12,
+         r20, r21, r22;
+    return m;
+  }
 
-    public:
+  /**
+   * Helper functions that were member functions in the old Matrix33 class.
+   */
 
-     Matrix33();
+  // Transpose then multiply by vector: matrix.transpose() * vec
+  // More efficient than forming transpose explicitly
+  inline Vector3 multrans(const Matrix33& m, const Vector3& v)
+  {
+    return m.transpose() * v;
+  }
 
-     Matrix33(double i00, double i01, double i02,
-              double i10, double i11, double i12,
-              double i20, double i21, double i22);
+  // Print functions
+  inline void print(const Matrix33& m)
+  {
+    for (int row = 0; row < 3; row++)
+    {
+      for (int col = 0; col < 3; col++)
+        std::cout << m(row, col) << ", ";
+      std::cout << "\n";
+    }
+    std::cout << "\n";
+  }
 
-     Matrix33(const Matrix33& mb);
+  inline void printLine(const Matrix33& m)
+  {
+    for (int row = 0; row < 3; row++)
+    {
+      for (int col = 0; col < 3; col++)
+        std::cout << m(row, col) << " ";
+    }
+  }
 
-     /**
-      * returns determinant of matrix
-      */
-     double det() const;
+} // namespace CRRCMath
 
-     /**
-      * returns inverse matrix: does not check whether this is
-      * possible (det() != 0)!
-      */
-     Matrix33 inv() const;
-
-     /**
-      * Operator: Zuweisung
-      */
-     Matrix33& operator=(const Matrix33& b);
-
-     /**
-      * Operator: Multiplikation mit Vector3
-      */
-     Vector3 operator*(const Vector3& b) const;
-
-     /**
-      * Operation: Erst die transponierte bilden, dann Multiplikation mit Vector3.
-      *            Ist wahrscheinlich schneller als <tt>matrix.trans() * vector3</tt>.
-      */
-     Vector3 multrans(const Vector3& b) const;
-
-     /**
-      * Operator: Multiplikation mit Matrix33
-      */
-     Matrix33 operator*(const Matrix33& b) const;
-
-     /**
-      * Operator: Subtraktion
-      */
-     Matrix33 operator-(const Matrix33& b) const;
-
-     /**
-      * transponierte Matrix
-      */
-     Matrix33 trans() const;
-
-     /**
-      *
-      */
-     void print();
-
-     /**
-      *
-      */
-     void printLine();
-
-  };
-/*}}}*/
-}
-#endif
+#endif // MATRIX33_H

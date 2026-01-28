@@ -85,15 +85,15 @@ void Cntrl_MCopter01::Calc(double      dt,
 {
   CRRCMath::Vector3 omega = fdm->getPQR();
 
-  pInputsToFDM->rudder = cntrlOmega[2].Step(dt, pInputsFromUser->rudder, omega.r[2]);
+  pInputsToFDM->rudder = cntrlOmega[2].Step(dt, pInputsFromUser->rudder, omega(2));
   
   if (smAttitudeRate == TSimInputs::smNOTHING || pInputsFromUser->GetInput(smAttitudeRate) > 0.25)
   {
-    pInputsToFDM->aileron  = controllerA[0].Step(dt, pInputsFromUser->aileron,  fdm->getPhi(),   omega.r[0]);
-    pInputsToFDM->elevator = controllerA[1].Step(dt, pInputsFromUser->elevator, fdm->getTheta(), omega.r[1]);
+    pInputsToFDM->aileron  = controllerA[0].Step(dt, pInputsFromUser->aileron,  fdm->getPhi(),   omega(0));
+    pInputsToFDM->elevator = controllerA[1].Step(dt, pInputsFromUser->elevator, fdm->getTheta(), omega(1));
     
-    cntrlOmega[0].Step(dt, Scale(pInputsFromUser->aileron),  omega.r[0]);
-    cntrlOmega[1].Step(dt, Scale(pInputsFromUser->elevator), omega.r[1]);
+    cntrlOmega[0].Step(dt, Scale(pInputsFromUser->aileron),  omega(0));
+    cntrlOmega[1].Step(dt, Scale(pInputsFromUser->elevator), omega(1));
     cntrlOmega[0].integrator = 0;
     cntrlOmega[1].integrator = 0;
     
@@ -105,8 +105,8 @@ void Cntrl_MCopter01::Calc(double      dt,
   }
   else
   {
-    pInputsToFDM->aileron  = cntrlOmega[0].Step(dt, Scale(pInputsFromUser->aileron),  omega.r[0]);
-    pInputsToFDM->elevator = cntrlOmega[1].Step(dt, Scale(pInputsFromUser->elevator), omega.r[1]);
+    pInputsToFDM->aileron  = cntrlOmega[0].Step(dt, Scale(pInputsFromUser->aileron),  omega(0));
+    pInputsToFDM->elevator = cntrlOmega[1].Step(dt, Scale(pInputsFromUser->elevator), omega(1));
     
     if (nMode != 2)
     {
@@ -135,7 +135,7 @@ void Cntrl_MCopter01::Calc(double      dt,
   
   if (nLog == 2)
   {
-    outlog << omega.r[0] << " " << omega.r[1] << " " << omega.r[2] << " "
+    outlog << omega(0) << " " << omega(1) << " " << omega(2) << " "
       << fdm->getPhi() << " " << fdm->getTheta() << " "
       << controllerA[0].GetSetpoint(pInputsFromUser->aileron) << " " 
       << controllerA[1].GetSetpoint(pInputsFromUser->elevator) << " " 

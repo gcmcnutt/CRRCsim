@@ -101,12 +101,12 @@ void CRRC_AirplaneSim_Playback::update(TSimInputs* inputs,
         double timestep = RobotFile::ReadDouble(infile);
         if (eF3FState != eF3F_Jump)
           dDeltaT += timestep;
-        v3PosNew.r[0] = RobotFile::ReadFloat(infile);
-        v3PosNew.r[1] = RobotFile::ReadFloat(infile);
-        v3PosNew.r[2] = RobotFile::ReadFloat(infile);
-        v3Euler.r[0] = RobotFile::ReadInt16(infile) / ROBOT_EULER_TO_INT16;
-        v3Euler.r[1] = RobotFile::ReadInt16(infile) / ROBOT_EULER_TO_INT16;
-        v3Euler.r[2] = RobotFile::ReadInt16(infile) / ROBOT_EULER_TO_INT16;
+        v3PosNew(0) = RobotFile::ReadFloat(infile);
+        v3PosNew(1) = RobotFile::ReadFloat(infile);
+        v3PosNew(2) = RobotFile::ReadFloat(infile);
+        v3Euler(0) = RobotFile::ReadInt16(infile) / ROBOT_EULER_TO_INT16;
+        v3Euler(1) = RobotFile::ReadInt16(infile) / ROBOT_EULER_TO_INT16;
+        v3Euler(2) = RobotFile::ReadInt16(infile) / ROBOT_EULER_TO_INT16;
         
         if (fFirstPos)
         {
