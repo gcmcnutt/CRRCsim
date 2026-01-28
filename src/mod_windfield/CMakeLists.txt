@@ -2,6 +2,7 @@ set(MOD_WINDFIELD_SRCS
   thermal03/solve.cpp
   thermal03/thermikschale.cpp
   thermal03/tschalen.cpp
+  arena_thermal.cpp
   windfield.cpp
   )
 add_library(mod_windfield ${MOD_WINDFIELD_SRCS})

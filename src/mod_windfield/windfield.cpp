@@ -28,6 +28,7 @@
  */
 
 #include "windfield.h"
+#include "arena_thermal.h"
 
 #include "../global.h"
 #include "../include_gl.h"
@@ -355,6 +356,9 @@ bool find_new_thermal_position(float *xpos, float *ypos,
 // Description: see header file
 void clear_wind_field()
 {
+  // Clear arena thermals
+  clear_arena_thermals();
+
   // remove linked list
   Thermal* tptr0 = thermals;
   Thermal* tptr1;
@@ -383,13 +387,16 @@ void initialize_wind_field(SimpleXMLTransfer* el)
   gFirstWindCallPending.store(true);
   gWindResetCounter.fetch_add(1);
 
+  // Save the original location config pointer before el gets modified
+  SimpleXMLTransfer* locCfg = el;
+
   int loop;
   Thermal *temp_thermal;
   int xloop,yloop;
 
   // initialize wind turbulence model
   initialize_gust();
-  
+
   ThermalVersion = THERMAL_CODE;
   // Use version 3?
   {
@@ -505,6 +512,14 @@ void initialize_wind_field(SimpleXMLTransfer* el)
   // This ensures all RandGauss objects have clean phase=0 state regardless of
   // how many RNG calls were consumed during thermal initialization
   initialize_gust();
+
+  // Initialize arena-bounded thermal system (for GP training scenarios)
+  // This is separate from the global thermal grid and more efficient for
+  // small bounded arenas. If arena_thermals is enabled, it will be used
+  // instead of the global thermal grid for wind calculations.
+  // Note: use locCfg (the original location config), not el (which may have
+  // been modified to point to the thermal child node)
+  initialize_arena_thermals(locCfg);
 }
 
 SimpleXMLTransfer* GetDefaultConf_Thermal()
@@ -555,6 +570,14 @@ void update_thermals(float flDeltaT)
   y_wind_velocity = -1 * flWindVel * sin(M_PI*cfg->wind->getDirection()/180);
   x_motion        = flDeltaT * x_wind_velocity;
   y_motion        = flDeltaT * y_wind_velocity;
+
+  // Update arena thermals if enabled (more efficient than global grid)
+  if (g_arenaThermalField && g_arenaThermalField->isEnabled())
+  {
+    g_arenaThermalField->update(flDeltaT, flWindVel, cfg->wind->getDirection());
+    // Skip global thermal grid update when arena thermals are active
+    return;
+  }
 
   // loop over linked list of thermals
   thermal_ptr = thermals;
@@ -611,7 +634,20 @@ int calculate_wind(double  X_cg,      double  Y_cg,     double  Z_cg,
   Vel_north = fact*x_wind_velocity;
   Vel_east  = fact*y_wind_velocity;
   Vel_down  = fact*z_wind_velocity;
- 
+
+  // Check for arena thermal system first (more efficient for GP training)
+  if (g_arenaThermalField && g_arenaThermalField->isEnabled())
+  {
+    // Use arena-bounded thermals instead of global grid
+    double arena_vel_north = 0, arena_vel_east = 0, arena_vel_down = 0;
+    g_arenaThermalField->calculateThermalWind(X_cg, Y_cg, Z_cg,
+                                               arena_vel_north, arena_vel_east, arena_vel_down);
+    Vel_north += arena_vel_north;
+    Vel_east  += arena_vel_east;
+    Vel_down  += arena_vel_down;
+    return wind_error;  // Skip global thermal grid
+  }
+
   // calculate indices of the aircraft in the grid
   aircraft_xcoord = absToGridCoor(X_cg);
   aircraft_ycoord = absToGridCoor(Y_cg);

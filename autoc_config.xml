@@ -64,7 +64,7 @@
     <location name="scenery/davis-orig.xml">
       <sky nUse="0" />
       <thermal strength_mean="5" strength_sigma="1" radius_mean="70"
-         radius_sigma="10" density="2.4e-06" lifetime_mean="240" lifetime_sigma="60">
+         radius_sigma="10" density="0" lifetime_mean="240" lifetime_sigma="60">
         <v3 vRefExp="2" dz_m="50" height_m="600">
           <inside>
             <upper r_m="30" sl_r="0.8" sl_dz_r="0.2" />
@@ -76,6 +76,18 @@
           </outside>
         </v3>
       </thermal>
+      <arena_thermals enabled="1">
+        <bounds x_min="-150" x_max="150" y_min="-150" y_max="150" />
+        <count_min>0</count_min>
+        <count_max>5</count_max>
+        <strength_mean>2.0</strength_mean>
+        <strength_sigma>0.5</strength_sigma>
+        <radius_mean>20</radius_mean>
+        <radius_sigma>5</radius_sigma>
+        <lifetime_mean>180</lifetime_mean>
+        <lifetime_sigma>60</lifetime_sigma>
+        <height_m>300</height_m>
+      </arena_thermals>
       <start position="field" />
       <wind velocity="12" direction="330" turbulence="1" />
     </location>
