@@ -242,10 +242,24 @@ void initialize_flight_model()
     //printf ("START theta : %.1f phi: %.1f \n",theta, phi);////
     //printf ("START h: %.1f h0: %.1f h1: %.1f h2: %.1f \n",height,h0,h1,h2);
     }
-  Altitude = Altitude + zlow + height; 
+  Altitude = Altitude + zlow + height;
 #ifdef DETAILED_LOGGING
   printf ("START ALTITUDE : %.1f (%.1f+%.1f)\n",Altitude,zlow,height );////
 #endif
+
+  // VARIATIONS1: Apply entry variations from scenario (set by inputdev_autoc)
+  velocity_rel *= Global::entrySpeedFactor;
+  phi += Global::entryRollOffset;
+  theta += Global::entryPitchOffset;
+  psi += Global::entryHeadingOffset;
+#ifdef DETAILED_LOGGING
+  printf("VARIATIONS1: vel=%.2fx phi=%.1f° theta=%.1f° psi=%.1f°\n",
+         Global::entrySpeedFactor,
+         Global::entryRollOffset * 180.0/M_PI,
+         Global::entryPitchOffset * 180.0/M_PI,
+         Global::entryHeadingOffset * 180.0/M_PI);
+#endif
+
   Global::aircraft->getFDMInterface()->initAirplaneState(
                                  velocity_rel,
                                  phi,

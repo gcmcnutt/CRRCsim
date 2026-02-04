@@ -53,3 +53,10 @@ TInputDev*        Global::inputDev;
 Aircraft*         Global::aircraft;
 FlightRecorder*   Global::recorder;
 Robots*           Global::robots;
+
+// VARIATIONS1: Entry and wind direction offsets (defaults = no variation)
+double            Global::entryHeadingOffset = 0.0;
+double            Global::entryRollOffset = 0.0;
+double            Global::entryPitchOffset = 0.0;
+double            Global::entrySpeedFactor = 1.0;
+double            Global::windDirectionOffset = 0.0;

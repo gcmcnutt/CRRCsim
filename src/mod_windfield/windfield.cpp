@@ -565,16 +565,19 @@ void update_thermals(float flDeltaT)
   float x_wind_velocity,y_wind_velocity;
   float flWindVel = cfg->wind->getVelocity();
 
+  // VARIATIONS1: Apply wind direction offset from scenario (radians -> degrees)
+  double effectiveWindDir = cfg->wind->getDirection() + (Global::windDirectionOffset * 180.0 / M_PI);
+
   // Wind velocity is the same everywhere, so every thermals relative movement is:
-  x_wind_velocity = -1 * flWindVel * cos(M_PI*cfg->wind->getDirection()/180);
-  y_wind_velocity = -1 * flWindVel * sin(M_PI*cfg->wind->getDirection()/180);
+  x_wind_velocity = -1 * flWindVel * cos(M_PI*effectiveWindDir/180);
+  y_wind_velocity = -1 * flWindVel * sin(M_PI*effectiveWindDir/180);
   x_motion        = flDeltaT * x_wind_velocity;
   y_motion        = flDeltaT * y_wind_velocity;
 
   // Update arena thermals if enabled (more efficient than global grid)
   if (g_arenaThermalField && g_arenaThermalField->isEnabled())
   {
-    g_arenaThermalField->update(flDeltaT, flWindVel, cfg->wind->getDirection());
+    g_arenaThermalField->update(flDeltaT, flWindVel, effectiveWindDir);
     // Skip global thermal grid update when arena thermals are active
     return;
   }
@@ -1016,7 +1019,9 @@ void draw_thermals(CRRCMath::Vector3 pos)
 void draw_wind(double direction_face)
 {
   double length    = 0.8;
-  double direction = (M_PI*cfg->wind->getDirection()/180) - direction_face;
+  // VARIATIONS1: Apply wind direction offset from scenario
+  double effectiveWindDir = cfg->wind->getDirection() + (Global::windDirectionOffset * 180.0 / M_PI);
+  double direction = (M_PI*effectiveWindDir/180) - direction_face;
 
   //
   int xsize, ysize;

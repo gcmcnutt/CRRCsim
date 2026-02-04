@@ -737,10 +737,12 @@ int BuiltinSceneryDavis::getWindComponents(double X_cg, double Y_cg, double Z_cg
     float *x_wind_velocity, float *y_wind_velocity, float *z_wind_velocity)
 {
   float flWindVel = cfg->wind->getVelocity();
-  *x_wind_velocity = -1 * flWindVel * cos(M_PI*cfg->wind->getDirection()/180);
-  *y_wind_velocity = -1 * flWindVel * sin(M_PI*cfg->wind->getDirection()/180);
+  // VARIATIONS1: Apply wind direction offset from scenario (radians -> degrees)
+  double effectiveWindDir = cfg->wind->getDirection() + (Global::windDirectionOffset * 180.0 / M_PI);
+  *x_wind_velocity = -1 * flWindVel * cos(M_PI*effectiveWindDir/180);
+  *y_wind_velocity = -1 * flWindVel * sin(M_PI*effectiveWindDir/180);
   *z_wind_velocity = 0.;
-  
+
   return 0;
 }
 
@@ -1622,8 +1624,10 @@ int BuiltinSceneryCapeCod::getWindComponents(double X_cg, double Y_cg, double Z_
     float *x_wind_velocity, float *y_wind_velocity, float *z_wind_velocity)
 {
   float flWindVel = cfg->wind->getVelocity();
-  *x_wind_velocity = -1 * flWindVel * cos(M_PI*cfg->wind->getDirection()/180);
-  *y_wind_velocity = -1 * flWindVel * sin(M_PI*cfg->wind->getDirection()/180);
+  // VARIATIONS1: Apply wind direction offset from scenario (radians -> degrees)
+  double effectiveWindDir = cfg->wind->getDirection() + (Global::windDirectionOffset * 180.0 / M_PI);
+  *x_wind_velocity = -1 * flWindVel * cos(M_PI*effectiveWindDir/180);
+  *y_wind_velocity = -1 * flWindVel * sin(M_PI*effectiveWindDir/180);
   *z_wind_velocity = 0.;
 
   if (cfg->getDynamicSoaring()==FALSE)

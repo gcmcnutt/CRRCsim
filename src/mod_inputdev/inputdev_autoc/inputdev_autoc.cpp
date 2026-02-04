@@ -512,6 +512,22 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       priorPathSelector = pathSelector;
       ScenarioMetadata activeScenario = scenarioForPathIndex(evalData, static_cast<size_t>(pathSelector));
 
+      // VARIATIONS1: Set entry and wind variation offsets from scenario
+      // These are read by initialize_flight_model() and windfield during reset
+      Global::entryHeadingOffset = activeScenario.entryHeadingOffset;
+      Global::entryRollOffset = activeScenario.entryRollOffset;
+      Global::entryPitchOffset = activeScenario.entryPitchOffset;
+      Global::entrySpeedFactor = activeScenario.entrySpeedFactor;
+      Global::windDirectionOffset = activeScenario.windDirectionOffset;
+
+#ifdef DETAILED_LOGGING
+      std::cerr << "VARIATIONS1: heading=" << (Global::entryHeadingOffset * 180.0/M_PI)
+                << "° roll=" << (Global::entryRollOffset * 180.0/M_PI)
+                << "° pitch=" << (Global::entryPitchOffset * 180.0/M_PI)
+                << "° speed=" << Global::entrySpeedFactor
+                << "x wind=" << (Global::windDirectionOffset * 180.0/M_PI) << "°" << std::endl;
+#endif
+
       // Reset simulation with wind seed
       // This will:
       // 1. Set RNG to windSeed
