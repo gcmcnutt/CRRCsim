@@ -960,6 +960,14 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     }
 #endif
 
+    // Capture temporal history before GP evaluation (for GETDPHI_PREV, GETDTHETA_PREV, etc.)
+    {
+      VectorPathProvider pathProvider(path, aircraftState.getThisPathIndex());
+      gp_scalar dPhi = executeGetDPhi(pathProvider, aircraftState, 0.0f);
+      gp_scalar dTheta = executeGetDTheta(pathProvider, aircraftState, 0.0f);
+      aircraftState.recordErrorHistory(dPhi, dTheta, simTimeMsec);
+    }
+
     // Evaluate immediately on this snapshot
     if (isGPTreeData) {
       gp->NthMyGene(0)->evaluate(path, *gp, 0);

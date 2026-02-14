@@ -31,6 +31,7 @@
 #include "gp_bytecode.h"
 #include "minisim.h"
 #include "autoc.h"
+#include "gp_evaluator_portable.h"
 
 #include <stdio.h>
 #include <iostream>
