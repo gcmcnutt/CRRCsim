@@ -68,6 +68,7 @@ void ArenaThermalConfig::loadFromXML(SimpleXMLTransfer* el)
     lifetime_sigma = el->getDouble("lifetime_sigma", lifetime_sigma);
     height_m = el->getDouble("height_m", height_m);
 
+#ifdef DETAILED_LOGGING
     if (enabled) {
         std::cout << "Arena thermals enabled: "
                   << "bounds=[" << spawn_x_min << "," << spawn_x_max << "] x ["
@@ -77,6 +78,7 @@ void ArenaThermalConfig::loadFromXML(SimpleXMLTransfer* el)
                   << "radius=" << radius_mean << "+/-" << radius_sigma << " m"
                   << std::endl;
     }
+#endif
 }
 
 // ---------- ArenaThermal ----------
@@ -282,8 +284,10 @@ void ArenaThermalField::initialize(const ArenaThermalConfig& config)
 
     spawnThermals();
 
+#ifdef DETAILED_LOGGING
     std::cout << "Arena thermal field initialized with " << thermalCount_
               << " thermals" << std::endl;
+#endif
 }
 
 void ArenaThermalField::clear()
