@@ -130,9 +130,9 @@ void Aircraft::enterTestmode(CRRCMath::Vector3 planeposn)
 
     // create a new FDM for testmode
     setFDMInterface(new ModFDMInterface());
-    getFDMInterface()->loadAirplaneTestmode(-planeposn.r[2],
-                                             planeposn.r[0],
-                                            -planeposn.r[1]);
+    getFDMInterface()->loadAirplaneTestmode(-planeposn(2),
+                                             planeposn(0),
+                                            -planeposn(1));
   }
 }
 

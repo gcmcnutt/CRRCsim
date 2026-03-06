@@ -329,17 +329,14 @@ TInputDev::TInputDev()//constructor
     int size;     
     ZoomControlStringsGUI = T_GUI_Util::loadnames(lZoomControlStrings, size);
   }
-  { 
+  {
     std::vector<std::string> lMixerStringsXML(T_TX_Mixer::NUM_MIXERS);
     std::vector<std::string> lMixerStringsGUI(T_TX_Mixer::NUM_MIXERS);
     for (int i = 0; i < T_TX_Mixer::NUM_MIXERS; i++)
     {
-      std::string s;
-      std::stringstream out;
-      out << (i+1);
-      s = out.str();
-      lMixerStringsXML[i] = "mixer" + s; 
-      lMixerStringsGUI[i] = _("Mixer") + s; 
+      std::string s = std::to_string(i + 1);  // Use to_string to avoid stringstream
+      lMixerStringsXML[i] = "mixer" + s;
+      lMixerStringsGUI[i] = _("Mixer") + s;
     }
     int size;     
     MixerStringsXML = T_GUI_Util::loadnames(lMixerStringsXML, size);

@@ -59,9 +59,9 @@ void Robots::AddRobot(std::string robotfilename)
     {
       SimpleXMLTransfer* i;
       i = xml->getChild("CG");
-      pCG.r[0] = i->attributeAsDouble("x", 0);
-      pCG.r[1] = i->attributeAsDouble("y", 0);
-      pCG.r[2] = i->attributeAsDouble("z", 0);
+      pCG(0) = i->attributeAsDouble("x", 0);
+      pCG(1) = i->attributeAsDouble("y", 0);
+      pCG(2) = i->attributeAsDouble("z", 0);
       
       if (i->attributeAsInt("units") == 1)
         pCG *= M_TO_FT;

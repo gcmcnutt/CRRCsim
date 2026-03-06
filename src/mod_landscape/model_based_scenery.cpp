@@ -36,6 +36,7 @@
 #include <iomanip>
 
 #include "../crrc_main.h"
+#include "../global.h"
 #include "../mod_misc/SimpleXMLTransfer.h"
 #include "../mod_misc/filesystools.h"
 #include "../mod_misc/ls_constants.h"
@@ -775,7 +776,8 @@ int ModelBasedScenery::getWindComponents(double X, double Y,double Z,
 {
   // freestream wind velocity
   float flWindVel = cfg->wind->getVelocity();
-  float flWindDir = cfg->wind->getDirection()*DEG_TO_RAD;
+  // VARIATIONS1: Apply wind direction offset from scenario (radians converted to degrees first)
+  float flWindDir = (cfg->wind->getDirection() + (Global::windDirectionOffset * 180.0 / M_PI))*DEG_TO_RAD;
   *x_wind_velocity = -1 * flWindVel * cos(flWindDir);
   *y_wind_velocity = -1 * flWindVel * sin(flWindDir);
   *z_wind_velocity = 0.;

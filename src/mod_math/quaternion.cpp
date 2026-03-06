@@ -43,7 +43,7 @@ CRRCMath::Vector3 CRRCMath::Quaternion::body(CRRCMath::Vector3 local)
 
 CRRCMath::Vector3 CRRCMath::Quaternion::local(Vector3 body)
 {
-  return(mat.multrans(body));
+  return(CRRCMath::multrans(mat, body));
 }
 
 /*******************************************************************************************/
@@ -62,10 +62,10 @@ void CRRCMath::Quaternion_001::step(double            dT,
   {
     double inv_eps = 1.0/length();
 
-    ep0 = -omega.r[0]*e1.val - omega.r[1]*e2.val - omega.r[2]*e3.val;
-    ep1 =  omega.r[0]*e0.val - omega.r[1]*e3.val + omega.r[2]*e2.val;
-    ep2 =  omega.r[0]*e3.val + omega.r[1]*e0.val - omega.r[2]*e1.val;
-    ep3 = -omega.r[0]*e2.val + omega.r[1]*e1.val + omega.r[2]*e0.val;
+    ep0 = -omega(0)*e1.val - omega(1)*e2.val - omega(2)*e3.val;
+    ep1 =  omega(0)*e0.val - omega(1)*e3.val + omega(2)*e2.val;
+    ep2 =  omega(0)*e3.val + omega(1)*e0.val - omega(2)*e1.val;
+    ep3 = -omega(0)*e2.val + omega(1)*e1.val + omega(2)*e0.val;
 
     e0.step(dT, 0.5*ep0*inv_eps);
     e1.step(dT, 0.5*ep1*inv_eps);
@@ -99,34 +99,34 @@ void CRRCMath::Quaternion_001::step(double            dT,
 
 void CRRCMath::Quaternion_001::update_mat()
 {
-  mat.v[0][0] = e0.val*e0.val + e1.val*e1.val - e2.val*e2.val - e3.val*e3.val;
-  mat.v[0][1] = 2*(e1.val*e2.val + e0.val*e3.val);
-  mat.v[0][2] = 2*(e1.val*e3.val - e0.val*e2.val);
+  mat(0,0) = e0.val*e0.val + e1.val*e1.val - e2.val*e2.val - e3.val*e3.val;
+  mat(0,1) = 2*(e1.val*e2.val + e0.val*e3.val);
+  mat(0,2) = 2*(e1.val*e3.val - e0.val*e2.val);
 
-  mat.v[1][0] = 2*(e1.val*e2.val - e0.val*e3.val);
-  mat.v[1][1] = e0.val*e0.val - e1.val*e1.val + e2.val*e2.val - e3.val*e3.val;
-  mat.v[1][2] = 2*(e2.val*e3.val + e0.val*e1.val);
+  mat(1,0) = 2*(e1.val*e2.val - e0.val*e3.val);
+  mat(1,1) = e0.val*e0.val - e1.val*e1.val + e2.val*e2.val - e3.val*e3.val;
+  mat(1,2) = 2*(e2.val*e3.val + e0.val*e1.val);
 
-  mat.v[2][0] = 2*(e1.val*e3.val + e0.val*e2.val);
-  mat.v[2][1] = 2*(e2.val*e3.val - e0.val*e1.val);
-  mat.v[2][2] = (e0.val*e0.val - e1.val*e1.val - e2.val*e2.val + e3.val*e3.val);
+  mat(2,0) = 2*(e1.val*e3.val + e0.val*e2.val);
+  mat(2,1) = 2*(e2.val*e3.val - e0.val*e1.val);
+  mat(2,2) = (e0.val*e0.val - e1.val*e1.val - e2.val*e2.val + e3.val*e3.val);
 }
 
 void CRRCMath::Quaternion_001::updateEuler()
 {
-  if (mat.v[0][2] >= 1)
-    euler.r[1] = asin(1.0);
-  else if (mat.v[0][2] <= -1)
-    euler.r[1] = asin(-1.0);
+  if (mat(0,2) >= 1)
+    euler(1) = asin(1.0);
+  else if (mat(0,2) <= -1)
+    euler(1) = asin(-1.0);
   else
-    euler.r[1] = asin(mat.v[0][2]);
+    euler(1) = asin(mat(0,2));
 
-  double b = cos(euler.r[1]);
+  double b = cos(euler(1));
 
   double c;
   double sign;
 
-  c = mat.v[2][2] / b;
+  c = mat(2,2) / b;
   if (c >= 1)
     c = acos(1.0);
   else if (c <= -1)
@@ -134,14 +134,14 @@ void CRRCMath::Quaternion_001::updateEuler()
   else
     c = acos(c);
 
-  if (mat.v[1][2] > 0)
+  if (mat(1,2) > 0)
     sign = 1;
   else
     sign = -1;
 
-  euler.r[0] = c * sign;
+  euler(0) = c * sign;
 
-  c = mat.v[0][0] / b;
+  c = mat(0,0) / b;
   if (c >= 1)
     c = acos(1.0);
   else if (c <= -1)
@@ -149,22 +149,22 @@ void CRRCMath::Quaternion_001::updateEuler()
   else
     c = acos(c);
 
-  if (mat.v[0][1] > 0)
+  if (mat(0,1) > 0)
     sign = 1;
   else
     sign = -1;
 
-  euler.r[2] = c * sign;
+  euler(2) = c * sign;
 }
 
 void CRRCMath::Quaternion_001::init(CRRCMath::Vector3 eulerAngle)
 {
-  double sphi   = sin(0.5*eulerAngle.r[0]);
-  double cphi   = cos(0.5*eulerAngle.r[0]);
-  double stheta = sin(0.5*eulerAngle.r[1]);
-  double ctheta = cos(0.5*eulerAngle.r[1]);
-  double spsi   = sin(0.5*eulerAngle.r[2]);
-  double cpsi   = cos(0.5*eulerAngle.r[2]);
+  double sphi   = sin(0.5*eulerAngle(0));
+  double cphi   = cos(0.5*eulerAngle(0));
+  double stheta = sin(0.5*eulerAngle(1));
+  double ctheta = cos(0.5*eulerAngle(1));
+  double spsi   = sin(0.5*eulerAngle(2));
+  double cpsi   = cos(0.5*eulerAngle(2));
 
   e0.init(+cpsi*ctheta*cphi +spsi*stheta*sphi, 0);
   e1.init(+cpsi*ctheta*sphi -spsi*stheta*cphi, 0);
@@ -194,17 +194,17 @@ void CRRCMath::Quaternion_002::step(double            dT,
 //  std::cout << "length_A= " << length() << "\n";
 
   // Gleichung (2.13) aus [1]:
-  double ep0 = 0.5 * (                   +omega.r[2]*e1.val -omega.r[1]*e2.val +omega.r[0]*e3.val);
-  double ep1 = 0.5 * (-omega.r[2]*e0.val                    +omega.r[0]*e2.val +omega.r[1]*e3.val);
-  double ep2 = 0.5 * (+omega.r[1]*e0.val -omega.r[0]*e1.val                    +omega.r[2]*e3.val);
-  double ep3 = 0.5 * (-omega.r[0]*e0.val -omega.r[1]*e1.val -omega.r[2]*e2.val                   );
+  double ep0 = 0.5 * (                   +omega(2)*e1.val -omega(1)*e2.val +omega(0)*e3.val);
+  double ep1 = 0.5 * (-omega(2)*e0.val                    +omega(0)*e2.val +omega(1)*e3.val);
+  double ep2 = 0.5 * (+omega(1)*e0.val -omega(0)*e1.val                    +omega(2)*e3.val);
+  double ep3 = 0.5 * (-omega(0)*e0.val -omega(1)*e1.val -omega(2)*e2.val                   );
 
   e0.step(dT, ep0);
   e1.step(dT, ep1);
   e2.step(dT, ep2);
   e3.step(dT, ep3);
 
-  // Länge wird erzwungen:
+  // Lï¿½nge wird erzwungen:
   double inv_eps = 1/length();
   
 //  std::cout << "length_B= " << length() << "\n";
@@ -220,32 +220,32 @@ void CRRCMath::Quaternion_002::step(double            dT,
 void CRRCMath::Quaternion_002::update_mat()
 {
   // Matrix nach Gleichung (2.8) aus [1]:
-  mat.v[0][0] =  e0.val*e0.val - e1.val*e1.val - e2.val*e2.val + e3.val*e3.val;
-  mat.v[0][1] =  2*(e0.val*e1.val + e2.val*e3.val);
-  mat.v[0][2] =  2*(e0.val*e2.val - e1.val*e3.val);
+  mat(0,0) =  e0.val*e0.val - e1.val*e1.val - e2.val*e2.val + e3.val*e3.val;
+  mat(0,1) =  2*(e0.val*e1.val + e2.val*e3.val);
+  mat(0,2) =  2*(e0.val*e2.val - e1.val*e3.val);
 
-  mat.v[1][0] =  2*(e0.val*e1.val - e2.val*e3.val);
-  mat.v[1][1] = -e0.val*e0.val + e1.val*e1.val - e2.val*e2.val + e3.val*e3.val;
-  mat.v[1][2] =  2*(e1.val*e2.val + e0.val*e3.val);
+  mat(1,0) =  2*(e0.val*e1.val - e2.val*e3.val);
+  mat(1,1) = -e0.val*e0.val + e1.val*e1.val - e2.val*e2.val + e3.val*e3.val;
+  mat(1,2) =  2*(e1.val*e2.val + e0.val*e3.val);
 
-  mat.v[2][0] =  2*(e0.val*e2.val + e1.val*e3.val);
-  mat.v[2][1] =  2*(e1.val*e2.val - e0.val*e3.val);
-  mat.v[2][2] = -e0.val*e0.val - e1.val*e1.val + e2.val*e2.val + e3.val*e3.val;  
+  mat(2,0) =  2*(e0.val*e2.val + e1.val*e3.val);
+  mat(2,1) =  2*(e1.val*e2.val - e0.val*e3.val);
+  mat(2,2) = -e0.val*e0.val - e1.val*e1.val + e2.val*e2.val + e3.val*e3.val;  
 }
 
 void CRRCMath::Quaternion_002::updateEuler()
 {
   // Winkel nach Gleichungen (2.14) aus [1]:
-  euler.r[0] = atan2(mat.v[1][2], mat.v[2][2]); // phi
-  euler.r[1] = asin(-1*mat.v[0][2]);            // theta
-  euler.r[2] = atan2(mat.v[0][1], mat.v[0][0]); // psi
+  euler(0) = atan2(mat(1,2), mat(2,2)); // phi
+  euler(1) = asin(-1*mat(0,2));            // theta
+  euler(2) = atan2(mat(0,1), mat(0,0)); // psi
 
   // Erste Tests zeigen, dass es mit den obigen Gleichungen nicht getan ist. Ich brauche:
-  if (mat.v[2][2] == 0)
-    euler.r[0] = 0;
+  if (mat(2,2) == 0)
+    euler(0) = 0;
   
-  if (mat.v[0][0] == 0)
-    euler.r[2] = 0;
+  if (mat(0,0) == 0)
+    euler(2) = 0;
 }
 
 void CRRCMath::Quaternion_002::init(CRRCMath::Vector3 eulerAngle)
@@ -254,21 +254,21 @@ void CRRCMath::Quaternion_002::init(CRRCMath::Vector3 eulerAngle)
 
   Matrix33 A = initFromEuler(eulerAngle);
 
-  e3.init(0.5*sqrt(1 + A.v[0][0] + A.v[1][1] + A.v[2][2] ), 0);
+  e3.init(0.5*sqrt(1 + A(0,0) + A(1,1) + A(2,2) ), 0);
 
   if (e3.val != 0)
   {
     double d = 1.0/(4*e3.val);
 
-    e0.init(d*(A.v[1][2] - A.v[2][1]), 0);
-    e1.init(d*(A.v[2][0] - A.v[0][2]), 0);
-    e2.init(d*(A.v[0][1] - A.v[1][0]), 0);
+    e0.init(d*(A(1,2) - A(2,1)), 0);
+    e1.init(d*(A(2,0) - A(0,2)), 0);
+    e2.init(d*(A(0,1) - A(1,0)), 0);
   }
   else
   {
-    e0.init(0.5*sqrt(1 + A.v[0][0] - A.v[1][1] - A.v[2][2]), 0);
-    e1.init(0.5*sqrt(1 - A.v[2][2] - 2 * e0.val*e0.val), 0);
-    e2.init(0.5*sqrt(1 - A.v[1][1] - 2 * e0.val*e0.val), 0);
+    e0.init(0.5*sqrt(1 + A(0,0) - A(1,1) - A(2,2)), 0);
+    e1.init(0.5*sqrt(1 - A(2,2) - 2 * e0.val*e0.val), 0);
+    e2.init(0.5*sqrt(1 - A(1,1) - 2 * e0.val*e0.val), 0);
   }
 
   update_mat();
@@ -285,18 +285,18 @@ CRRCMath::Matrix33 CRRCMath::Quaternion_002::initFromEuler(CRRCMath::Vector3 eul
 {
   Matrix33 mat2;
 
-  double s0 = sin(eul.r[0]);
-  double c0 = cos(eul.r[0]);
-  double s1 = sin(eul.r[1]);
-  double c1 = cos(eul.r[1]);
-  double s2 = sin(eul.r[2]);
-  double c2 = cos(eul.r[2]);
+  double s0 = sin(eul(0));
+  double c0 = cos(eul(0));
+  double s1 = sin(eul(1));
+  double c1 = cos(eul(1));
+  double s2 = sin(eul(2));
+  double c2 = cos(eul(2));
 
   // Berechnung der Matrix A aus [1], S.12, Formel (2.1)
   // Damit gilt mat2 * v_local = v_body
-  mat2 = Matrix33(c1*c2,          s2*c1,          -s1,
-                  c2*s1*s0-s2*c0, s2*s1*s0+c2*c0, c1*s0,
-                  c2*s1*c0+s2*s0, s2*s1*c0-c2*s0, c1*c0);
+  mat2 = make_matrix33(c1*c2,          s2*c1,          -s1,
+                       c2*s1*s0-s2*c0, s2*s1*s0+c2*c0, c1*s0,
+                       c2*s1*c0+s2*s0, s2*s1*c0-c2*s0, c1*c0);
   
   return(mat2);
 }
@@ -307,7 +307,7 @@ void CRRCMath::Quaternion_002::convTest1()
 
   // Vergleich mit der internen Matrix
   std::cout << "convTest1:\n";
-  (mat2-mat).print();
+  CRRCMath::print(mat2-mat);
 }
 
 /*******************************************************************************************/
@@ -321,10 +321,10 @@ void CRRCMath::Quaternion_003::step(double            dT,
   double e_3 = e3.val;
   
   /* Transform to quaternion rates (see Appendix E in [2]) */  
-  double e_dot_0 = 0.5*( -omega.r[0]*e_1 - omega.r[1]*e_2 - omega.r[2]*e_3 );
-  double e_dot_1 = 0.5*(  omega.r[0]*e_0 - omega.r[1]*e_3 + omega.r[2]*e_2 );
-  double e_dot_2 = 0.5*(  omega.r[0]*e_3 + omega.r[1]*e_0 - omega.r[2]*e_1 );
-  double e_dot_3 = 0.5*( -omega.r[0]*e_2 + omega.r[1]*e_1 + omega.r[2]*e_0 );
+  double e_dot_0 = 0.5*( -omega(0)*e_1 - omega(1)*e_2 - omega(2)*e_3 );
+  double e_dot_1 = 0.5*(  omega(0)*e_0 - omega(1)*e_3 + omega(2)*e_2 );
+  double e_dot_2 = 0.5*(  omega(0)*e_3 + omega(1)*e_0 - omega(2)*e_1 );
+  double e_dot_3 = 0.5*( -omega(0)*e_2 + omega(1)*e_1 + omega(2)*e_0 );
   
   /* Integrate using trapezoidal as before */
   e0.step(dT, e_dot_0);
@@ -352,32 +352,32 @@ void CRRCMath::Quaternion_003::update_mat()
   double e_2 = e2.val;
   double e_3 = e3.val;
   
-  mat.v[0][0] = e_0*e_0 + e_1*e_1 - e_2*e_2 - e_3*e_3;
-  mat.v[0][1] = 2*(e_1*e_2 + e_0*e_3);
-  mat.v[0][2] = 2*(e_1*e_3 - e_0*e_2);
-  mat.v[1][0] = 2*(e_1*e_2 - e_0*e_3);
-  mat.v[1][1] = e_0*e_0 - e_1*e_1 + e_2*e_2 - e_3*e_3;
-  mat.v[1][2] = 2*(e_2*e_3 + e_0*e_1);
-  mat.v[2][0] = 2*(e_1*e_3 + e_0*e_2);
-  mat.v[2][1] = 2*(e_2*e_3 - e_0*e_1);
-  mat.v[2][2] = e_0*e_0 - e_1*e_1 - e_2*e_2 + e_3*e_3;
+  mat(0,0) = e_0*e_0 + e_1*e_1 - e_2*e_2 - e_3*e_3;
+  mat(0,1) = 2*(e_1*e_2 + e_0*e_3);
+  mat(0,2) = 2*(e_1*e_3 - e_0*e_2);
+  mat(1,0) = 2*(e_1*e_2 - e_0*e_3);
+  mat(1,1) = e_0*e_0 - e_1*e_1 + e_2*e_2 - e_3*e_3;
+  mat(1,2) = 2*(e_2*e_3 + e_0*e_1);
+  mat(2,0) = 2*(e_1*e_3 + e_0*e_2);
+  mat(2,1) = 2*(e_2*e_3 - e_0*e_1);
+  mat(2,2) = e_0*e_0 - e_1*e_1 - e_2*e_2 + e_3*e_3;
 }
 
 void CRRCMath::Quaternion_003::updateEuler()
 {
   double Phi, Theta, Psi;
 
-  Theta = asin( -1*mat.v[0][2] );
+  Theta = asin( -1*mat(0,2) );
 
-  if( mat.v[0][0] == 0 )
+  if( mat(0,0) == 0 )
     Psi = 0;
   else
-    Psi = atan2( mat.v[0][1], mat.v[0][0] );
+    Psi = atan2( mat(0,1), mat(0,0) );
 
-  if( mat.v[2][2] == 0 )
+  if( mat(2,2) == 0 )
     Phi = 0;
   else
-    Phi = atan2( mat.v[1][2], mat.v[2][2] );
+    Phi = atan2( mat(1,2), mat(2,2) );
 
   /* Resolve Psi to 0 - 359.9999 */
   if (Psi < 0 )      Psi += 2*M_PI;
@@ -387,19 +387,19 @@ void CRRCMath::Quaternion_003::updateEuler()
   if (Phi < 0 )      Phi += 2*M_PI;
   if (Phi >= 2*M_PI) Phi -= 2*M_PI;  
     
-  euler.r[0] = Phi;
-  euler.r[1] = Theta;
-  euler.r[2] = Psi;
+  euler(0) = Phi;
+  euler(1) = Theta;
+  euler(2) = Psi;
 }
 
 void CRRCMath::Quaternion_003::init(CRRCMath::Vector3 eulerAngle)
 {
-  double sphi   = sin(0.5*eulerAngle.r[0]);
-  double cphi   = cos(0.5*eulerAngle.r[0]);
-  double stheta = sin(0.5*eulerAngle.r[1]);
-  double ctheta = cos(0.5*eulerAngle.r[1]);
-  double spsi   = sin(0.5*eulerAngle.r[2]);
-  double cpsi   = cos(0.5*eulerAngle.r[2]);
+  double sphi   = sin(0.5*eulerAngle(0));
+  double cphi   = cos(0.5*eulerAngle(0));
+  double stheta = sin(0.5*eulerAngle(1));
+  double ctheta = cos(0.5*eulerAngle(1));
+  double spsi   = sin(0.5*eulerAngle(2));
+  double cpsi   = cos(0.5*eulerAngle(2));
 
   e0.init(+cpsi*ctheta*cphi +spsi*stheta*sphi, 0);
   e1.init(+cpsi*ctheta*sphi -spsi*stheta*cphi, 0);

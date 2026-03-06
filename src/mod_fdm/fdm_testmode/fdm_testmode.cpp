@@ -57,17 +57,17 @@ void CRRC_AirplaneSim_TestMode::update(TSimInputs* inputs,
   float travel = 1.0;
   
 #if (TEST_SHADOW==1)
-  angle.r[0] =        inputs->aileron*5;
-  angle.r[1] =       -inputs->elevator*5;
-  angle.r[2] = dPsi0 -inputs->rudder*5;
+  angle(0) =        inputs->aileron*5;
+  angle(1) =       -inputs->elevator*5;
+  angle(2) = dPsi0 -inputs->rudder*5;
 #else
-  angle.r[0] =        inputs->aileron * .4;
-  angle.r[1] =       -inputs->elevator * .4;
-  angle.r[2] = dPsi0 -inputs->rudder * .6;
+  angle(0) =        inputs->aileron * .4;
+  angle(1) =       -inputs->elevator * .4;
+  angle(2) = dPsi0 -inputs->rudder * .6;
 #endif
-  pos.r[1]   = basepos.r[1] + travel*(inputs->throttle)*sin(angle.r[2]);
-  pos.r[0]   = basepos.r[0] + travel*(inputs->throttle)*cos(angle.r[2]);
-  pos.r[2]   = basepos.r[2] - travel*(inputs->throttle)*sin(angle.r[1]);
+  pos(1)   = basepos(1) + travel*(inputs->throttle)*sin(angle(2));
+  pos(0)   = basepos(0) + travel*(inputs->throttle)*cos(angle(2));
+  pos(2)   = basepos(2) - travel*(inputs->throttle)*sin(angle(1));
 }
 
 
@@ -80,8 +80,8 @@ CRRC_AirplaneSim_TestMode::CRRC_AirplaneSim_TestMode(CRRCMath::Vector3 ipos) : F
 
 #endif
   dPsi0    = -.5;
-  pos      = CRRCMath::Vector3();
-  angle    = CRRCMath::Vector3();
+  pos      = CRRCMath::Vector3::Zero();
+  angle    = CRRCMath::Vector3::Zero();
 }
 
 
@@ -91,17 +91,17 @@ CRRC_AirplaneSim_TestMode::~CRRC_AirplaneSim_TestMode()
 
 double CRRC_AirplaneSim_TestMode::getPhi()
 {
-  return(angle.r[0]);
+  return(angle(0));
 }
 
 double CRRC_AirplaneSim_TestMode::getTheta()
 {
-  return(angle.r[1]);
+  return(angle(1));
 }
 
 double CRRC_AirplaneSim_TestMode::getPsi()
 {
-  return(angle.r[2]);
+  return(angle(2));
 }
 
 CRRCMath::Vector3 CRRC_AirplaneSim_TestMode::getPos()

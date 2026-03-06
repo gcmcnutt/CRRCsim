@@ -35,7 +35,7 @@ void Cntrl_LimitFlipThrottle::Calc(double      dt,
                                    TSimInputs* pInputsToFDM)
 {
   CRRCMath::Vector3 diff = CRRCMath::Vector3(0, 0, 1) - fdm->WorldToBody(CRRCMath::Vector3(0, 0, 1));
-  double qdiff = diff.r[0]*diff.r[0] + diff.r[1]*diff.r[1] + diff.r[2]*diff.r[2];  
+  double qdiff = diff(0)*diff(0) + diff(1)*diff(1) + diff(2)*diff(2);  
   double max = 1; // assume no limit
   
   if (qdiff > 2) // at least 90°

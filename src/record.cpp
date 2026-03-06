@@ -121,9 +121,9 @@ void FlightRecorder::AirplanePosition(double dt, int multiloop, FDMBase* fdm)
 
     RobotFile::WriteDouble(out, dt*multiloop);
     CRRCMath::Vector3 pos = fdm->getPos();
-    RobotFile::WriteFloat(out, pos.r[0]);
-    RobotFile::WriteFloat(out, pos.r[1]);
-    RobotFile::WriteFloat(out, pos.r[2]);
+    RobotFile::WriteFloat(out, pos(0));
+    RobotFile::WriteFloat(out, pos(1));
+    RobotFile::WriteFloat(out, pos(2));
     RobotFile::WriteInt16(out, fdm->getPhi()*ROBOT_EULER_TO_INT16);
     RobotFile::WriteInt16(out, fdm->getTheta()*ROBOT_EULER_TO_INT16);
     RobotFile::WriteInt16(out, fdm->getPsi()*ROBOT_EULER_TO_INT16);

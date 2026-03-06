@@ -94,6 +94,9 @@ class SimStateHandler : public EventListener
 
     /// reset the simulation
     void reset();
+
+    /// reset the simulation with a specific wind seed (for autoc mode)
+    void reset(unsigned int windSeed);
   
     /// quit the simulation
     void quit();

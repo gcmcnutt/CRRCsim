@@ -98,13 +98,13 @@ BuiltinScenery::BuiltinScenery(const char *mapfile)
     alt_max = conf->getDouble("dimension.height.max");
     alt_min = conf->getDouble("dimension.height.min");
 
-    player.r[0] = conf->getDouble("player.position.x");
-    player.r[1] = conf->getDouble("player.position.y");
-    player.r[2] = conf->getDouble("player.position.z");
+    player(0) = conf->getDouble("player.position.x");
+    player(1) = conf->getDouble("player.position.y");
+    player(2) = conf->getDouble("player.position.z");
 
-    model_start.r[0] = conf->getDouble("model.position.x");
-    model_start.r[1] = conf->getDouble("model.position.y");
-    model_start.r[2] = conf->getDouble("model.position.z");
+    model_start(0) = conf->getDouble("model.position.x");
+    model_start(1) = conf->getDouble("model.position.y");
+    model_start(2) = conf->getDouble("model.position.z");
   }
   catch (XMLException e)
   {
@@ -212,13 +212,13 @@ void BuiltinScenery::calculate_normals()
       v3 = CRRCMath::Vector3(-1*zoom, (height[x-1][z] - height[x][z]), 0);
       v4 = CRRCMath::Vector3(0, (height[x][z+1] - height[x][z]), 1*zoom);
 
-      n1 = v1 * v2;
+      n1 = v1.cross(v2);
       //cout << "n1 " << n1.x << " " << n1.y << " " << n1.z << endl;
-      n2 = v2 * v3;
+      n2 = v2.cross(v3);
       //cout << "n2 " << n2.x << " " << n2.y << " " << n2.z << endl;
-      n3 = v3 * v4;
+      n3 = v3.cross(v4);
       //cout << "n3 " << n3.x << " " << n3.y << " " << n3.z << endl;
-      n4 = v4 * v1;
+      n4 = v4.cross(v1);
       //cout << "n4 " << n4.x << " " << n4.y << " " << n4.z << endl;
 
       normal[x][z] = n1 + n2 + n3 + n4;
@@ -249,10 +249,10 @@ void BuiltinScenery::draw_normals(float length)
       glBegin(GL_LINES);
       glColor3f(1.0, 0.0, 0.0);
       glVertex3f(xpos, height[x][z], zpos);
-      glVertex3f( xpos + length * normal[x][z].r[0],
-                  height[x][z] + length * normal[x][z].r[1],
-                  zpos + length * normal[x][z].r[2]);
-      //glVertex3f(zoom*x + zoom*height[x][y] + normal[x][y].r[0], zoom*y + zoom*height[x][y] + normal[x][y].r[1], zoom*height[x][y] + normal[x][y].r[2]);
+      glVertex3f( xpos + length * normal[x][z](0),
+                  height[x][z] + length * normal[x][z](1),
+                  zpos + length * normal[x][z](2));
+      //glVertex3f(zoom*x + zoom*height[x][y] + normal[x][y](0), zoom*y + zoom*height[x][y] + normal[x][y](1), zoom*height[x][y] + normal[x][y](2));
       glEnd();
     }
   }
@@ -322,33 +322,33 @@ void BuiltinScenery::compile_display_list()
       xpos = x*zoom - xoff;
       zpos = z*zoom - zoff;
 
-      glNormal3f(normal[x][z].r[0], normal[x][z].r[1], normal[x][z].r[2]);
+      glNormal3f(normal[x][z](0), normal[x][z](1), normal[x][z](2));
       glVertex3f(xpos, height[x][z], zpos);
 
       xpos = (x+1)*zoom - xoff;
       zpos = z*zoom - zoff;
-      glNormal3f(normal[x+1][z].r[0], normal[x+1][z].r[1], normal[x+1][z].r[2]);
+      glNormal3f(normal[x+1][z](0), normal[x+1][z](1), normal[x+1][z](2));
       glVertex3f(xpos, height[x+1][z], zpos);
 
       xpos = x*zoom - xoff;
       zpos = (z+1)*zoom - zoff;
-      glNormal3f(normal[x][z+1].r[0], normal[x][z+1].r[1], normal[x][z+1].r[2]);
+      glNormal3f(normal[x][z+1](0), normal[x][z+1](1), normal[x][z+1](2));
       glVertex3f(xpos, height[x][z+1], zpos);
       //glColor3f(0.5f, 1.0f, 0.5f);
       xpos = x*zoom - xoff;
       zpos = (z+1)*zoom - zoff;
 
-      glNormal3f(normal[x][z+1].r[0], normal[x][z+1].r[1], normal[x][z+1].r[2]);
+      glNormal3f(normal[x][z+1](0), normal[x][z+1](1), normal[x][z+1](2));
       glVertex3f(xpos, height[x][z+1], zpos);
 
       xpos = (x+1)*zoom - xoff;
       zpos = z*zoom - zoff;
-      glNormal3f(normal[x+1][z].r[0], normal[x+1][z].r[1], normal[x+1][z].r[2]);
+      glNormal3f(normal[x+1][z](0), normal[x+1][z](1), normal[x+1][z](2));
       glVertex3f(xpos, height[x+1][z], zpos);
 
       xpos = (x+1)*zoom - xoff;
       zpos = (z+1)*zoom - zoff;
-      glNormal3f(normal[x+1][z+1].r[0], normal[x+1][z+1].r[1], normal[x+1][z+1].r[2]);
+      glNormal3f(normal[x+1][z+1](0), normal[x+1][z+1](1), normal[x+1][z+1](2));
       glVertex3f(xpos, height[x+1][z+1], zpos);
       //draw_normal(x, y);
     }
@@ -385,22 +385,22 @@ void BuiltinScenery::compile_display_list()
         glColor3f(0.5f, 1.0f, 0.5f);
       }
 
-      glNormal3f(normal[x][z].r[0], normal[x][z].r[1], normal[x][z].r[2]);
+      glNormal3f(normal[x][z](0), normal[x][z](1), normal[x][z](2));
       glVertex3f(xpos, height[x][z], zpos);
 
       xpos = (x+1)*zoom - xoff;
       zpos = z*zoom - zoff;
-      //glNormal3f(normal[x+1][y].r[0], normal[x+1][y].r[1], normal[x+1][y].r[2]);
+      //glNormal3f(normal[x+1][y](0), normal[x+1][y](1), normal[x+1][y](2));
       glVertex3f(xpos, height[x+1][z], zpos);
 
       xpos = (x+1)*zoom - xoff;
       zpos = (z+1)*zoom - zoff;
-      //glNormal3f(normal[x+1][y+1].r[0], normal[x+1][y+1].r[1], normal[x+1][y+1].r[2]);
+      //glNormal3f(normal[x+1][y+1](0), normal[x+1][y+1](1), normal[x+1][y+1](2));
       glVertex3f(xpos, height[x+1][z+1], zpos);
 
       xpos = x*zoom - xoff;
       zpos = (z+1)*zoom - zoff;
-      //glNormal3f(normal[x][y+1].r[0], normal[x][y+1].r[1], normal[x][y+1].r[2]);
+      //glNormal3f(normal[x][y+1](0), normal[x][y+1](1), normal[x][y+1](2));
       glVertex3f(xpos, height[x][z+1], zpos);
     }
   }
@@ -435,8 +435,8 @@ void BuiltinScenery::setup_drawing_state()
   glDisable(GL_COLOR_MATERIAL);
 
   // viewing transformation
-  gluLookAt(player_pos.r[0], player_pos.r[1], player_pos.r[2],
-            Video::looking_pos.r[0], Video::looking_pos.r[1], Video::looking_pos.r[2],
+  gluLookAt(player_pos(0), player_pos(1), player_pos(2),
+            Video::looking_pos(0), Video::looking_pos(1), Video::looking_pos(2),
             0.0, 1.0, 0.0);
 
   glEnable(GL_LIGHTING);
@@ -737,10 +737,12 @@ int BuiltinSceneryDavis::getWindComponents(double X_cg, double Y_cg, double Z_cg
     float *x_wind_velocity, float *y_wind_velocity, float *z_wind_velocity)
 {
   float flWindVel = cfg->wind->getVelocity();
-  *x_wind_velocity = -1 * flWindVel * cos(M_PI*cfg->wind->getDirection()/180);
-  *y_wind_velocity = -1 * flWindVel * sin(M_PI*cfg->wind->getDirection()/180);
+  // VARIATIONS1: Apply wind direction offset from scenario (radians -> degrees)
+  double effectiveWindDir = cfg->wind->getDirection() + (Global::windDirectionOffset * 180.0 / M_PI);
+  *x_wind_velocity = -1 * flWindVel * cos(M_PI*effectiveWindDir/180);
+  *y_wind_velocity = -1 * flWindVel * sin(M_PI*effectiveWindDir/180);
   *z_wind_velocity = 0.;
-  
+
   return 0;
 }
 
@@ -1622,8 +1624,10 @@ int BuiltinSceneryCapeCod::getWindComponents(double X_cg, double Y_cg, double Z_
     float *x_wind_velocity, float *y_wind_velocity, float *z_wind_velocity)
 {
   float flWindVel = cfg->wind->getVelocity();
-  *x_wind_velocity = -1 * flWindVel * cos(M_PI*cfg->wind->getDirection()/180);
-  *y_wind_velocity = -1 * flWindVel * sin(M_PI*cfg->wind->getDirection()/180);
+  // VARIATIONS1: Apply wind direction offset from scenario (radians -> degrees)
+  double effectiveWindDir = cfg->wind->getDirection() + (Global::windDirectionOffset * 180.0 / M_PI);
+  *x_wind_velocity = -1 * flWindVel * cos(M_PI*effectiveWindDir/180);
+  *y_wind_velocity = -1 * flWindVel * sin(M_PI*effectiveWindDir/180);
   *z_wind_velocity = 0.;
 
   if (cfg->getDynamicSoaring()==FALSE)

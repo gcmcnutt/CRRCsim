@@ -27,17 +27,37 @@
 #include "../../mod_fdm/fdm.h"
 #include "../../mod_fdm/eom01/eom01.h"
 #include "../../mod_misc/crrc_rand.h"
+#include "../../mod_windfield/windfield.h"
 #include "inputdev_autoc.h"
 #include <chrono>
 #include <stdio.h>
 #include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/iostreams/stream.hpp>
+#include <boost/iostreams/device/back_inserter.hpp>
 #include <cstdlib>
+#include <sstream>
 
 using namespace std::chrono;
 using namespace std;
 using boost::asio::ip::tcp;
 
+
+// DETAILED_LOGGING controls noisy RNG trace output - leave undefined for normal use
+
 namespace {
+
+// Hash serialized data instead of raw memory to avoid padding issues
+template<typename T>
+std::pair<const void*, size_t> serializeForHash(const T& data, std::vector<char>& buffer) {
+  buffer.clear();
+  boost::iostreams::back_insert_device<std::vector<char>> inserter(buffer);
+  boost::iostreams::stream<boost::iostreams::back_insert_device<std::vector<char>>> stream(inserter);
+  boost::archive::binary_oarchive archive(stream);
+  archive << data;
+  stream.flush();
+  return std::make_pair(buffer.data(), buffer.size());
+}
 
 // Runtime-configurable intervals (sim time)
 unsigned long parseIntervalFromEnv(const char* name, unsigned long fallback) {
@@ -91,10 +111,122 @@ unsigned long getCycleCounterOverflow() {
   return overflow > 0 ? overflow : 1;
 }
 
-static bool gAutocDeterministicMode = (std::getenv("AUTOC_DETERMINISTIC") != nullptr);
+static bool gInDeterministicTest = false;
 
 // Reference to the global aircraftState used by GP evaluation (from autoc-eval.cc)
 extern AircraftState aircraftState;
+
+// Physics trace buffer for collecting detailed FDM state
+// Cleared at start of each evaluation, sent back with EvalResults only for elite reeval
+std::vector<PhysicsTraceEntry> gCurrentPhysicsTrace;
+
+// Extern globals defined in fdm_larcsim.cpp for trace capture
+// We set these so the FDM can access worker identity when capturing traces
+extern "C" {
+  extern int32_t gTraceWorkerId;
+  extern int32_t gTraceWorkerPid;
+  extern int32_t gTraceEvalCounter;
+  extern int32_t gTracePathIndex;
+  extern uint32_t gPhysicsStepCounter;
+  extern bool gTraceIsEliteReeval;  // Only collect trace when true
+}
+
+// Helper function to capture current FDM state into physics trace
+// Called from FDM code (fdm_larcsim::update) to log detailed physics state
+// Declared extern "C" to make it easily callable from FDM
+extern "C" void capturePhysicsTrace(
+    uint32_t step, double simTimeMsec, double dtSec,
+    int32_t workerId, int32_t workerPid, int32_t evalCounter,
+    const double* pos, const double* vel, const double* acc, const double* accPast,
+    const double* quat, const double* quatDotPast,
+    const double* omegaBody, const double* omegaDotBody,
+    const double* rate, const double* ratePast,
+    double alpha, double beta, double vRelWind,
+    const double* velRelGround, const double* velRelAir,
+    const double* vLocal, const double* vLocalDot,
+    double cosAlpha, double sinAlpha, double cosBeta,
+    double CL, double CD,
+    double CL_left, double CL_cent, double CL_right, double CL_wing,
+    double Cl, double Cm, double Cn, double QS,
+    const double* forceBody, const double* momentBody,
+    const double* wind, const double* localAirmass, const double* gustBody,
+    double density, double gravity,
+    double geocentricLat, double geocentricLon, double geocentricR,
+    double pitchCommand, double rollCommand, double throttleCommand,
+    double elevator, double aileron, double rudder, double throttle,
+    uint16_t rngState16, uint32_t rngState32,
+    int32_t pathIndex) {
+  // Only collect trace for elite reeval to save CPU
+  if (!gTraceIsEliteReeval) {
+    return;
+  }
+  PhysicsTraceEntry entry;
+  entry.step = step;
+  entry.simTimeMsec = simTimeMsec;
+  entry.dtSec = dtSec;
+  entry.workerId = workerId;
+  entry.workerPid = workerPid;
+  entry.evalCounter = evalCounter;
+
+  memcpy(entry.pos, pos, 3 * sizeof(double));
+  memcpy(entry.vel, vel, 3 * sizeof(double));
+  memcpy(entry.acc, acc, 3 * sizeof(double));
+  memcpy(entry.accPast, accPast, 3 * sizeof(double));
+  memcpy(entry.quat, quat, 4 * sizeof(double));
+  memcpy(entry.quatDotPast, quatDotPast, 4 * sizeof(double));
+  memcpy(entry.omegaBody, omegaBody, 3 * sizeof(double));
+  memcpy(entry.omegaDotBody, omegaDotBody, 3 * sizeof(double));
+  memcpy(entry.rate, rate, 3 * sizeof(double));
+  memcpy(entry.ratePast, ratePast, 3 * sizeof(double));
+
+  entry.alpha = alpha;
+  entry.beta = beta;
+  entry.vRelWind = vRelWind;
+  memcpy(entry.velRelGround, velRelGround, 3 * sizeof(double));
+  memcpy(entry.velRelAir, velRelAir, 3 * sizeof(double));
+  memcpy(entry.vLocal, vLocal, 3 * sizeof(double));
+  memcpy(entry.vLocalDot, vLocalDot, 3 * sizeof(double));
+
+  entry.cosAlpha = cosAlpha;
+  entry.sinAlpha = sinAlpha;
+  entry.cosBeta = cosBeta;
+  entry.CL = CL;
+  entry.CD = CD;
+  entry.CL_left = CL_left;
+  entry.CL_cent = CL_cent;
+  entry.CL_right = CL_right;
+  entry.CL_wing = CL_wing;
+  entry.Cl = Cl;
+  entry.Cm = Cm;
+  entry.Cn = Cn;
+  entry.QS = QS;
+
+  memcpy(entry.forceBody, forceBody, 3 * sizeof(double));
+  memcpy(entry.momentBody, momentBody, 3 * sizeof(double));
+  memcpy(entry.wind, wind, 3 * sizeof(double));
+  memcpy(entry.localAirmass, localAirmass, 3 * sizeof(double));
+  memcpy(entry.gustBody, gustBody, 6 * sizeof(double));  // Now 6 elements: v_V_gust + v_R_omega_gust
+
+  entry.density = density;
+  entry.gravity = gravity;
+  entry.geocentricLat = geocentricLat;
+  entry.geocentricLon = geocentricLon;
+  entry.geocentricR = geocentricR;
+
+  entry.pitchCommand = pitchCommand;
+  entry.rollCommand = rollCommand;
+  entry.throttleCommand = throttleCommand;
+  entry.elevator = elevator;
+  entry.aileron = aileron;
+  entry.rudder = rudder;
+  entry.throttle = throttle;
+
+  entry.rngState16 = rngState16;
+  entry.rngState32 = rngState32;
+  entry.pathIndex = pathIndex;
+
+  gCurrentPhysicsTrace.push_back(entry);
+}
 
 // Single pending command to model compute latency between sensor sample and applied outputs
 struct PendingCommand {
@@ -108,12 +240,6 @@ static PendingCommand gPendingCommand;
 
 void MyGP::evaluate() {}
 void MyGP::evalTask(WorkerContext& context) {}
-
-boost::iostreams::stream<boost::iostreams::array_source> charArrayToIstream(const std::vector<char> &charArray)
-{
-  return boost::iostreams::stream<boost::iostreams::array_source>(
-      boost::iostreams::array_source(charArray.data(), charArray.size()));
-}
 
 #ifdef DETAILED_LOGGING
 char *get_iso8601_timestamp(char *buf, size_t len)
@@ -142,10 +268,13 @@ char *get_iso8601_timestamp(char *buf, size_t len)
 #endif
 
 T_TX_InterfaceAUTOC::T_TX_InterfaceAUTOC()
+  : callbackPort(0)  // Initialize to safe default
 {
 #if DEBUG_TX_INTERFACE > 0
   printf("T_TX_InterfaceAUTOC::T_TX_InterfaceAUTOC()\n");
 #endif
+  workerPid = static_cast<int>(getpid());
+  workerIndex = 0;
 }
 
 T_TX_InterfaceAUTOC::~T_TX_InterfaceAUTOC()
@@ -196,6 +325,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 #if DEBUG_TX_INTERFACE > 1
   printf("void T_TX_InterfaceAUTOC::getInputData(TSimInputs* inputs)\n");
 #endif
+  constexpr size_t DEBUG_SAMPLE_LIMIT = 64;
   // occasionally ask for a model update?
   unsigned long simTimeMsec = Global::Simulation->getSimulationTimeSinceReset();
 
@@ -253,10 +383,29 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     if (evalDataEmpty)
     {
       evalData = receiveRPC<EvalData>(*socket_);
+      const uint64_t localGpHash = hashByteVector(evalData.gp);
+      if (evalData.gpHash == 0) {
+        evalData.gpHash = localGpHash;
+      }
       ensureScenarioMetadata(evalData);
-      
-      Global::Simulation->reset();
-      lastUpdateTimeMsec = 0;
+
+      // Set flag for RNG tracing when entering deterministic test
+      gInDeterministicTest = (!evalData.scenarioList.empty() &&
+                              evalData.scenarioList.front().enableDeterministicLogging);
+
+      // Enable determinism tracker on first deterministic test
+      static bool trackerInitialized = false;
+      if (gInDeterministicTest && !trackerInitialized) {
+        // Determinism tracker disabled
+        trackerInitialized = true;
+      }
+
+      // Log job receipt with hash verification
+      // (disabled)
+
+      // Log scenario metadata hash during determinism test
+      // (disabled)
+
       evalDataEmpty = false;
       priorPathSelector = -1;
       pathSelector = 0;
@@ -266,6 +415,10 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       evalResults.crashReasonList.clear();
       evalResults.pathList = evalData.pathList;
       evalResults.gp = evalData.gp;
+      evalResults.gpHash = evalData.gpHash;
+      if (evalResults.gpHash == 0 && !evalResults.gp.empty()) {
+        evalResults.gpHash = hashByteVector(evalResults.gp);
+      }
       if (!evalData.scenarioList.empty()) {
         evalResults.scenario = evalData.scenarioList.front();
       } else {
@@ -273,9 +426,14 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       }
       evalResults.scenarioList.clear();
       evalResults.scenarioList.reserve(evalData.scenarioList.size());
+      evalResults.debugSamples.clear();
+      evalResults.physicsTrace.clear();
+      evalResults.workerId = workerIndex;
+      evalResults.workerPid = workerPid;
+      evalResults.workerEvalCounter = evalCounter;
 
 #ifdef DETAILED_LOGGING
-      if (gAutocDeterministicMode && !evalData.scenarioList.empty()) {
+      if (!evalData.scenarioList.empty()) {
         const auto& firstScenario = evalData.scenarioList.front();
         std::cerr << "AUTOC deterministic wind seed=" << firstScenario.windSeed
                   << " pathVariant=" << firstScenario.pathVariantIndex
@@ -283,6 +441,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       }
 #endif
       aircraftStates.clear();
+      debugSamplesCurrentPath.clear();
 
       // Clean up previous interpreters
       if (gp)
@@ -318,7 +477,8 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       if (looksLikeBinaryArchive) {
         // This looks like Boost binary serialized bytecode data
         try {
-          boost::iostreams::stream<boost::iostreams::array_source> bytecodeStream = charArrayToIstream(evalData.gp);
+          boost::iostreams::array_source source(evalData.gp.data(), evalData.gp.size());
+          boost::iostreams::stream<boost::iostreams::array_source> bytecodeStream(source);
           boost::archive::binary_iarchive archive(bytecodeStream);
           interpreter = new GPBytecodeInterpreter();
           archive >> *interpreter;
@@ -330,7 +490,8 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       } else {
         // This looks like GP tree data
         try {
-          boost::iostreams::stream<boost::iostreams::array_source> gpStream = charArrayToIstream(evalData.gp);
+          boost::iostreams::array_source source(evalData.gp.data(), evalData.gp.size());
+          boost::iostreams::stream<boost::iostreams::array_source> gpStream(source);
           gp = new MyGP();
           gp->load(gpStream);
           gp->resolveNodeValues(adfNs);
@@ -340,6 +501,8 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
           return;
         }
       }
+      // Cache quat dot past reset
+      quatDotPast[0] = quatDotPast[1] = quatDotPast[2] = quatDotPast[3] = 0.0;
       return;
     }
 
@@ -349,30 +512,59 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       priorPathSelector = pathSelector;
       ScenarioMetadata activeScenario = scenarioForPathIndex(evalData, static_cast<size_t>(pathSelector));
 
-      // reset sim
-      Global::Simulation->reset();
+      // VARIATIONS1: Set entry and wind variation offsets from scenario
+      // These are read by initialize_flight_model() and windfield during reset
+      Global::entryHeadingOffset = activeScenario.entryHeadingOffset;
+      Global::entryRollOffset = activeScenario.entryRollOffset;
+      Global::entryPitchOffset = activeScenario.entryPitchOffset;
+      Global::entrySpeedFactor = activeScenario.entrySpeedFactor;
+      Global::windDirectionOffset = activeScenario.windDirectionOffset;
+
+#ifdef DETAILED_LOGGING
+      std::cerr << "VARIATIONS1: heading=" << (Global::entryHeadingOffset * 180.0/M_PI)
+                << "° roll=" << (Global::entryRollOffset * 180.0/M_PI)
+                << "° pitch=" << (Global::entryPitchOffset * 180.0/M_PI)
+                << "° speed=" << Global::entrySpeedFactor
+                << "x wind=" << (Global::windDirectionOffset * 180.0/M_PI) << "°" << std::endl;
+#endif
+
+      // Reset simulation with wind seed
+      // This will:
+      // 1. Set RNG to windSeed
+      // 2. Call Init_mod_windfield() which creates thermals (consuming RNG deterministically)
+      // 3. Call initialize_gust() which resets all RandGauss objects to phase=0
+      Global::Simulation->reset(activeScenario.windSeed);
       simCrashed = false;
       lastUpdateTimeMsec = 0;
       pathIndex = 0;
       gPendingCommand = PendingCommand{};
       aircraftStates.clear();
+      gCurrentPhysicsTrace.clear();  // Clear physics trace for new path
 
-      CRRC_Random::reset(activeScenario.windSeed);
-      Init_mod_windfield();
+      // Set worker identity globals for FDM trace capture
+      gTraceWorkerId = workerIndex;
+      gTraceWorkerPid = workerPid;
+      gTraceEvalCounter = evalCounter;
+      gTracePathIndex = pathSelector;
+      gPhysicsStepCounter = 0;  // Reset step counter for new path
+      gTraceIsEliteReeval = evalData.isEliteReeval;  // Only collect trace for elite reeval
+
 #ifdef DETAILED_LOGGING
-      if (gAutocDeterministicMode) {
-        std::cerr << "AUTOC deterministic path start pathSelector=" << pathSelector
-                  << " pathVariant=" << activeScenario.pathVariantIndex
-                  << " windVariant=" << activeScenario.windVariantIndex
-                  << " windSeed=" << activeScenario.windSeed << std::endl;
-      }
+      // Start ordered event logging for this path (noisy RNG trace)
+      RandGaussTrace::startEventLog(1000);
+#endif
+#ifdef DETAILED_LOGGING
+      std::cerr << "AUTOC deterministic path start pathSelector=" << pathSelector
+                << " pathVariant=" << activeScenario.pathVariantIndex
+                << " windVariant=" << activeScenario.windVariantIndex
+                << " windSeed=" << activeScenario.windSeed << std::endl;
 #endif
       
       // Record initial aircraft state at time 0 to match path start
       // Get initial position and orientation after reset
-      gp_vec3 initialPos{static_cast<gp_scalar>(Global::aircraft->getPos().r[0] * FEET_TO_METERS),
-                                static_cast<gp_scalar>(Global::aircraft->getPos().r[1] * FEET_TO_METERS),
-                                static_cast<gp_scalar>(Global::aircraft->getPos().r[2] * FEET_TO_METERS)};
+      gp_vec3 initialPos{static_cast<gp_scalar>(Global::aircraft->getPos()(0) * FEET_TO_METERS),
+                                static_cast<gp_scalar>(Global::aircraft->getPos()(1) * FEET_TO_METERS),
+                                static_cast<gp_scalar>(Global::aircraft->getPos()(2) * FEET_TO_METERS)};
       
       EOM01* eom01 = dynamic_cast<EOM01*>(Global::aircraft->getFDM());
       gp_quat initialQuat;
@@ -385,24 +577,88 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       
       CRRCMath::Vector3 fdm_velocity = Global::aircraft->getFDM()->getVel();
       gp_vec3 initialVel{
-          static_cast<gp_scalar>(fdm_velocity.r[0] * FEET_TO_METERS),
-          static_cast<gp_scalar>(fdm_velocity.r[1] * FEET_TO_METERS), 
-          static_cast<gp_scalar>(fdm_velocity.r[2] * FEET_TO_METERS)
+          static_cast<gp_scalar>(fdm_velocity(0) * FEET_TO_METERS),
+          static_cast<gp_scalar>(fdm_velocity(1) * FEET_TO_METERS), 
+          static_cast<gp_scalar>(fdm_velocity(2) * FEET_TO_METERS)
       };
       gp_scalar initialSpeed = initialVel.norm();
       
       AircraftState initialState{0, initialSpeed, initialVel, initialQuat, initialPos,
                                  static_cast<gp_scalar>(0.0f), static_cast<gp_scalar>(0.0f), static_cast<gp_scalar>(0.0f), 0};
       aircraftStates.push_back(initialState);
-
-#ifdef DETAILED_LOGGING
-      {
-        char tbuf[100];
-        printf("%s: reset: %ld % 8.2f %8.2f %8.2f\n", get_iso8601_timestamp(tbuf, sizeof(tbuf)),
-               simTimeMsec, Global::aircraft->getPos().r[0],
-               Global::aircraft->getPos().r[1], Global::aircraft->getPos().r[2]);
+      if (debugSamplesCurrentPath.empty()) {
+        DebugSample sample;
+        sample.pathIndex = pathSelector;
+        sample.stepIndex = 0;
+        sample.simTimeMsec = static_cast<gp_scalar>(0.0f);
+        sample.dtSec = static_cast<gp_scalar>(Global::dt);
+        sample.simSteps = static_cast<gp_scalar>(Global::Simulation->getSimulationTimeSinceReset() / 1000.0);
+        sample.velRelGround = initialVel;
+        sample.velRelAirmass = gp_vec3::Zero();
+        sample.position = initialPos;
+        sample.velocity = initialVel;
+        sample.acceleration = gp_vec3::Zero();
+        sample.accelPast = gp_vec3::Zero();
+        sample.angularRates = gp_vec3::Zero();
+        sample.angularAccelPast = gp_vec3::Zero();
+        sample.quatDotPast = gp_quat::Identity();
+        sample.windBody = gp_vec3::Zero();
+        sample.orientation = initialQuat;
+        sample.pitchCommand = static_cast<gp_scalar>(0.0f);
+        sample.rollCommand = static_cast<gp_scalar>(0.0f);
+        sample.throttleCommand = static_cast<gp_scalar>(0.0f);
+        sample.elevatorSim = static_cast<gp_scalar>(0.0f);
+        sample.aileronSim = static_cast<gp_scalar>(0.0f);
+        sample.throttleSim = static_cast<gp_scalar>(0.0f);
+        sample.massKg = static_cast<gp_scalar>(eom01 ? eom01->getMass() : 0.0f);
+        sample.density = static_cast<gp_scalar>(eom01 ? eom01->getDensity() : 0.0f);
+        sample.gravity = static_cast<gp_scalar>(eom01 ? eom01->getGravity() : 0.0f);
+        sample.alpha = static_cast<gp_scalar>(eom01 ? eom01->getAlpha() : 0.0f);
+        sample.beta = static_cast<gp_scalar>(eom01 ? eom01->getBeta() : 0.0f);
+        sample.vRelWind = static_cast<gp_scalar>(eom01 ? eom01->getVRelWind() : 0.0f);
+        if (eom01) {
+          CRRCMath::Vector3 vLocal = eom01->getVLocal();
+          sample.vLocal = gp_vec3{
+              static_cast<gp_scalar>(vLocal(0) * FEET_TO_METERS),
+              static_cast<gp_scalar>(vLocal(1) * FEET_TO_METERS),
+              static_cast<gp_scalar>(vLocal(2) * FEET_TO_METERS)};
+          CRRCMath::Vector3 vLocalDot = eom01->getVLocalDot();
+          sample.vLocalDot = gp_vec3{
+              static_cast<gp_scalar>(vLocalDot(0) * FEET_TO_METERS),
+              static_cast<gp_scalar>(vLocalDot(1) * FEET_TO_METERS),
+              static_cast<gp_scalar>(vLocalDot(2) * FEET_TO_METERS)};
+          CRRCMath::Vector3 omegaBody = eom01->getOmegaBody();
+          sample.omegaBody = gp_vec3{
+              static_cast<gp_scalar>(omegaBody(0)),
+              static_cast<gp_scalar>(omegaBody(1)),
+              static_cast<gp_scalar>(omegaBody(2))};
+          CRRCMath::Vector3 omegaDotBody = eom01->getOmegaDot();
+          sample.omegaDotBody = gp_vec3{
+              static_cast<gp_scalar>(omegaDotBody(0)),
+              static_cast<gp_scalar>(omegaDotBody(1)),
+              static_cast<gp_scalar>(omegaDotBody(2))};
+          sample.latGeoc = static_cast<gp_scalar>(eom01->getLatGeocentric());
+          sample.lonGeoc = static_cast<gp_scalar>(eom01->getLonGeocentric());
+          sample.radiusToVehicle = static_cast<gp_scalar>(eom01->getRadiusToVehicle() * FEET_TO_METERS);
+        } else {
+          sample.vLocal = gp_vec3::Zero();
+          sample.vLocalDot = gp_vec3::Zero();
+          sample.omegaBody = gp_vec3::Zero();
+          sample.omegaDotBody = gp_vec3::Zero();
+          sample.latGeoc = static_cast<gp_scalar>(0.0f);
+          sample.lonGeoc = static_cast<gp_scalar>(0.0f);
+          sample.radiusToVehicle = static_cast<gp_scalar>(0.0f);
+        }
+        sample.latDotPast = static_cast<gp_scalar>(eom01 ? eom01->getLatDotPast() : 0.0f);
+        sample.lonDotPast = static_cast<gp_scalar>(eom01 ? eom01->getLonDotPast() : 0.0f);
+        sample.radiusDotPast = static_cast<gp_scalar>(eom01 ? eom01->getRadiusDotPast() : 0.0f);
+        sample.rngState16 = CRRC_Random::getState16();
+        sample.rngState32 = CRRC_Random::getState32();
+        debugSamplesCurrentPath.push_back(sample);
       }
-#endif
+
+      // Increment evaluation counter BEFORE any logging (needed for warmup check)
+      evalCounter++;
 
       // re-initialize aircraft state from incoming payload
       // cfgfile->setAttributeOverwrite("launch.velocity_rel", std::to_string(mainToSim.aircraftState.dRelVel / FEET_TO_METERS));
@@ -429,9 +685,9 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     // get actual velocity vector from FDM (in feet/s, convert to m/s) - ground speed
     CRRCMath::Vector3 fdm_velocity = Global::aircraft->getFDM()->getVel();
     gp_vec3 velocity_vector{
-        fdm_velocity.r[0] * FEET_TO_METERS,  // North
-        fdm_velocity.r[1] * FEET_TO_METERS,  // East
-        fdm_velocity.r[2] * FEET_TO_METERS   // Down
+        fdm_velocity(0) * FEET_TO_METERS,  // North
+        fdm_velocity(1) * FEET_TO_METERS,  // East
+        fdm_velocity(2) * FEET_TO_METERS   // Down
     };
     if (isnan(velocity_vector[0]) || isnan(velocity_vector[1]) || isnan(velocity_vector[2]))
     {
@@ -471,9 +727,9 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     q.normalize();
 
     // position
-    gp_vec3 p{static_cast<gp_scalar>(Global::aircraft->getPos().r[0] * FEET_TO_METERS),
-              static_cast<gp_scalar>(Global::aircraft->getPos().r[1] * FEET_TO_METERS),
-              static_cast<gp_scalar>(Global::aircraft->getPos().r[2] * FEET_TO_METERS)};
+    gp_vec3 p{static_cast<gp_scalar>(Global::aircraft->getPos()(0) * FEET_TO_METERS),
+              static_cast<gp_scalar>(Global::aircraft->getPos()(1) * FEET_TO_METERS),
+              static_cast<gp_scalar>(Global::aircraft->getPos()(2) * FEET_TO_METERS)};
     if (isnan(p[0]) || isnan(p[1]) || isnan(p[2]))
     {
       p = gp_vec3::Zero();
@@ -487,20 +743,10 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 
 
     // convert sim state to AircraftState
+    // Commands always start at zero before GP evaluation (prevents pollution across re-evals)
     aircraftState = {pathIndex, v, velocity_vector, q, p,
-                     pitchCommand, rollCommand, throttleCommand,
+                     static_cast<gp_scalar>(0.0f), static_cast<gp_scalar>(0.0f), static_cast<gp_scalar>(0.0f),
                      simTimeMsec};
-
-#ifdef DETAILED_LOGGING
-    {
-      char tbuf[1000];
-      printf("%s: aircraft_conversion: crrcsim_pos_ft[%8.2f,%8.2f,%8.2f] -> autoc_pos_m[%8.2f,%8.2f,%8.2f] v_ft=%8.2f->v_m=%8.2f\n",
-             get_iso8601_timestamp(tbuf, sizeof(tbuf)),
-             Global::aircraft->getPos().r[0], Global::aircraft->getPos().r[1], Global::aircraft->getPos().r[2],
-             p[0], p[1], p[2],
-             Global::aircraft->getFDM()->getVRelAirmass(), v);
-    }
-#endif
 
     CrashReason crashReason = CrashReason::None;
 
@@ -547,19 +793,40 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       std::vector<AircraftState> aircraftStatesCopy = aircraftStates;
       evalResults.aircraftStateList.push_back(aircraftStatesCopy);
       aircraftStates.clear();
+      // Only send physics trace data for elite reeval (expensive, only needed for divergence analysis)
+      if (evalData.isEliteReeval) {
+        if (!debugSamplesCurrentPath.empty()) {
+          evalResults.debugSamples.push_back(debugSamplesCurrentPath);
+        } else {
+          evalResults.debugSamples.emplace_back();
+        }
+        if (!gCurrentPhysicsTrace.empty()) {
+          evalResults.physicsTrace.push_back(gCurrentPhysicsTrace);
+        } else {
+          evalResults.physicsTrace.emplace_back();
+        }
+      }
+      // Always clear trace buffers (whether sent or not)
+      debugSamplesCurrentPath.clear();
+      gCurrentPhysicsTrace.clear();
+
+#ifdef DETAILED_LOGGING
+      // Dump ordered RandGauss event log for this path (noisy)
+      RandGaussTrace::dumpAndClearEventLog();
+#endif
+
+      // Dtest logging disabled
 
       // prepare for the next path if any
       if (++pathSelector < evalData.pathList.size())
       {
         path = evalData.pathList.at(pathSelector);
 #ifdef DETAILED_LOGGING
-        if (gAutocDeterministicMode) {
-          ScenarioMetadata nextScenario = scenarioForPathIndex(evalData, static_cast<size_t>(pathSelector));
-          std::cerr << "AUTOC deterministic path start pathSelector=" << pathSelector
-                    << " pathVariant=" << nextScenario.pathVariantIndex
-                    << " windVariant=" << nextScenario.windVariantIndex
-                    << " windSeed=" << nextScenario.windSeed << std::endl;
-        }
+        ScenarioMetadata nextScenario = scenarioForPathIndex(evalData, static_cast<size_t>(pathSelector));
+        std::cerr << "AUTOC deterministic path start pathSelector=" << pathSelector
+                  << " pathVariant=" << nextScenario.pathVariantIndex
+                  << " windVariant=" << nextScenario.windVariantIndex
+                  << " windSeed=" << nextScenario.windSeed << std::endl;
 #endif
       }
       else
@@ -693,6 +960,14 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     }
 #endif
 
+    // Capture temporal history before GP evaluation (for GETDPHI_PREV, GETDTHETA_PREV, etc.)
+    {
+      VectorPathProvider pathProvider(path, aircraftState.getThisPathIndex());
+      gp_scalar dPhi = executeGetDPhi(pathProvider, aircraftState, 0.0f);
+      gp_scalar dTheta = executeGetDTheta(pathProvider, aircraftState, 0.0f);
+      aircraftState.recordErrorHistory(dPhi, dTheta, simTimeMsec);
+    }
+
     // Evaluate immediately on this snapshot
     if (isGPTreeData) {
       gp->NthMyGene(0)->evaluate(path, *gp, 0);
@@ -702,6 +977,153 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 
     // Save post-eval state for results
     aircraftStates.push_back(aircraftState);
+    if (debugSamplesCurrentPath.size() < DEBUG_SAMPLE_LIMIT) {
+      DebugSample sample;
+      sample.pathIndex = pathSelector;
+      sample.stepIndex = static_cast<int>(aircraftStates.size() - 1);
+      sample.simTimeMsec = static_cast<gp_scalar>(simTimeMsec);
+      sample.dtSec = static_cast<gp_scalar>(Global::dt);
+      sample.simSteps = static_cast<gp_scalar>(Global::Simulation->getSimulationTimeSinceReset() / 1000.0);
+      if (eom01) {
+        CRRCMath::Vector3 vGround = eom01->getVelRelGroundVec();
+        sample.velRelGround = gp_vec3{
+            static_cast<gp_scalar>(vGround(0) * FEET_TO_METERS),
+            static_cast<gp_scalar>(vGround(1) * FEET_TO_METERS),
+            static_cast<gp_scalar>(vGround(2) * FEET_TO_METERS)};
+        CRRCMath::Vector3 vAir = eom01->getVelRelAirmassVec();
+        sample.velRelAirmass = gp_vec3{
+            static_cast<gp_scalar>(vAir(0) * FEET_TO_METERS),
+            static_cast<gp_scalar>(vAir(1) * FEET_TO_METERS),
+            static_cast<gp_scalar>(vAir(2) * FEET_TO_METERS)};
+      } else {
+        sample.velRelGround = velocity_vector;
+        sample.velRelAirmass = gp_vec3::Zero();
+      }
+      sample.position = p;
+      sample.velocity = velocity_vector;
+      if (eom01) {
+        CRRCMath::Vector3 accelFdm = eom01->getAccel();
+        sample.acceleration = gp_vec3{
+            static_cast<gp_scalar>(accelFdm(0) * FEET_TO_METERS),
+            static_cast<gp_scalar>(accelFdm(1) * FEET_TO_METERS),
+            static_cast<gp_scalar>(accelFdm(2) * FEET_TO_METERS)};
+        CRRCMath::Vector3 accelPast = eom01->getAccelPast();
+        sample.accelPast = gp_vec3{
+            static_cast<gp_scalar>(accelPast(0) * FEET_TO_METERS),
+            static_cast<gp_scalar>(accelPast(1) * FEET_TO_METERS),
+            static_cast<gp_scalar>(accelPast(2) * FEET_TO_METERS)};
+        CRRCMath::Vector3 pqr = eom01->getPQR();
+        sample.angularRates = gp_vec3{
+            static_cast<gp_scalar>(pqr(0)),
+            static_cast<gp_scalar>(pqr(1)),
+            static_cast<gp_scalar>(pqr(2))};
+        CRRCMath::Vector3 omegaDotPast = eom01->getOmegaDotPast();
+        sample.angularAccelPast = gp_vec3{
+            static_cast<gp_scalar>(omegaDotPast(0)),
+            static_cast<gp_scalar>(omegaDotPast(1)),
+            static_cast<gp_scalar>(omegaDotPast(2))};
+        double quatDotArr[4]; eom01->getQuatDotPast(quatDotArr);
+        sample.quatDotPast = gp_quat(
+            static_cast<gp_scalar>(quatDotArr[0]),
+            static_cast<gp_scalar>(quatDotArr[1]),
+            static_cast<gp_scalar>(quatDotArr[2]),
+            static_cast<gp_scalar>(quatDotArr[3]));
+        CRRCMath::Vector3 windBodyFdm = eom01->getWindBody();
+        sample.windBody = gp_vec3{
+            static_cast<gp_scalar>(windBodyFdm(0) * FEET_TO_METERS),
+            static_cast<gp_scalar>(windBodyFdm(1) * FEET_TO_METERS),
+            static_cast<gp_scalar>(windBodyFdm(2) * FEET_TO_METERS)};
+        sample.massKg = static_cast<gp_scalar>(eom01->getMass());
+        sample.density = static_cast<gp_scalar>(eom01->getDensity());
+        sample.gravity = static_cast<gp_scalar>(eom01->getGravity());
+        sample.alpha = static_cast<gp_scalar>(eom01->getAlpha());
+        sample.beta = static_cast<gp_scalar>(eom01->getBeta());
+        sample.vRelWind = static_cast<gp_scalar>(eom01->getVRelWind());
+        CRRCMath::Vector3 vLocal = eom01->getVLocal();
+        sample.vLocal = gp_vec3{
+            static_cast<gp_scalar>(vLocal(0) * FEET_TO_METERS),
+            static_cast<gp_scalar>(vLocal(1) * FEET_TO_METERS),
+            static_cast<gp_scalar>(vLocal(2) * FEET_TO_METERS)};
+        CRRCMath::Vector3 vLocalDot = eom01->getVLocalDot();
+        sample.vLocalDot = gp_vec3{
+            static_cast<gp_scalar>(vLocalDot(0) * FEET_TO_METERS),
+            static_cast<gp_scalar>(vLocalDot(1) * FEET_TO_METERS),
+            static_cast<gp_scalar>(vLocalDot(2) * FEET_TO_METERS)};
+        CRRCMath::Vector3 omegaBody = eom01->getOmegaBody();
+        sample.omegaBody = gp_vec3{
+            static_cast<gp_scalar>(omegaBody(0)),
+            static_cast<gp_scalar>(omegaBody(1)),
+            static_cast<gp_scalar>(omegaBody(2))};
+        CRRCMath::Vector3 omegaDotBody = eom01->getOmegaDot();
+        sample.omegaDotBody = gp_vec3{
+            static_cast<gp_scalar>(omegaDotBody(0)),
+            static_cast<gp_scalar>(omegaDotBody(1)),
+            static_cast<gp_scalar>(omegaDotBody(2))};
+        sample.latGeoc = static_cast<gp_scalar>(eom01->getLatGeocentric());
+        sample.lonGeoc = static_cast<gp_scalar>(eom01->getLonGeocentric());
+        sample.radiusToVehicle = static_cast<gp_scalar>(eom01->getRadiusToVehicle() * FEET_TO_METERS);
+        CRRCMath::Vector3 localAirmass = eom01->getLastLocalAirmass();
+        sample.localAirmass = gp_vec3{
+            static_cast<gp_scalar>(localAirmass(0) * FEET_TO_METERS),
+            static_cast<gp_scalar>(localAirmass(1) * FEET_TO_METERS),
+            static_cast<gp_scalar>(localAirmass(2) * FEET_TO_METERS)};
+        CRRCMath::Vector3 gustBody = eom01->getLastGustBody();
+        sample.gustBody = gp_vec3{
+            static_cast<gp_scalar>(gustBody(0) * FEET_TO_METERS),
+            static_cast<gp_scalar>(gustBody(1) * FEET_TO_METERS),
+            static_cast<gp_scalar>(gustBody(2) * FEET_TO_METERS)};
+        CRRCMath::Vector3 forceBody = eom01->getLastForceBody();
+        sample.forceBody = gp_vec3{
+            static_cast<gp_scalar>(forceBody(0) * FEET_TO_METERS),
+            static_cast<gp_scalar>(forceBody(1) * FEET_TO_METERS),
+            static_cast<gp_scalar>(forceBody(2) * FEET_TO_METERS)};
+        CRRCMath::Vector3 momentBody = eom01->getLastMomentBody();
+        sample.momentBody = gp_vec3{
+            static_cast<gp_scalar>(momentBody(0)),
+            static_cast<gp_scalar>(momentBody(1)),
+            static_cast<gp_scalar>(momentBody(2))};
+        sample.latDotPast = static_cast<gp_scalar>(eom01->getLatDotPast());
+        sample.lonDotPast = static_cast<gp_scalar>(eom01->getLonDotPast());
+        sample.radiusDotPast = static_cast<gp_scalar>(eom01->getRadiusDotPast());
+      } else {
+        sample.acceleration = gp_vec3::Zero();
+        sample.accelPast = gp_vec3::Zero();
+        sample.angularRates = gp_vec3::Zero();
+        sample.angularAccelPast = gp_vec3::Zero();
+        sample.quatDotPast = gp_quat::Identity();
+        sample.windBody = gp_vec3::Zero();
+        sample.massKg = static_cast<gp_scalar>(0.0f);
+        sample.density = static_cast<gp_scalar>(0.0f);
+        sample.gravity = static_cast<gp_scalar>(0.0f);
+        sample.alpha = static_cast<gp_scalar>(0.0f);
+        sample.beta = static_cast<gp_scalar>(0.0f);
+        sample.vRelWind = static_cast<gp_scalar>(0.0f);
+        sample.localAirmass = gp_vec3::Zero();
+        sample.gustBody = gp_vec3::Zero();
+        sample.forceBody = gp_vec3::Zero();
+        sample.momentBody = gp_vec3::Zero();
+        sample.vLocal = gp_vec3::Zero();
+        sample.vLocalDot = gp_vec3::Zero();
+        sample.omegaBody = gp_vec3::Zero();
+        sample.omegaDotBody = gp_vec3::Zero();
+        sample.latGeoc = static_cast<gp_scalar>(0.0f);
+        sample.lonGeoc = static_cast<gp_scalar>(0.0f);
+        sample.radiusToVehicle = static_cast<gp_scalar>(0.0f);
+        sample.latDotPast = static_cast<gp_scalar>(0.0f);
+        sample.lonDotPast = static_cast<gp_scalar>(0.0f);
+        sample.radiusDotPast = static_cast<gp_scalar>(0.0f);
+      }
+      sample.orientation = q;
+      sample.pitchCommand = aircraftState.getPitchCommand();
+      sample.rollCommand = aircraftState.getRollCommand();
+      sample.throttleCommand = aircraftState.getThrottleCommand();
+      sample.elevatorSim = static_cast<gp_scalar>(-pitchCommand / 2.0);
+      sample.aileronSim = static_cast<gp_scalar>(rollCommand / 2.0);
+      sample.throttleSim = static_cast<gp_scalar>(throttleCommand / 2.0 + 0.5);
+      sample.rngState16 = CRRC_Random::getState16();
+      sample.rngState32 = CRRC_Random::getState32();
+      debugSamplesCurrentPath.push_back(sample);
+    }
 
     // Stage commands to be applied after compute latency
     gPendingCommand.pitch = aircraftState.getPitchCommand();

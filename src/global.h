@@ -80,6 +80,14 @@ class Global
     static Aircraft*        aircraft;       ///< A complete Aircraft (model & FDM).
     static FlightRecorder*  recorder;
     static Robots*          robots;
+
+    // VARIATIONS1: Entry and wind direction offsets from ScenarioMetadata
+    // Set by inputdev_autoc when scenario changes, applied by init code
+    static double entryHeadingOffset;    ///< radians, offset from config heading
+    static double entryRollOffset;       ///< radians, initial roll attitude
+    static double entryPitchOffset;      ///< radians, offset from config pitch
+    static double entrySpeedFactor;      ///< multiplier on config velocity
+    static double windDirectionOffset;   ///< radians, offset from config wind dir
 };
 
 

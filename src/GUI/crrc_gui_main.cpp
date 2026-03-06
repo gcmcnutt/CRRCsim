@@ -528,8 +528,8 @@ void CGUIMain::doHUDCompass(const float field_of_view)
       bigFont = Video::window_xsize > 800 ? PUFONT_TIMES_ROMAN_24 : PUFONT_HELVETICA_18;
     }
     CRRCMath::Vector3 look_dir = Video::looking_pos - player_pos;
-    float azimuth = atan2(look_dir.r[0], -look_dir.r[2])*180.0/M_PI;
-    float elevation = atan2(look_dir.r[1], sqrt(pow(look_dir.r[0],2) + pow(look_dir.r[2],2)))*180.0/M_PI;
+    float azimuth = atan2(look_dir(0), -look_dir(2))*180.0/M_PI;
+    float elevation = atan2(look_dir(1), sqrt(pow(look_dir(0),2) + pow(look_dir(2),2)))*180.0/M_PI;
     azimuth = azimuth < 0.0 ? azimuth + 360.0 : azimuth;
     // for some reason the actual field of view is quite smaller than specified by field_of_view
     // and if not corrected this would result in inaccurate compass labels

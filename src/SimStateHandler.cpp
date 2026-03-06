@@ -35,17 +35,23 @@
 #include "global.h"
 #include "aircraft.h"
 #include "crrc_main.h"
+#include "config.h"
 #include "crrc_soundserver.h"
 #include "global_video.h"
 #include "SimStateHandler.h"
 #include "mod_mode/T_GameHandler.h"
 #include "GUI/crrc_gui_main.h"
 #include "mod_fdm/fdm.h"
+#include "mod_fdm/eom01/eom01.h"
 #include "mod_windfield/windfield.h"
+#include "mod_misc/crrc_rand.h"
 #include "robots.h"
 #include "record.h"
 #include "mod_misc/lib_conversions.h"
 
+// Physics step counter for deterministic simulation time
+// Defined in fdm_larcsim.cpp, reset on path changes in inputdev_autoc.cpp
+extern "C" uint32_t gPhysicsStepCounter;
 
 /**
  * Advance the simulation by the specified number om milliseconds
@@ -59,18 +65,36 @@ void idle(TSimInputs* inputs, int nDeltaTicks)
   if (Global::Simulation->getState() == STATE_RESUMING)
     Global::Simulation->setState(STATE_RUN);
 
-  // How many times the flight model shall be calculated 
-  // given it advances the simulation dt seconds for every step
-  multiloop = (int)((nDeltaTicks/1000.0 - dDeltaT)/Global::dt + 0.5);
-  
+  // In headless mode (video.enabled=0), use deterministic physics stepping
+  // without frame timing correction. The dDeltaT accumulator causes
+  // non-determinism because it persists across resets.
+  bool headlessMode = (cfgfile->getInt("video.enabled", 1) == 0);
+
+  if (headlessMode)
+  {
+    // Deterministic: fixed multiloop based on nDeltaTicks and dt
+    multiloop = (int)(nDeltaTicks/1000.0/Global::dt + 0.5);
+  }
+  else
+  {
+    // Video mode: apply frame timing correction for smooth display
+    // How many times the flight model shall be calculated
+    // given it advances the simulation dt seconds for every step
+    multiloop = (int)((nDeltaTicks/1000.0 - dDeltaT)/Global::dt + 0.5);
+  }
+
   // alter simulation time scale if slow motion is active
   if (Global::slowMotion)
     timeScale = Global::slowTimeScale;
   else
     timeScale = 1.0;
-    
+
   multiloop /= timeScale;
-  dDeltaT += multiloop*Global::dt - nDeltaTicks/1000.0/timeScale;
+
+  if (!headlessMode)
+  {
+    dDeltaT += multiloop*Global::dt - nDeltaTicks/1000.0/timeScale;
+  }
 
   Global::Simulation->incSimSteps(multiloop);
   
@@ -79,9 +103,9 @@ void idle(TSimInputs* inputs, int nDeltaTicks)
   Global::aircraft->getFDMInterface()->update(inputs, Global::dt, multiloop);
   Global::aircraft->getModel()->update(Global::aircraft->getFDM());
   
-  double X_cg_rwy =    Global::aircraft->getPos().r[0];
-  double Y_cg_rwy =    Global::aircraft->getPos().r[1];
-  double H_cg_rwy = -1*Global::aircraft->getPos().r[2];
+  double X_cg_rwy =    Global::aircraft->getPos()(0);
+  double Y_cg_rwy =    Global::aircraft->getPos()(1);
+  double H_cg_rwy = -1*Global::aircraft->getPos()(2);
 
   Global::gameHandler->update(X_cg_rwy,Y_cg_rwy,H_cg_rwy, Global::recorder, Global::robots);
   
@@ -172,45 +196,63 @@ void SimStateHandler::pause()
 void SimStateHandler::reset()
 {
   unsigned long int current;
-  
+
   Global::inputs = TSimInputs();
 
   if (Global::testmode)
     leave_test_mode();
 
   sim_steps = 0;
-  
+
   current = SDL_GetTicks();
   reset_time = current;
   pause_time = current;
   accum_pause_time = 0;
-  
+
   /*
   IdleFunc = idle;
   OldIdleFunc = NULL;
   */
-  
+
   nState = STATE_RESUMING;
   initialize_flight_model();
   Init_mod_windfield();
-    
+
   // Safely reset aircraft model if properly initialized
   if (Global::aircraft && Global::aircraft->getModel() && Global::aircraft->getFDM())
   {
     Global::aircraft->getModel()->reset(Global::aircraft->getFDM());
+    // Reset integrator history as part of the global reset to keep
+    // non-autoc code paths (and warmups) deterministic.
+    if (EOM01* eom = dynamic_cast<EOM01*>(Global::aircraft->getFDM())) {
+      eom->resetIntegratorState();
+    }
   }
   else
   {
     fprintf(stderr, "Warning: Aircraft not properly initialized for reset\n");
   }
-  
+
   Global::gameHandler->reset();
   Global::robots->Reset();
   Global::TXInterface->reset();
 
-  Video::InitSmartCamera();  
-  
+  Video::InitSmartCamera();
+
   LOG(_("Simulation reset."));
+}
+
+// Overload for autoc mode: set wind seed before windfield initialization
+void SimStateHandler::reset(unsigned int windSeed)
+{
+  // Set RNG seed BEFORE any initialization that might use it
+  CRRC_Random::reset(windSeed);
+
+  // Call standard reset which will:
+  // 1. Call Init_mod_windfield() -> initialize_wind_field()
+  // 2. Create thermals (consuming RNG with deterministic seed)
+  // 3. Call initialize_gust() which resets all RandGauss objects
+  reset();
 }
 
 

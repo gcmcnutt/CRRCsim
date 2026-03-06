@@ -31,11 +31,13 @@
 #include "gp_bytecode.h"
 #include "minisim.h"
 #include "autoc.h"
+#include "gp_evaluator_portable.h"
 
 #include <stdio.h>
 #include <iostream>
 #include <cmath>
 #include <array>
+#include <unistd.h>
 
 #include <boost/circular_buffer.hpp>
 
@@ -105,6 +107,12 @@ private:
   EvalData evalData;
   EvalResults evalResults;
   std::vector<AircraftState> aircraftStates;
+  std::vector<DebugSample> debugSamplesCurrentPath;
+  double quatDotPast[4] = {0,0,0,0};
+  int workerIndex = -1;
+  int workerPid = 0;
+
+  int evalCounter = 0;  // Total evaluations this worker has processed
 
   // work in progress
   MyGP *gp = nullptr;

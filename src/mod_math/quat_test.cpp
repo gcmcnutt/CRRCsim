@@ -51,7 +51,7 @@ int main()
   achse[1] = CRRCMath::Vector3(0, 1, 0);
   achse[2] = CRRCMath::Vector3(0, 0, 1);
 
-  q1.init(CRRCMath::Vector3());
+  q1.init(CRRCMath::Vector3::Zero());
 
 
   std::cout << "#N time reference_value phi theta psi l2b[0|0] l2b[0|1] l2b[0|2] l2b[1|0] l2b[1|1] l2b[1|2] l2b[2|0] l2b[2|1] l2b[2|2]\n";
@@ -79,8 +79,8 @@ int main()
 
         q1.updateEuler();
                 
-        std::cout << zeit++ << " " << soll_mod << " " << q1.euler.r[0] << " " << q1.euler.r[1] << " " << q1.euler.r[2] << " ";
-        q1.mat.printLine(); 
+        std::cout << zeit++ << " " << soll_mod << " " << q1.euler(0) << " " << q1.euler(1) << " " << q1.euler(2) << " ";
+        CRRCMath::printLine(q1.mat); 
         std::cout << "\n";
       }
       soll_ende = soll_ende_tmp;
@@ -106,8 +106,8 @@ int main()
 
         q1.updateEuler();
 
-        std::cout << zeit++ << " " << soll_mod << " " << q1.euler.r[0] << " " << q1.euler.r[1] << " " << q1.euler.r[2] << " ";
-        q1.mat.printLine(); 
+        std::cout << zeit++ << " " << soll_mod << " " << q1.euler(0) << " " << q1.euler(1) << " " << q1.euler(2) << " ";
+        CRRCMath::printLine(q1.mat); 
         std::cout << "\n";
       }
       soll_ende = soll_ende_tmp;      
@@ -115,8 +115,8 @@ int main()
     
     for (int n=0; n<4*nSteps; n++)
     {
-      std::cout << zeit++ << " " << soll_mod << " " << q1.euler.r[0] << " " << q1.euler.r[1] << " " << q1.euler.r[2] << " ";
-      q1.mat.printLine();
+      std::cout << zeit++ << " " << soll_mod << " " << q1.euler(0) << " " << q1.euler(1) << " " << q1.euler(2) << " ";
+      CRRCMath::printLine(q1.mat);
       std::cout << "\n";
     }
     

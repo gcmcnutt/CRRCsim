@@ -43,18 +43,18 @@ EOM_6DOF::EOM_6DOF(CRRCMath::Vector3  initPosEarth,
 
   dGravity = 9.81; // m/s^2
 
-  if (inertia.det() == 0)
+  if (inertia.determinant() == 0)
   {
     std::cout << "unable to calculate inertia_inv\n";
     exit(-1);
   }
-  inertia_inv = inertia.inv();
+  inertia_inv = inertia.inverse();
 
   // Umrechnung koerperfest->erdfest festlegen
   conv.init(initAng);
 
   // init velocity
-  vel.init(initVelBody, CRRCMath::Vector3());
+  vel.init(initVelBody, CRRCMath::Vector3::Zero());
 
   // init position
   pos.init(initPosEarth, conv.local(initVelBody));
@@ -62,8 +62,8 @@ EOM_6DOF::EOM_6DOF(CRRCMath::Vector3  initPosEarth,
   // init angular velocity
   angvel.init(CRRCMath::Vector3(0,0,0), CRRCMath::Vector3(0,0,0));
 
-  initAng.print("euler=", ", ");
-  initVelBody.print("v_body=", ", ");
+  CRRCMath::print(initAng, "euler=", ", ");
+  CRRCMath::print(initVelBody, "v_body=", ", ");
 }
 
 
@@ -79,10 +79,10 @@ void EOM_6DOF::print(std::string name)
 
   conv.updateEuler();
 
-  pos.val.print("posEarth=", ", ");
-  vel.val.print("velBody=", ", ");
-  angvel.val.print("angvel=", ", ");
-  conv.euler.print("euler=", "\n");
+  CRRCMath::print(pos.val, "posEarth=", ", ");
+  CRRCMath::print(vel.val, "velBody=", ", ");
+  CRRCMath::print(angvel.val, "angvel=", ", ");
+  CRRCMath::print(conv.euler, "euler=", "\n");
 }
 
 
@@ -112,16 +112,16 @@ void EOM_6DOF::step(double             dT,
   
   
   // Beschleunigungen addieren:
-  //  1. Erdbeschleunigung, umgerechnet ins körperfeste Koordinatensystem
+  //  1. Erdbeschleunigung, umgerechnet ins kï¿½rperfeste Koordinatensystem
   //  2. Beschleunigung aus FBody
   //  3. der Rotationsterm
-  accel_body = conv.body(CRRCMath::Vector3(0, 0, dGravity)) + (FBody*dMass_inv) + (vel.val*angvel.val);
+  accel_body = conv.body(CRRCMath::Vector3(0, 0, dGravity)) + (FBody*dMass_inv) + vel.val.cross(angvel.val);
 
   // integrate acceleration to velocity
   vel.step(dT, accel_body);
 
   // Drehbeschleunigungen addieren:
-  angaccel_body = inertia_inv*( MBody - (angvel.val*(inertia*angvel.val)) );
+  angaccel_body = inertia_inv*( MBody - angvel.val.cross(inertia*angvel.val) );
 
   // integrate angular acceleration
   angvel.step(dT, angaccel_body);

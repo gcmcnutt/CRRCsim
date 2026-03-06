@@ -27,6 +27,7 @@ find_package(Boost REQUIRED COMPONENTS thread system serialization)
 add_definitions(-DGP_BUILD)
 
 option(ENABLE_PROFILING "Build with frame pointers and debug info for perf/FlameGraph" OFF)
+option(PERFORMANCE_BUILD "Build with high performance flags (keeps debug symbols for core dumps)" OFF)
 
 # uncomment to get verbose output
 #set (CMAKE_VERBOSE_MAKEFILE ON)
@@ -193,6 +194,20 @@ if(ENABLE_PROFILING)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O2 -fno-omit-frame-pointer -fno-optimize-sibling-calls")
 endif()
 
+if(PERFORMANCE_BUILD)
+  message(STATUS "Enabling performance-optimized build for crrcsim (with debug symbols)")
+  # -O3: Aggressive optimization
+  # -g: Debug symbols for core dump analysis (doesn't affect runtime)
+  # -march=native: Use AVX-512/AVX2 and other CPU-specific instructions
+  # -mtune=native: Optimize instruction scheduling for this CPU
+  # -funroll-loops: Better SIMD utilization
+  # -flto: Link-time optimization for whole-program analysis
+  # -ffast-math: Aggressive FP optimizations (safe now that simTime is deterministic)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -g -march=native -mtune=native -funroll-loops -flto -ffast-math")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -g -march=native -mtune=native -funroll-loops -flto -ffast-math")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -flto")
+endif()
+
 set(CRRCSIM_INCDIRS ${SDL_INCLUDE_DIR}
                     ${CMAKE_BINARY_DIR}
                     ${HAVE_SYS_IO_H}
@@ -226,6 +241,14 @@ set(CRRCSIM_SRCS
  src/SimStateHandler.cpp
  src/zoom.cpp
   )
+
+# Set up include directories BEFORE add_subdirectory so they're inherited
+include_directories(${CRRCSIM_INCDIRS}
+  ${EIGEN3_INCLUDE_DIRS}
+  $ENV{HOME}/GP/autoc
+  $ENV{HOME}/GP/include
+)
+message(STATUS "Eigen3 include dirs: ${EIGEN3_INCLUDE_DIRS}")
 
 add_subdirectory(src/mod_chardevice)
 add_subdirectory(src/GUI)
@@ -265,15 +288,17 @@ set (CRRCSIM_LIBS
   ${PLIB_LIBRARIES}
   )
 
-include_directories(${CRRCSIM_INCDIRS}
-  ${EIGEN3_INCLUDE_DIR}
-  $ENV{HOME}/GP/autoc
-  $ENV{HOME}/GP/include
-)
-
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in ${CMAKE_BINARY_DIR}/crrc_config.h)
 
-add_executable (crrcsim WIN32 ${CRRCSIM_SRCS})
+# Track external headers from autoc as dependencies
+# CMake doesn't automatically track headers outside the source tree
+set(AUTOC_HEADERS
+  $ENV{HOME}/GP/autoc/minisim.h
+  $ENV{HOME}/GP/autoc/gp_bytecode.h
+  $ENV{HOME}/GP/autoc/autoc.h
+)
+
+add_executable (crrcsim WIN32 ${CRRCSIM_SRCS} ${AUTOC_HEADERS})
 
 option(USE_SANITIZER "Build with Address Sanitizer" OFF)
 if(USE_SANITIZER)

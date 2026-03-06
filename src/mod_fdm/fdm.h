@@ -69,10 +69,10 @@ class FDMBase
    /**
     * returns velocity w.r.t. earth surface
     */
-   virtual CRRCMath::Vector3 getVel()   { return(CRRCMath::Vector3()); };
-   virtual CRRCMath::Vector3 getAccel() { return(CRRCMath::Vector3()); };
+   virtual CRRCMath::Vector3 getVel()   { return(CRRCMath::Vector3::Zero()); };
+   virtual CRRCMath::Vector3 getAccel() { return(CRRCMath::Vector3::Zero()); };
    
-   virtual CRRCMath::Vector3 getPQR()   { return(CRRCMath::Vector3()); };
+   virtual CRRCMath::Vector3 getPQR()   { return(CRRCMath::Vector3::Zero()); };
 
    virtual double getLon() { return(-1.0); };
    virtual double getLat() { return(-1.0); };
@@ -191,14 +191,14 @@ class FDMBase
    void logVal(CRRCMath::Vector3 val)
    {
 #if FDM_LOG != 0
-     if (fabs(val.r[0]) > 2E6)
-       val.r[0] = 0;
-     if (fabs(val.r[1]) > 2E6)
-       val.r[1] = 0;
-     if (fabs(val.r[2]) > 2E6)
-       val.r[2] = 0;
+     if (fabs(val(0)) > 2E6)
+       val(0) = 0;
+     if (fabs(val(1)) > 2E6)
+       val(1) = 0;
+     if (fabs(val(2)) > 2E6)
+       val(2) = 0;
      
-     logfile << val.r[0] << " " << val.r[1] << " " << val.r[2] << " ";
+     logfile << val(0) << " " << val(1) << " " << val(2) << " ";
 #endif
    };
       
@@ -212,13 +212,13 @@ class FDMBase
      for (unsigned int m=0; m<3; m++)
        for (unsigned int n=0; n<3; n++)
        {
-         if (fabs(val.v[m][n]) > 2E6)
+         if (fabs(val(m,n)) > 2E6)
          {
-           logfile << val.v[m][n] << " ";
+           logfile << val(m,n) << " ";
 //           logfile << "0 ";
          }
          else
-           logfile << val.v[m][n] << " ";
+           logfile << val(m,n) << " ";
        }
 #endif
    };

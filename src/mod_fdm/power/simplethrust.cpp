@@ -42,7 +42,7 @@ void Power::SimpleThrust::step(PowerValuesStep* values)
   double  omega = i*values->omega;
   double  n     = omega/(2*M_PI);
 
-  values->force->r[0]  += omega*k_F;
+  (*values->force)(0)  += omega*k_F;
   values->moment_shaft -= omega*k_M*i;
   values->dPropFreq     = n;
 }

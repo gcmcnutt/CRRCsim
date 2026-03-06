@@ -71,9 +71,9 @@ void Cntrl_Omega::Calc(double      dt,
 {
   CRRCMath::Vector3 omega = fdm->getPQR();
   
-  pInputsToFDM->aileron  = controllers[0].Step(dt, Scale(pInputsFromUser->aileron),  omega.r[0]);
-  pInputsToFDM->elevator = controllers[1].Step(dt, Scale(pInputsFromUser->elevator), omega.r[1]);
-  pInputsToFDM->rudder   = controllers[2].Step(dt, pInputsFromUser->rudder,          omega.r[2]);
+  pInputsToFDM->aileron  = controllers[0].Step(dt, Scale(pInputsFromUser->aileron),  omega(0));
+  pInputsToFDM->elevator = controllers[1].Step(dt, Scale(pInputsFromUser->elevator), omega(1));
+  pInputsToFDM->rudder   = controllers[2].Step(dt, pInputsFromUser->rudder,          omega(2));
 }
 
 double Cntrl_Omega::Scale(double in)

@@ -1,0 +1,36 @@
+{
+   WSL_Graphics_1
+   Memcheck:Cond
+   obj:*/libdxcore.so
+}
+{
+   WSL_Graphics_2
+   Memcheck:Cond
+   obj:*/swrast_dri.so
+}
+{
+   WSL_Graphics_3
+   Memcheck:Cond
+   obj:*/libigc.so
+}
+{
+   WSL_Graphics_4
+   Memcheck:Param
+   ioctl(generic)
+   obj:*/libd3d12core.so
+}
+{
+   WSL_Graphics_5
+   Memcheck:Value8
+   obj:*/libdxcore.so
+}
+{
+   WSL_Graphics_6
+   Memcheck:Value8
+   obj:*/swrast_dri.so
+}
+{
+   WSL_Graphics_7
+   Memcheck:Addr8
+   obj:*/libdxcore.so
+}

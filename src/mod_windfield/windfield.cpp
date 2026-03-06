@@ -28,11 +28,13 @@
  */
 
 #include "windfield.h"
+#include "arena_thermal.h"
 
 #include "../global.h"
 #include "../include_gl.h"
 #include <math.h>
 #include <stdio.h>
+#include <cstdlib>
 #include <plib/ssg.h>   // for ssgSimpleState
 #include "../mod_misc/ls_constants.h"
 //jwtodo #include "../config.h"
@@ -50,6 +52,7 @@
 #include "../global_video.h"
 #include "thermal03/tschalen.h"
 #include "../mod_landscape/crrc_scenery.h"
+#include <atomic>
 
 namespace {
 
@@ -74,6 +77,17 @@ double uniform01WithContext(const char* label) {
   RandContextScope scope(label);
   int raw = CRRC_Random::rand();
   return static_cast<double>(raw) / (static_cast<double>(CRRC_Random::max()) + 1.0);
+}
+
+// Optional first-call logging to help debug wind nondeterminism.
+// Now enabled by default (can be disabled by clearing AUTOC_WIND_LOG_DISABLED).
+std::atomic<bool> gLogFirstWindCall{true};
+std::atomic<int> gWindResetCounter{0};
+std::atomic<bool> gFirstWindCallPending{false};
+
+void initWindDebugFlag() {
+  // Always log first wind call during debugging
+  gLogFirstWindCall.store(true);
 }
 
 }  // namespace
@@ -342,6 +356,9 @@ bool find_new_thermal_position(float *xpos, float *ypos,
 // Description: see header file
 void clear_wind_field()
 {
+  // Clear arena thermals
+  clear_arena_thermals();
+
   // remove linked list
   Thermal* tptr0 = thermals;
   Thermal* tptr1;
@@ -366,13 +383,20 @@ void clear_wind_field()
 // Description: see header file
 void initialize_wind_field(SimpleXMLTransfer* el)
 {
+  initWindDebugFlag();
+  gFirstWindCallPending.store(true);
+  gWindResetCounter.fetch_add(1);
+
+  // Save the original location config pointer before el gets modified
+  SimpleXMLTransfer* locCfg = el;
+
   int loop;
   Thermal *temp_thermal;
   int xloop,yloop;
 
   // initialize wind turbulence model
   initialize_gust();
-  
+
   ThermalVersion = THERMAL_CODE;
   // Use version 3?
   {
@@ -405,7 +429,7 @@ void initialize_wind_field(SimpleXMLTransfer* el)
     num_thermals = (int)(pow(occupancy_grid_size*occupancy_grid_res,2)*
                          dDensity);
 
-    // num_thermals = 0;  // Commented out to enable thermals
+    // REMOVED: num_thermals = 0;  // Testing thermal determinism
   }
 
 #if THERMAL_TEST != 0
@@ -481,8 +505,21 @@ void initialize_wind_field(SimpleXMLTransfer* el)
     temp_thermal->next_thermal = thermals;
     thermals = temp_thermal;
   }
-  
+
   therm_quadric = gluNewQuadric();
+
+  // CRITICAL: Reset turbulence and thermal RNG objects after thermal creation
+  // This ensures all RandGauss objects have clean phase=0 state regardless of
+  // how many RNG calls were consumed during thermal initialization
+  initialize_gust();
+
+  // Initialize arena-bounded thermal system (for GP training scenarios)
+  // This is separate from the global thermal grid and more efficient for
+  // small bounded arenas. If arena_thermals is enabled, it will be used
+  // instead of the global thermal grid for wind calculations.
+  // Note: use locCfg (the original location config), not el (which may have
+  // been modified to point to the thermal child node)
+  initialize_arena_thermals(locCfg);
 }
 
 SimpleXMLTransfer* GetDefaultConf_Thermal()
@@ -528,11 +565,22 @@ void update_thermals(float flDeltaT)
   float x_wind_velocity,y_wind_velocity;
   float flWindVel = cfg->wind->getVelocity();
 
+  // VARIATIONS1: Apply wind direction offset from scenario (radians -> degrees)
+  double effectiveWindDir = cfg->wind->getDirection() + (Global::windDirectionOffset * 180.0 / M_PI);
+
   // Wind velocity is the same everywhere, so every thermals relative movement is:
-  x_wind_velocity = -1 * flWindVel * cos(M_PI*cfg->wind->getDirection()/180);
-  y_wind_velocity = -1 * flWindVel * sin(M_PI*cfg->wind->getDirection()/180);
+  x_wind_velocity = -1 * flWindVel * cos(M_PI*effectiveWindDir/180);
+  y_wind_velocity = -1 * flWindVel * sin(M_PI*effectiveWindDir/180);
   x_motion        = flDeltaT * x_wind_velocity;
   y_motion        = flDeltaT * y_wind_velocity;
+
+  // Update arena thermals if enabled (more efficient than global grid)
+  if (g_arenaThermalField && g_arenaThermalField->isEnabled())
+  {
+    g_arenaThermalField->update(flDeltaT, flWindVel, effectiveWindDir);
+    // Skip global thermal grid update when arena thermals are active
+    return;
+  }
 
   // loop over linked list of thermals
   thermal_ptr = thermals;
@@ -589,7 +637,20 @@ int calculate_wind(double  X_cg,      double  Y_cg,     double  Z_cg,
   Vel_north = fact*x_wind_velocity;
   Vel_east  = fact*y_wind_velocity;
   Vel_down  = fact*z_wind_velocity;
- 
+
+  // Check for arena thermal system first (more efficient for GP training)
+  if (g_arenaThermalField && g_arenaThermalField->isEnabled())
+  {
+    // Use arena-bounded thermals instead of global grid
+    double arena_vel_north = 0, arena_vel_east = 0, arena_vel_down = 0;
+    g_arenaThermalField->calculateThermalWind(X_cg, Y_cg, Z_cg,
+                                               arena_vel_north, arena_vel_east, arena_vel_down);
+    Vel_north += arena_vel_north;
+    Vel_east  += arena_vel_east;
+    Vel_down  += arena_vel_down;
+    return wind_error;  // Skip global thermal grid
+  }
+
   // calculate indices of the aircraft in the grid
   aircraft_xcoord = absToGridCoor(X_cg);
   aircraft_ycoord = absToGridCoor(Y_cg);
@@ -758,21 +819,21 @@ int calculate_wind_grad(double X_cg, double Y_cg, double Z_cg, double delta_spac
   // Gradients are calculated from symmetric pairs to get symmetric behaviour.
   if (!err_x)
   {
-    m_V_grad.v[0][0] = (V_north_xp - V_north_xm)/(2*delta_space);
-    m_V_grad.v[1][0] = (V_east_xp  - V_east_xm) /(2*delta_space);
-    m_V_grad.v[2][0] = (V_down_xp  - V_down_xm) /(2*delta_space);
+    m_V_grad(0,0) = (V_north_xp - V_north_xm)/(2*delta_space);
+    m_V_grad(1,0) = (V_east_xp  - V_east_xm) /(2*delta_space);
+    m_V_grad(2,0) = (V_down_xp  - V_down_xm) /(2*delta_space);
   }
   if (!err_y)
   {
-    m_V_grad.v[0][1] = (V_north_yp - V_north_ym)/(2*delta_space);
-    m_V_grad.v[1][1] = (V_east_yp  - V_east_ym) /(2*delta_space);
-    m_V_grad.v[2][1] = (V_down_yp  - V_down_ym) /(2*delta_space);
+    m_V_grad(0,1) = (V_north_yp - V_north_ym)/(2*delta_space);
+    m_V_grad(1,1) = (V_east_yp  - V_east_ym) /(2*delta_space);
+    m_V_grad(2,1) = (V_down_yp  - V_down_ym) /(2*delta_space);
   }
   if (!err_z)
   {
-    m_V_grad.v[0][2] = (V_north_zp - V_north_zm)/(2*delta_space);
-    m_V_grad.v[1][2] = (V_east_zp  - V_east_zm) /(2*delta_space);
-    m_V_grad.v[2][2] = (V_down_zp  - V_down_zm) /(2*delta_space);
+    m_V_grad(0,2) = (V_north_zp - V_north_zm)/(2*delta_space);
+    m_V_grad(1,2) = (V_east_zp  - V_east_zm) /(2*delta_space);
+    m_V_grad(2,2) = (V_down_zp  - V_down_zm) /(2*delta_space);
   }
 
   return (err_x | err_y | err_z);
@@ -781,10 +842,10 @@ int calculate_wind_grad(double X_cg, double Y_cg, double Z_cg, double delta_spac
 // Description: see header file
 void initialize_gust()
 {
-  v_V_gust_body_.r[0] = v_V_gust_body_.r[1] = v_V_gust_body_.r[2] = 0.0;
+  v_V_gust_body_(0) = v_V_gust_body_(1) = v_V_gust_body_(2) = 0.0;
   v_V_gust_body_old_ = v_V_gust_body_;
 
-  v_R_omega_gust_body_.r[0] = v_R_omega_gust_body_.r[1] = v_R_omega_gust_body_.r[2] = 0.0;
+  v_R_omega_gust_body_(0) = v_R_omega_gust_body_(1) = v_R_omega_gust_body_(2) = 0.0;
 
   // CRITICAL: Reset the Dryden turbulence Gaussian RNGs to ensure determinism
   // These are global static objects that persist across simulation resets
@@ -792,6 +853,13 @@ void initialize_gust()
   eta2.Reset();
   eta3.Reset();
   eta4.Reset();
+
+  // CRITICAL: Also reset thermal RandGauss objects
+  // These can retain phase state from initial windfield setup, causing
+  // cross-process non-determinism when workers are restarted
+  rnd_radius.Reset();
+  rnd_strength.Reset();
+  rnd_lifetime.Reset();
 }
 
 // Description: see header file
@@ -802,7 +870,7 @@ void calculate_gust(double dt, double altitude, double V_rel_wind, double b,
                     CRRCMath::Vector3& v_R_omega_gust_body)
 {
   double intensity = cfg->wind->getTurbulence();
-  double V_wind = v_V_local_airmass.length();
+  double V_wind = v_V_local_airmass.norm();
 
   // no wind turbulence if wind velocity is zero or
   // relative turbulence intensity has been set to zero
@@ -810,8 +878,9 @@ void calculate_gust(double dt, double altitude, double V_rel_wind, double b,
     return;
   
   v_V_local_airmass.normalize();
-  CRRCMath::Matrix33 WindToLocal(v_V_local_airmass.r[0], -v_V_local_airmass.r[1], 0.,
-                                 v_V_local_airmass.r[1],  v_V_local_airmass.r[0], 0.,
+  CRRCMath::Matrix33 WindToLocal = CRRCMath::make_matrix33(
+                                 v_V_local_airmass(0), -v_V_local_airmass(1), 0.,
+                                 v_V_local_airmass(1),  v_V_local_airmass(0), 0.,
                                  0.,                      0.,                     1.);
   
   // linear and rotational gust velocity estimated using digital filter 
@@ -837,25 +906,27 @@ void calculate_gust(double dt, double altitude, double V_rel_wind, double b,
   
   // align length scale "u" with wind direction, then
   // transform length scale from local to body frame
-  CRRCMath::Matrix33 L_tensor(Lu, 0., 0.,
+  CRRCMath::Matrix33 L_tensor = CRRCMath::make_matrix33(
+                              Lu, 0., 0.,
                               0., Lv, 0.,
                               0., 0., Lw);
-  L_tensor = WindToLocal*(L_tensor*WindToLocal.trans());
-  L_tensor = LocalToBody*(L_tensor*LocalToBody.trans());
-  Lu = L_tensor.v[0][0];
-  Lv = L_tensor.v[1][1];
-  Lw = L_tensor.v[2][2];
+  L_tensor = WindToLocal*(L_tensor*WindToLocal.transpose());
+  L_tensor = LocalToBody*(L_tensor*LocalToBody.transpose());
+  Lu = L_tensor(0,0);
+  Lv = L_tensor(1,1);
+  Lw = L_tensor(2,2);
 
   // align sigma "u" with wind direction, then
   // transform sigma from local to body frame
-  CRRCMath::Matrix33 s_tensor(sigu, 0., 0.,
+  CRRCMath::Matrix33 s_tensor = CRRCMath::make_matrix33(
+                              sigu, 0., 0.,
                               0., sigv, 0.,
                               0., 0., sigw);
-  s_tensor = WindToLocal*(s_tensor*WindToLocal.trans());
-  s_tensor = LocalToBody*(s_tensor*LocalToBody.trans());
-  sigu = s_tensor.v[0][0];
-  sigv = s_tensor.v[1][1];
-  sigw = s_tensor.v[2][2];
+  s_tensor = WindToLocal*(s_tensor*WindToLocal.transpose());
+  s_tensor = LocalToBody*(s_tensor*LocalToBody.transpose());
+  sigu = s_tensor(0,0);
+  sigv = s_tensor(1,1);
+  sigw = s_tensor(2,2);
 
   double temp = sqrt(2.0*Lw*b);
   double Lp   = temp/2.6;
@@ -868,22 +939,22 @@ void calculate_gust(double dt, double altitude, double V_rel_wind, double b,
   double aq_dt = pid4b*V_dt;
   double ar_dt = pid3b*V_dt;
   
-  v_V_gust_body_.r[0]       = (1.0 - au_dt)*v_V_gust_body_.r[0] 
+  v_V_gust_body_(0)       = (1.0 - au_dt)*v_V_gust_body_(0) 
                               + sqrt(2.0*au_dt)*sigu*eta1.Get();
-  v_V_gust_body_.r[1]       = (1.0 - av_dt)*v_V_gust_body_.r[1]
+  v_V_gust_body_(1)       = (1.0 - av_dt)*v_V_gust_body_(1)
                               + sqrt(2.0*av_dt)*sigv*eta2.Get();
-  v_V_gust_body_.r[2]       = (1.0 - aw_dt)*v_V_gust_body_.r[2]
+  v_V_gust_body_(2)       = (1.0 - aw_dt)*v_V_gust_body_(2)
                               + sqrt(2.0*aw_dt)*sigw*eta3.Get();                             
 
   // NB: signs for q and r (airmass turbulence rotation around body y and z)
   //     are consistent with airmass rotation computed from airmass velocity
   //     gradient (see e.g. fdm_larcsim.cpp). Sign for p is arbitrary.
-  v_R_omega_gust_body_.r[0] = (1.0 - ap_dt)*v_R_omega_gust_body_.r[0] 
+  v_R_omega_gust_body_(0) = (1.0 - ap_dt)*v_R_omega_gust_body_(0) 
                               + sqrt(2.0*ap_dt)*sigp*eta4.Get();
-  v_R_omega_gust_body_.r[1] = (1.0 - aq_dt)*v_R_omega_gust_body_.r[1]
-                              - pid4b*(v_V_gust_body_.r[2] - v_V_gust_body_old_.r[2]);
-  v_R_omega_gust_body_.r[2] = (1.0 - ar_dt)*v_R_omega_gust_body_.r[2]
-                              + pid3b*(v_V_gust_body_.r[1] - v_V_gust_body_old_.r[1]);
+  v_R_omega_gust_body_(1) = (1.0 - aq_dt)*v_R_omega_gust_body_(1)
+                              - pid4b*(v_V_gust_body_(2) - v_V_gust_body_old_(2));
+  v_R_omega_gust_body_(2) = (1.0 - ar_dt)*v_R_omega_gust_body_(2)
+                              + pid3b*(v_V_gust_body_(1) - v_V_gust_body_old_(1));
                              
   v_V_gust_body = v_V_gust_body_ * intensity;
   v_R_omega_gust_body = v_R_omega_gust_body_ * intensity;
@@ -894,9 +965,9 @@ void draw_thermals(CRRCMath::Vector3 pos)
 {
   Thermal* thermal_ptr;
 
-  double X_cg_rwy =  pos.r[0];
-  double Y_cg_rwy =  pos.r[1];
-  double H_cg_rwy = -pos.r[2];
+  double X_cg_rwy =  pos(0);
+  double Y_cg_rwy =  pos(1);
+  double H_cg_rwy = -pos(2);
 
   if (nDrawThermalsFromGrid)
   {
@@ -948,7 +1019,9 @@ void draw_thermals(CRRCMath::Vector3 pos)
 void draw_wind(double direction_face)
 {
   double length    = 0.8;
-  double direction = (M_PI*cfg->wind->getDirection()/180) - direction_face;
+  // VARIATIONS1: Apply wind direction offset from scenario
+  double effectiveWindDir = cfg->wind->getDirection() + (Global::windDirectionOffset * 180.0 / M_PI);
+  double direction = (M_PI*effectiveWindDir/180) - direction_face;
 
   //
   int xsize, ysize;
@@ -1076,13 +1149,13 @@ void windfield_thermalScreenshot(CRRCMath::Vector3 pos)
 
   for (int nX=-nSteps; nX<nSteps; nX++)
   {
-    double x = pos.r[0] + nX*dStep;
+    double x = pos(0) + nX*dStep;
 
     for (int nY=-nSteps; nY<nSteps; nY++)
     {
-      double y = pos.r[1] + nY*dStep;
+      double y = pos(1) + nY*dStep;
 
-      calculate_wind(x, y, pos.r[2], dVNorth, dVEast, dVDown);
+      calculate_wind(x, y, pos(2), dVNorth, dVEast, dVDown);
 
 # if (DEBUG_THERMAL_SCRSHOT_FORMAT == 0) || (DEBUG_THERMAL_SCRSHOT_FORMAT == 2) || (DEBUG_THERMAL_SCRSHOT_FORMAT == 3)
       tf_up << -1*dVDown << " ";

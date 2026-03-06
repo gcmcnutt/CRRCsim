@@ -68,7 +68,7 @@ AirplaneVisualization::AirplaneVisualization( std::string const& model_name,
     sgMat4 it = {  {1.0,  0.0,  0.0,  0.0},
                    {0.0,  0.0, -1.0,  0.0},
                    {0.0,  1.0,  0.0,  0.0},
-                   {(float)pCG.r[1],  (float)pCG.r[2],  (float)-pCG.r[0],  1.0}  };
+                   {(float)pCG(1),  (float)pCG(2),  (float)-pCG(0),  1.0}  };
 
     // Get half (approxiamtely) of the airplane model size    
     sphereRadius = model->getBSphere()->getRadius();
@@ -132,7 +132,7 @@ void AirplaneVisualization::setPosition(CRRCMath::Vector3 const& pos,
   sgMat4 temp;
   sgVec3 rvec;
   
-  sgMakeTransMat4(m, pos.r[1], -pos.r[2], -pos.r[0]);
+  sgMakeTransMat4(m, pos(1), -pos(2), -pos(0));
   
   sgSetVec3(rvec, 0.0, 1.0, 0.0);
   sgMakeRotMat4(temp, 180.0f - (float)psi * SG_RADIANS_TO_DEGREES, rvec);

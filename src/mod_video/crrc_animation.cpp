@@ -399,12 +399,12 @@ void CRRCControlSurfaceAnimation::transformPoint(CRRCMath::Vector3& point)
 {
   sgVec3 pnt_sg;
 
-  sgSetVec3(pnt_sg, (float)point.r[0], (float)point.r[1], (float)point.r[2]);
+  sgSetVec3(pnt_sg, (float)point(0), (float)point(1), (float)point(2));
   sgXformVec3(pnt_sg, current_transformation);
 
-  point.r[0] = pnt_sg[SG_X];
-  point.r[1] = pnt_sg[SG_Y];
-  point.r[2] = pnt_sg[SG_Z];
+  point(0) = pnt_sg[SG_X];
+  point(1) = pnt_sg[SG_Y];
+  point(2) = pnt_sg[SG_Z];
 }
 
 

@@ -74,7 +74,7 @@ Extra drag and slightly softer pitch authority to match the mushy feel seen in r
       <en>default</en>
     </descr_short>
   </graphics>
-  <wheels version="1" units="0">
+  <wheels version="1" units="0" enabled="0">
     <wheel percent_brake="0.5" caster_angle_rad="0">
       <pos x="0.66666698" y="0" z="0.0625" />
       <spring constant="35" damping="0.15" max_force="25.0" />

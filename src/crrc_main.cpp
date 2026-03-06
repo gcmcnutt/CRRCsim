@@ -75,7 +75,6 @@ If you'd like to help with CRRCSIM, then send me an email!
 #include "mod_fdm/xmlmodelfile.h"
 #include "mod_misc/crrc_rand.h"
 #include <cstdlib>
-static bool gAutocDeterministicMode = (std::getenv("AUTOC_DETERMINISTIC") != nullptr);
 #include "mod_video/glconsole.h"
 #include "crrc_fdm.h"
 #include "mod_misc/ls_constants.h"
@@ -150,7 +149,7 @@ void activate_test_mode()
   
   // enter testmode
   CRRCMath::Vector3 ppos = Global::scenery->getPlayerPosition();
-  CRRCMath::Vector3 planepos(ppos.r[0] - distance, ppos.r[1], ppos.r[2]);
+  CRRCMath::Vector3 planepos(ppos(0) - distance, ppos(1), ppos(2));
   Global::aircraft->enterTestmode(planepos); 
   initialize_flight_model();
   Global::aircraft->getFDMInterface()->update(&inp, 0, 0);
@@ -210,14 +209,14 @@ void initialize_flight_model()
     // default relative position is similar to what has been used on original 'Cape Cod' and 'Davis':
     double launchx = cfgfile->getDouble("launch.rel_front", MODELSTART_REL_FRONT);
     double launchy = cfgfile->getDouble("launch.rel_right", MODELSTART_REL_RIGHT);
-    posX = -player_pos.r[2] + launchx*cos(wind_direction) - launchy*sin(wind_direction);
-    posY =  player_pos.r[0] + launchx*sin(wind_direction) + launchy*cos(wind_direction);
+    posX = -player_pos(2) + launchx*cos(wind_direction) - launchy*sin(wind_direction);
+    posY =  player_pos(0) + launchx*sin(wind_direction) + launchy*cos(wind_direction);
   }
   else
   {
     CRRCMath::Vector3 start_pos = Global::scenery->getStartPosition(CurrentStartPositionName);
-    posX = -start_pos.r[2];
-    posY =  start_pos.r[0];
+    posX = -start_pos(2);
+    posY =  start_pos(0);
   }
   double phi,theta,psi,height;
   float plane[4];
@@ -243,10 +242,24 @@ void initialize_flight_model()
     //printf ("START theta : %.1f phi: %.1f \n",theta, phi);////
     //printf ("START h: %.1f h0: %.1f h1: %.1f h2: %.1f \n",height,h0,h1,h2);
     }
-  Altitude = Altitude + zlow + height; 
+  Altitude = Altitude + zlow + height;
 #ifdef DETAILED_LOGGING
   printf ("START ALTITUDE : %.1f (%.1f+%.1f)\n",Altitude,zlow,height );////
 #endif
+
+  // VARIATIONS1: Apply entry variations from scenario (set by inputdev_autoc)
+  velocity_rel *= Global::entrySpeedFactor;
+  phi += Global::entryRollOffset;
+  theta += Global::entryPitchOffset;
+  psi += Global::entryHeadingOffset;
+#ifdef DETAILED_LOGGING
+  printf("VARIATIONS1: vel=%.2fx phi=%.1f° theta=%.1f° psi=%.1f°\n",
+         Global::entrySpeedFactor,
+         Global::entryRollOffset * 180.0/M_PI,
+         Global::entryPitchOffset * 180.0/M_PI,
+         Global::entryHeadingOffset * 180.0/M_PI);
+#endif
+
   Global::aircraft->getFDMInterface()->initAirplaneState(
                                  velocity_rel,
                                  phi,
@@ -495,12 +508,17 @@ void write_globals_into_config()
 /*****************************************************************************/
 void initializeRandomNumberGenerator()
 {
-  time_t sometime = time(0);
-  srand((unsigned int) sometime);
+  // Initialize RNG with deterministic seed (42) for reproducibility
+  // For random behavior, uncomment the time-based seed below:
+  // time_t sometime = time(0);
+  // CRRC_Random::reset((unsigned int)sometime);
+
+  // Use deterministic seed for reproducibility
+  CRRC_Random::reset(42);
+
   const char* ctx = CRRC_Random::pushTraceContext("initializeRandomNumberGenerator.seed");
   CRRC_Random::insertData(CRRC_Random::rand());
   CRRC_Random::popTraceContext(ctx);
-  std::cout << "RAND_MAX = " << RAND_MAX << "\n";
 }
 
 /*****************************************************************************/
@@ -928,7 +946,7 @@ int main(int argc,char **argv)
       
       if (Global::training_mode)
       {
-        Global::inputs.heli_fixed_z = -Global::scenery->getPlayerPosition().r[1];
+        Global::inputs.heli_fixed_z = -Global::scenery->getPlayerPosition()(1);
       }
       else
       {
@@ -938,16 +956,18 @@ int main(int argc,char **argv)
       Global::Simulation->doIdle(&Global::inputs, crrc_time->update());
 
       Global::inputs.ClearKeys();
-      
-      // random data (skip when deterministic mode enforced)
-      if (!gAutocDeterministicMode) {
+
+      // Insert random data for additional entropy
+      // Skip in autoc mode to preserve determinism - autoc resets the RNG with a specific seed
+      // and any insertData() calls would corrupt the deterministic sequence
+      if (Global::TXInterface->inputMethod() != T_TX_Interface::eIM_autoc) {
         CRRC_Random::insertData(SDL_GetTicks());
         CRRC_Random::insertData(Global::inputs.getRandNum());
       }
 
       // get aircraft position from FDM
       CRRCMath::Vector3 aircraft_pos = Video::FDM2Graphics(Global::aircraft->getPos());
-      float distance_to_model = (aircraft_pos - player_pos).length();
+      float distance_to_model = (aircraft_pos - player_pos).norm();
       
       field_of_view = zoom_calc(distance_to_model);
       if (Global::gui)
@@ -956,9 +976,9 @@ int main(int argc,char **argv)
       }
       
       #if 0
-      Global::verboseString += " X: " + ftoStr(vFdmPos.r[0], 2, 2, true, false);
-      Global::verboseString += " Y: " + ftoStr(vFdmPos.r[1], 2, 2, true, false);
-      Global::verboseString += " Z: " + ftoStr(vFdmPos.r[2], 2, 2, true, false);
+      Global::verboseString += " X: " + ftoStr(vFdmPos(0), 2, 2, true, false);
+      Global::verboseString += " Y: " + ftoStr(vFdmPos(1), 2, 2, true, false);
+      Global::verboseString += " Z: " + ftoStr(vFdmPos(2), 2, 2, true, false);
       Global::verboseString += " Phi: " + ftoStr(Global::aircraft->getFDM()->getPhi() * SG_RADIANS_TO_DEGREES, 2, 2, true, false);
       Global::verboseString += " Theta: " + ftoStr(Global::aircraft->getFDM()->getTheta() * SG_RADIANS_TO_DEGREES, 2, 2, true, false);
       Global::verboseString += " Psi: " + ftoStr(Global::aircraft->getFDM()->getPsi() * SG_RADIANS_TO_DEGREES, 2, 2, true, false);
@@ -1054,7 +1074,7 @@ int main(int argc,char **argv)
       {
         soundUpdate3D(distance_to_model,
                       Global::aircraft->getFDM()->getPropFreq(),
-                      aircraft_pos.r[1],
+                      aircraft_pos(1),
                       Global::aircraft->getFDM()->getVRelAirmass()/Global::aircraft->getFDM()->getTrimmedFlightVelocity());
       }
     }

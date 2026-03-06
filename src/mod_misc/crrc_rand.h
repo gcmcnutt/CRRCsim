@@ -66,7 +66,7 @@ class CRRC_Random
    */
   static int rand();
 
-  static inline int max() { return(RAND_MAX); };
+  static inline int max() { return(0x7FFFFFFF); };  // Maximum for Park-Miller RNG
 
   /**
    * Temporarily associate a contextual label with subsequent rand() calls.
@@ -88,7 +88,13 @@ class CRRC_Random
    * Reset RNG state to a deterministic seed.
    */
   static void reset(unsigned int seed);
-   
+
+  /**
+   * Get current RNG state for debugging/logging.
+   */
+  static unsigned int getState16() { return uRandState16; }
+  static unsigned int getState32() { return uRandState32; }
+
   private:
    
    /**
@@ -138,5 +144,12 @@ class RandGauss
     double sigma_, mean_, V2, fac;
     int phase;
 };
+
+// Ordered event logging for debugging RNG non-determinism
+namespace RandGaussTrace {
+  void startEventLog(int maxEvents = 1000);
+  void dumpAndClearEventLog();
+  void stopEventLog();
+}
 
 #endif

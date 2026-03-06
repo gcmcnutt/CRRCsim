@@ -40,6 +40,45 @@
 
 EOM01::EOM01(const char* logfilename, FDMEnviroment* myEnv) : FDMBase(logfilename, myEnv)
 {
+  // Initialize ALL member variables to prevent uninitialized state in multi-evaluation scenarios.
+  // The FDM object is reused across evaluations, not recreated each time.
+
+  // Debug/diagnostic state (added for deterministic testing)
+  dbg_V_local_airmass = CRRCMath::Vector3::Zero();
+  dbg_V_gust_body = CRRCMath::Vector3::Zero();
+  dbg_force_body = CRRCMath::Vector3::Zero();
+  dbg_moment_body = CRRCMath::Vector3::Zero();
+
+  // Integrator history state (Adams-Bashforth requires previous timestep values)
+  v_V_dot_past = CRRCMath::Vector3::Zero();
+  latitude_dot_past = longitude_dot_past = radius_dot_past = 0.0;
+  v_R_omega_dot_body_past = CRRCMath::Vector3::Zero();
+  e_dot_0_past = e_dot_1_past = e_dot_2_past = e_dot_3_past = 0.0;
+
+  // Current state vectors (will be set by ls_step_init, but zero for safety)
+  v_R_omega_body = CRRCMath::Vector3::Zero();
+  v_V_local = CRRCMath::Vector3::Zero();
+  v_R_omega_dot_body = CRRCMath::Vector3::Zero();
+  v_V_dot_local = CRRCMath::Vector3::Zero();
+  v_V_local_rel_ground = CRRCMath::Vector3::Zero();
+  v_V_local_rel_airmass = CRRCMath::Vector3::Zero();
+  v_V_wind_body = CRRCMath::Vector3::Zero();
+  v_P_CG_Rwy = CRRCMath::Vector3::Zero();
+
+  // Scalars
+  e_0 = e_1 = e_2 = e_3 = 0.0;
+  Mass = I_xx = I_yy = I_zz = I_xz = 0.0;
+  Sea_level_radius = 0.0;
+  V_rel_wind = Alpha = Beta = 0.0;
+  Gravity = Density = 0.0;
+
+  // Arrays (using memset or explicit initialization)
+  euler_angles_v[0] = euler_angles_v[1] = euler_angles_v[2] = 0.0;
+  geocentric_position_v[0] = geocentric_position_v[1] = geocentric_position_v[2] = 0.0;
+  geodetic_position_v[0] = geodetic_position_v[1] = geodetic_position_v[2] = 0.0;
+
+  // Matrix (will be initialized by ls_step_init, but zero for safety)
+  LocalToBody = CRRCMath::Matrix33::Zero();
 }
 
 double EOM01::getPhi()
@@ -95,9 +134,9 @@ double EOM01::getAlt()
 void EOM01::ls_step_init() 
 {
   /* Set past values to zero */
-  v_V_dot_past = CRRCMath::Vector3();
+  v_V_dot_past = CRRCMath::Vector3::Zero();
   latitude_dot_past = longitude_dot_past = radius_dot_past  = 0;
-  v_R_omega_dot_body_past = CRRCMath::Vector3();
+  v_R_omega_dot_body_past = CRRCMath::Vector3::Zero();
   e_dot_0_past = e_dot_1_past = e_dot_2_past = e_dot_3_past = 0;
 
   /* Initialize geocentric position from geodetic latitude and altitude */
@@ -116,15 +155,15 @@ void EOM01::ls_step_init()
     + sin(Psi*0.5)*cos(Theta*0.5)*sin(Phi*0.5);
   e_3 = -cos(Psi*0.5)*sin(Theta*0.5)*sin(Phi*0.5)
     + sin(Psi*0.5)*cos(Theta*0.5)*cos(Phi*0.5);
-  LocalToBody.v[0][0] = e_0*e_0 + e_1*e_1 - e_2*e_2 - e_3*e_3;
-  LocalToBody.v[0][1] = 2*(e_1*e_2 + e_0*e_3);
-  LocalToBody.v[0][2] = 2*(e_1*e_3 - e_0*e_2);
-  LocalToBody.v[1][0] = 2*(e_1*e_2 - e_0*e_3);
-  LocalToBody.v[1][1] = e_0*e_0 - e_1*e_1 + e_2*e_2 - e_3*e_3;
-  LocalToBody.v[1][2] = 2*(e_2*e_3 + e_0*e_1);
-  LocalToBody.v[2][0] = 2*(e_1*e_3 + e_0*e_2);
-  LocalToBody.v[2][1] = 2*(e_2*e_3 - e_0*e_1);
-  LocalToBody.v[2][2] = e_0*e_0 - e_1*e_1 - e_2*e_2 + e_3*e_3;  
+  LocalToBody(0,0) = e_0*e_0 + e_1*e_1 - e_2*e_2 - e_3*e_3;
+  LocalToBody(0,1) = 2*(e_1*e_2 + e_0*e_3);
+  LocalToBody(0,2) = 2*(e_1*e_3 - e_0*e_2);
+  LocalToBody(1,0) = 2*(e_1*e_2 - e_0*e_3);
+  LocalToBody(1,1) = e_0*e_0 - e_1*e_1 + e_2*e_2 - e_3*e_3;
+  LocalToBody(1,2) = 2*(e_2*e_3 + e_0*e_1);
+  LocalToBody(2,0) = 2*(e_1*e_3 + e_0*e_2);
+  LocalToBody(2,1) = 2*(e_2*e_3 - e_0*e_1);
+  LocalToBody(2,2) = e_0*e_0 - e_1*e_1 - e_2*e_2 + e_3*e_3;  
 }
 
 
@@ -181,7 +220,7 @@ void EOM01::ls_step( SCALAR dt )
 
   if ( cos_Lat_geocentric != 0)
   {
-    Longitude_dot = v_V_local.r[1]/(Radius_to_vehicle*cos_Lat_geocentric);
+    Longitude_dot = v_V_local(1)/(Radius_to_vehicle*cos_Lat_geocentric);
   }
   else
   {
@@ -194,8 +233,8 @@ void EOM01::ls_step( SCALAR dt )
     fprintf(stderr, "Error: Longitude_dot --> +inf!\n");
   }
 
-  Latitude_dot = v_V_local.r[0]*inv_Radius_to_vehicle;
-  Radius_dot   = -v_V_local.r[2];
+  Latitude_dot = v_V_local(0)*inv_Radius_to_vehicle;
+  Radius_dot   = -v_V_local(2);
 
 /*  A N G U L A R   V E L O C I T I E S   A N D   P O S I T I O N S  */
 
@@ -203,10 +242,10 @@ void EOM01::ls_step( SCALAR dt )
 
   v_R_omega_body = v_R_omega_body + (v_R_omega_dot_body*3 - v_R_omega_dot_body_past)*dth;
   
-  // sanity check: v_R_omega_body.length() * dt < pi/2
+  // sanity check: v_R_omega_body.norm() * dt < pi/2
   {
     double vRo_max = 0.5*M_PI / dt;
-    double vRo_len = v_R_omega_body.length();
+    double vRo_len = v_R_omega_body.norm();
     
     if (vRo_len > vRo_max)
       v_R_omega_body *= vRo_max/vRo_len;
@@ -222,9 +261,9 @@ void EOM01::ls_step( SCALAR dt )
     CRRCMath::Vector3    v_R_local_in_body;
     
     /* Calculate local axis frame rates due to travel over curved earth */
-    v_R_omega_local.r[0] =  v_V_local.r[1]*inv_Radius_to_vehicle;
-    v_R_omega_local.r[1] = -v_V_local.r[0]*inv_Radius_to_vehicle;
-    v_R_omega_local.r[2] = -v_V_local.r[1]*tan(Lat_geocentric)*inv_Radius_to_vehicle;
+    v_R_omega_local(0) =  v_V_local(1)*inv_Radius_to_vehicle;
+    v_R_omega_local(1) = -v_V_local(0)*inv_Radius_to_vehicle;
+    v_R_omega_local(2) = -v_V_local(1)*tan(Lat_geocentric)*inv_Radius_to_vehicle;
   
     /* Transform local axis frame rates to body axis rates */
     v_R_local_in_body = LocalToBody * v_R_omega_local;
@@ -237,10 +276,10 @@ void EOM01::ls_step( SCALAR dt )
 
 /* Transform to quaternion rates (see Appendix E in [2]) */
 
-  e_dot_0 = 0.5*( -v_R_omega_total.r[0]*e_1 - v_R_omega_total.r[1]*e_2 - v_R_omega_total.r[2]*e_3 );
-  e_dot_1 = 0.5*(  v_R_omega_total.r[0]*e_0 - v_R_omega_total.r[1]*e_3 + v_R_omega_total.r[2]*e_2 );
-  e_dot_2 = 0.5*(  v_R_omega_total.r[0]*e_3 + v_R_omega_total.r[1]*e_0 - v_R_omega_total.r[2]*e_1 );
-  e_dot_3 = 0.5*( -v_R_omega_total.r[0]*e_2 + v_R_omega_total.r[1]*e_1 + v_R_omega_total.r[2]*e_0 );
+  e_dot_0 = 0.5*( -v_R_omega_total(0)*e_1 - v_R_omega_total(1)*e_2 - v_R_omega_total(2)*e_3 );
+  e_dot_1 = 0.5*(  v_R_omega_total(0)*e_0 - v_R_omega_total(1)*e_3 + v_R_omega_total(2)*e_2 );
+  e_dot_2 = 0.5*(  v_R_omega_total(0)*e_3 + v_R_omega_total(1)*e_0 - v_R_omega_total(2)*e_1 );
+  e_dot_3 = 0.5*( -v_R_omega_total(0)*e_2 + v_R_omega_total(1)*e_1 + v_R_omega_total(2)*e_0 );
 
 /* Integrate using trapezoidal as before */
 
@@ -268,30 +307,30 @@ void EOM01::ls_step( SCALAR dt )
 
 /* Update local to body transformation matrix */
 
-  LocalToBody.v[0][0] = e_0*e_0 + e_1*e_1 - e_2*e_2 - e_3*e_3;
-  LocalToBody.v[0][1] = 2*(e_1*e_2 + e_0*e_3);
-  LocalToBody.v[0][2] = 2*(e_1*e_3 - e_0*e_2);
-  LocalToBody.v[1][0] = 2*(e_1*e_2 - e_0*e_3);
-  LocalToBody.v[1][1] = e_0*e_0 - e_1*e_1 + e_2*e_2 - e_3*e_3;
-  LocalToBody.v[1][2] = 2*(e_2*e_3 + e_0*e_1);
-  LocalToBody.v[2][0] = 2*(e_1*e_3 + e_0*e_2);
-  LocalToBody.v[2][1] = 2*(e_2*e_3 - e_0*e_1);
-  LocalToBody.v[2][2] = e_0*e_0 - e_1*e_1 - e_2*e_2 + e_3*e_3;
+  LocalToBody(0,0) = e_0*e_0 + e_1*e_1 - e_2*e_2 - e_3*e_3;
+  LocalToBody(0,1) = 2*(e_1*e_2 + e_0*e_3);
+  LocalToBody(0,2) = 2*(e_1*e_3 - e_0*e_2);
+  LocalToBody(1,0) = 2*(e_1*e_2 - e_0*e_3);
+  LocalToBody(1,1) = e_0*e_0 - e_1*e_1 + e_2*e_2 - e_3*e_3;
+  LocalToBody(1,2) = 2*(e_2*e_3 + e_0*e_1);
+  LocalToBody(2,0) = 2*(e_1*e_3 + e_0*e_2);
+  LocalToBody(2,1) = 2*(e_2*e_3 - e_0*e_1);
+  LocalToBody(2,2) = e_0*e_0 - e_1*e_1 - e_2*e_2 + e_3*e_3;
   
 /* Calculate Euler angles */
 
 #if 1
-  Theta = asin( -1*LocalToBody.v[0][2] );
+  Theta = asin( -1*LocalToBody(0,2) );
 
-  if( LocalToBody.v[0][0] == 0 )
+  if( LocalToBody(0,0) == 0 )
     Psi = 0;
   else
-    Psi = atan2( LocalToBody.v[0][1], LocalToBody.v[0][0] );
+    Psi = atan2( LocalToBody(0,1), LocalToBody(0,0) );
 
-  if( LocalToBody.v[2][2] == 0 )
+  if( LocalToBody(2,2) == 0 )
     Phi = 0;
   else
-    Phi = atan2( LocalToBody.v[1][2], LocalToBody.v[2][2] );
+    Phi = atan2( LocalToBody(1,2), LocalToBody(2,2) );
 
 /* Resolve Psi to 0 - 359.9999 */
 
@@ -334,20 +373,22 @@ void EOM01::ls_aux(CRRCMath::Vector3 v_V_local_airmass, CRRCMath::Vector3 v_V_gu
   v_V_local_rel_ground = v_V_local;
   v_V_local_rel_airmass = v_V_local_rel_ground - v_V_local_airmass;
   v_V_wind_body = LocalToBody * v_V_local_rel_airmass - v_V_gust_body;
+  dbg_V_local_airmass = v_V_local_airmass;
+  dbg_V_gust_body = v_V_gust_body;
   
-  V_rel_wind = v_V_wind_body.length();
+  V_rel_wind = v_V_wind_body.norm();
 
   /* Calculate flight path and other flight condition values */
 
-  if (v_V_wind_body.r[0] == 0)
+  if (v_V_wind_body(0) == 0)
     Alpha = 0;
   else
-    Alpha = atan2( v_V_wind_body.r[2], v_V_wind_body.r[0] );
+    Alpha = atan2( v_V_wind_body(2), v_V_wind_body(0) );
 
   if (V_rel_wind == 0)
     Beta = 0;
   else
-    Beta = asin( v_V_wind_body.r[1]/ V_rel_wind );
+    Beta = asin( v_V_wind_body(1)/ V_rel_wind );
 
   /* Calculate local gravity  */
 
@@ -361,9 +402,9 @@ void EOM01::ls_aux(CRRCMath::Vector3 v_V_local_airmass, CRRCMath::Vector3 v_V_gu
   
   /* Determine location in runway coordinates */
 
-  v_P_CG_Rwy.r[0] = Sea_level_radius * Latitude;
-  v_P_CG_Rwy.r[1] = Sea_level_radius * Longitude;
-  v_P_CG_Rwy.r[2] = Sea_level_radius - Radius_to_vehicle;
+  v_P_CG_Rwy(0) = Sea_level_radius * Latitude;
+  v_P_CG_Rwy(1) = Sea_level_radius * Longitude;
+  v_P_CG_Rwy(2) = Sea_level_radius - Radius_to_vehicle;
   
   /* end of ls_aux */
 }
@@ -388,14 +429,14 @@ void EOM01::ls_accel(CRRCMath::Vector3 v_F,
 
   CRRCMath::Vector3 v_F_local;
     
-  if (isfinite(v_F.length()) == 0)
+  if (isfinite(v_F.norm()) == 0)
   {
-    v_F = CRRCMath::Vector3();
+    v_F = CRRCMath::Vector3::Zero();
     // std::cerr << "warning: used BSOD workaround\n";
   }
-  if (isfinite(v_M_cg.length()) == 0)
+  if (isfinite(v_M_cg.norm()) == 0)
   {
-    v_M_cg = CRRCMath::Vector3();
+    v_M_cg = CRRCMath::Vector3::Zero();
     // std::cerr << "warning: used BSOD workaround\n";
   }
   
@@ -447,7 +488,7 @@ void EOM01::ls_accel(CRRCMath::Vector3 v_F,
   
   /* Transform from body to local frame */
 
-  v_F_local = LocalToBody.multrans(v_F);
+  v_F_local = CRRCMath::multrans(LocalToBody, v_F);
   
   /* Calculate linear accelerations */
 
@@ -455,18 +496,20 @@ void EOM01::ls_accel(CRRCMath::Vector3 v_F,
   inv_Mass    = 1/Mass;
   inv_Radius  = 1/Radius_to_vehicle;
   
-  v_V_dot_local.r[0] = inv_Mass*v_F_local.r[0] + inv_Radius*(v_V_local.r[0]*v_V_local.r[2] - v_V_local.r[1]*v_V_local.r[1] *tan_Lat_geocentric);
-  v_V_dot_local.r[1] = inv_Mass*v_F_local.r[1] + inv_Radius*(v_V_local.r[1]*v_V_local.r[2]  + v_V_local.r[0]*v_V_local.r[1]*tan_Lat_geocentric);
+  v_V_dot_local(0) = inv_Mass*v_F_local(0) + inv_Radius*(v_V_local(0)*v_V_local(2) - v_V_local(1)*v_V_local(1) *tan_Lat_geocentric);
+  v_V_dot_local(1) = inv_Mass*v_F_local(1) + inv_Radius*(v_V_local(1)*v_V_local(2)  + v_V_local(0)*v_V_local(1)*tan_Lat_geocentric);
 #if EOM_TEST != 0
-  v_V_dot_local.r[2] = inv_Mass*v_F_local.r[2]           - inv_Radius*(v_V_local.r[0]*v_V_local.r[0] + v_V_local.r[1]*v_V_local.r[1]);
+  v_V_dot_local(2) = inv_Mass*v_F_local(2)           - inv_Radius*(v_V_local(0)*v_V_local(0) + v_V_local(1)*v_V_local(1));
 #else
-  v_V_dot_local.r[2] = inv_Mass*v_F_local.r[2] + Gravity - inv_Radius*(v_V_local.r[0]*v_V_local.r[0] + v_V_local.r[1]*v_V_local.r[1]);
+  v_V_dot_local(2) = inv_Mass*v_F_local(2) + Gravity - inv_Radius*(v_V_local(0)*v_V_local(0) + v_V_local(1)*v_V_local(1));
 #endif
+  dbg_force_body = v_F;
+  dbg_moment_body = v_M_cg;
   
   // The altitude-controller, because it is very easy here:
   if (fixed_z < EOM01_FIXED_Z_OFF*0.98)
   {
-    v_V_dot_local.r[2] = Controller_s(fixed_z + Altitude, v_V_local.r[2]);
+    v_V_dot_local(2) = Controller_s(fixed_z + Altitude, v_V_local(2));
   }  
   
   /* Invert the symmetric inertia matrix */
@@ -487,17 +530,17 @@ void EOM01::ls_accel(CRRCMath::Vector3 v_F,
 
   /* Calculate the rotational body axis accelerations */
 
-  v_R_omega_dot_body.r[0] = (c1*v_R_omega_body.r[2] + c2*v_R_omega_body.r[0])*v_R_omega_body.r[1] + c3*v_M_cg.r[0] +  c4*v_M_cg.r[2];
-  v_R_omega_dot_body.r[1] =  c5*v_R_omega_body.r[2]*v_R_omega_body.r[0] + c6*(v_R_omega_body.r[2]*v_R_omega_body.r[2] - v_R_omega_body.r[0]*v_R_omega_body.r[0]) + c7*v_M_cg.r[1];
-  v_R_omega_dot_body.r[2] = (c8*v_R_omega_body.r[0] + c9*v_R_omega_body.r[2])*v_R_omega_body.r[1] + c4*v_M_cg.r[0] + c10*v_M_cg.r[2];
+  v_R_omega_dot_body(0) = (c1*v_R_omega_body(2) + c2*v_R_omega_body(0))*v_R_omega_body(1) + c3*v_M_cg(0) +  c4*v_M_cg(2);
+  v_R_omega_dot_body(1) =  c5*v_R_omega_body(2)*v_R_omega_body(0) + c6*(v_R_omega_body(2)*v_R_omega_body(2) - v_R_omega_body(0)*v_R_omega_body(0)) + c7*v_M_cg(1);
+  v_R_omega_dot_body(2) = (c8*v_R_omega_body(0) + c9*v_R_omega_body(2))*v_R_omega_body(1) + c4*v_M_cg(0) + c10*v_M_cg(2);
 
   // fixed horizon controller
   // There currently is a problem with this one: once one has hit ground hard, yaw axis is dead ?!?!
   // Everything is fine after reset again.
   if (fFixedHorizon)
   {
-    v_R_omega_dot_body.r[0] = Controller_s(0 - Phi,   v_R_omega_body.r[0]);
-    v_R_omega_dot_body.r[1] = Controller_s(0 - Theta, v_R_omega_body.r[1]);
+    v_R_omega_dot_body(0) = Controller_s(0 - Phi,   v_R_omega_body(0));
+    v_R_omega_dot_body(1) = Controller_s(0 - Theta, v_R_omega_body(1));
   }
 }
 

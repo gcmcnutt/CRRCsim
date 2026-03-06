@@ -130,9 +130,9 @@ namespace CRRCMath
       void makeTranslation(Vector3 const& translation)
       {
         makeIdent();
-        v[0][3] = translation.r[0];
-        v[1][3] = translation.r[1];
-        v[2][3] = translation.r[2];
+        v[0][3] = translation(0);
+        v[1][3] = translation(1);
+        v[2][3] = translation(2);
       }
       
       /**
@@ -183,9 +183,9 @@ namespace CRRCMath
         
         Vector3 normaxis(axis);
         normaxis.normalize();
-        T x = (T)normaxis.r[0];
-        T y = (T)normaxis.r[1];
-        T z = (T)normaxis.r[2];
+        T x = (T)normaxis(0);
+        T y = (T)normaxis(1);
+        T z = (T)normaxis(2);
         
         v[0][0] = t * x * x + c;
         v[0][1] = t * x * y - s * z;
@@ -317,14 +317,14 @@ namespace CRRCMath
        */
       Vector3 operator*(const Vector3& rhs) const
       {
-        return Vector3(v[0][0] * rhs.r[0] + v[0][1] * rhs.r[1] + v[0][2] * rhs.r[2] + v[0][3],
-                       v[1][0] * rhs.r[0] + v[1][1] * rhs.r[1] + v[1][2] * rhs.r[2] + v[1][3],
-                       v[2][0] * rhs.r[0] + v[2][1] * rhs.r[1] + v[2][2] * rhs.r[2] + v[2][3]);
+        return Vector3(v[0][0] * rhs(0) + v[0][1] * rhs(1) + v[0][2] * rhs(2) + v[0][3],
+                       v[1][0] * rhs(0) + v[1][1] * rhs(1) + v[1][2] * rhs(2) + v[1][3],
+                       v[2][0] * rhs(0) + v[2][1] * rhs(1) + v[2][2] * rhs(2) + v[2][3]);
       }
 
       /**
       * Operation: Erst die transponierte bilden, dann Multiplikation mit Vector3.
-       *            Ist wahrscheinlich schneller als <tt>matrix.trans() * vector3</tt>.
+       *            Ist wahrscheinlich schneller als <tt>matrix.transpose() * vector3</tt>.
        */
       //~ Vector3 multrans(const Vector3& b) const;
 
