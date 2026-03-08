@@ -202,9 +202,11 @@ if(PERFORMANCE_BUILD)
   # -mtune=native: Optimize instruction scheduling for this CPU
   # -funroll-loops: Better SIMD utilization
   # -flto: Link-time optimization for whole-program analysis
-  # -ffast-math: Aggressive FP optimizations (safe now that simTime is deterministic)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -g -march=native -mtune=native -funroll-loops -flto -ffast-math")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -g -march=native -mtune=native -funroll-loops -flto -ffast-math")
+  # -ffast-math: Aggressive FP optimizations
+  # -fno-finite-math-only: Re-enable NaN/Inf checks that -ffast-math disables;
+  #   GP trees routinely produce NaN (DIV/0, SQRT(-1)) and guards rely on std::isnan
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -g -march=native -mtune=native -funroll-loops -flto -ffast-math -fno-finite-math-only")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -g -march=native -mtune=native -funroll-loops -flto -ffast-math -fno-finite-math-only")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -flto")
 endif()
 

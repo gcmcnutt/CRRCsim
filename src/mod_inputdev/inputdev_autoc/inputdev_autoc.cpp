@@ -539,6 +539,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       pathIndex = 0;
       gPendingCommand = PendingCommand{};
       aircraftStates.clear();
+      aircraftState.clearHistory();  // Reset temporal history for new path
       gCurrentPhysicsTrace.clear();  // Clear physics trace for new path
 
       // Set worker identity globals for FDM trace capture
@@ -742,11 +743,17 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     }
 
 
-    // convert sim state to AircraftState
+    // Update sim state in AircraftState in-place to preserve temporal history
     // Commands always start at zero before GP evaluation (prevents pollution across re-evals)
-    aircraftState = {pathIndex, v, velocity_vector, q, p,
-                     static_cast<gp_scalar>(0.0f), static_cast<gp_scalar>(0.0f), static_cast<gp_scalar>(0.0f),
-                     simTimeMsec};
+    aircraftState.setThisPathIndex(pathIndex);
+    aircraftState.setRelVel(v);
+    aircraftState.setVelocity(velocity_vector);
+    aircraftState.setOrientation(q);
+    aircraftState.setPosition(p);
+    aircraftState.setPitchCommand(0.0f);
+    aircraftState.setRollCommand(0.0f);
+    aircraftState.setThrottleCommand(0.0f);
+    aircraftState.setSimTimeMsec(simTimeMsec);
 
     CrashReason crashReason = CrashReason::None;
 
