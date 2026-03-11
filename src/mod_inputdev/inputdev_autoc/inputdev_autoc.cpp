@@ -520,12 +520,20 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       Global::entrySpeedFactor = activeScenario.entrySpeedFactor;
       Global::windDirectionOffset = activeScenario.windDirectionOffset;
 
+      // Entry position offsets (see specs/005-entry-fitness-ramp)
+      Global::entryNorthOffset = activeScenario.entryNorthOffset;
+      Global::entryEastOffset = activeScenario.entryEastOffset;
+      Global::entryAltOffset = activeScenario.entryAltOffset;
+
 #ifdef DETAILED_LOGGING
       std::cerr << "VARIATIONS1: heading=" << (Global::entryHeadingOffset * 180.0/M_PI)
                 << "° roll=" << (Global::entryRollOffset * 180.0/M_PI)
                 << "° pitch=" << (Global::entryPitchOffset * 180.0/M_PI)
                 << "° speed=" << Global::entrySpeedFactor
-                << "x wind=" << (Global::windDirectionOffset * 180.0/M_PI) << "°" << std::endl;
+                << "x wind=" << (Global::windDirectionOffset * 180.0/M_PI) << "°"
+                << " posN=" << Global::entryNorthOffset
+                << "m posE=" << Global::entryEastOffset
+                << "m alt=" << Global::entryAltOffset << "m" << std::endl;
 #endif
 
       // Reset simulation with wind seed

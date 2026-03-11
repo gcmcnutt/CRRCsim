@@ -252,12 +252,21 @@ void initialize_flight_model()
   phi += Global::entryRollOffset;
   theta += Global::entryPitchOffset;
   psi += Global::entryHeadingOffset;
+
+  // Entry position offsets (see specs/005-entry-fitness-ramp)
+  // NED mapping: North→-posX (crrcsim uses -Z for North), East→posY
+  posX += -Global::entryNorthOffset;
+  posY += Global::entryEastOffset;
+  Altitude += Global::entryAltOffset;
 #ifdef DETAILED_LOGGING
-  printf("VARIATIONS1: vel=%.2fx phi=%.1f° theta=%.1f° psi=%.1f°\n",
+  printf("VARIATIONS1: vel=%.2fx phi=%.1f° theta=%.1f° psi=%.1f° posN=%.1fm posE=%.1fm alt=%.1fm\n",
          Global::entrySpeedFactor,
          Global::entryRollOffset * 180.0/M_PI,
          Global::entryPitchOffset * 180.0/M_PI,
-         Global::entryHeadingOffset * 180.0/M_PI);
+         Global::entryHeadingOffset * 180.0/M_PI,
+         Global::entryNorthOffset,
+         Global::entryEastOffset,
+         Global::entryAltOffset);
 #endif
 
   Global::aircraft->getFDMInterface()->initAirplaneState(

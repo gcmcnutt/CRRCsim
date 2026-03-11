@@ -88,6 +88,11 @@ class Global
     static double entryPitchOffset;      ///< radians, offset from config pitch
     static double entrySpeedFactor;      ///< multiplier on config velocity
     static double windDirectionOffset;   ///< radians, offset from config wind dir
+
+    // Entry position offsets (see specs/005-entry-fitness-ramp)
+    static double entryNorthOffset;      ///< meters, NED North position offset
+    static double entryEastOffset;       ///< meters, NED East position offset
+    static double entryAltOffset;        ///< meters, NED Down altitude offset
 };
 
 

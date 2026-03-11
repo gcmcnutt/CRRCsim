@@ -60,3 +60,8 @@ double            Global::entryRollOffset = 0.0;
 double            Global::entryPitchOffset = 0.0;
 double            Global::entrySpeedFactor = 1.0;
 double            Global::windDirectionOffset = 0.0;
+
+// Entry position offsets (defaults = no offset)
+double            Global::entryNorthOffset = 0.0;
+double            Global::entryEastOffset = 0.0;
+double            Global::entryAltOffset = 0.0;
