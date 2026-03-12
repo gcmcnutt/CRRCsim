@@ -975,12 +975,15 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     }
 #endif
 
-    // Capture temporal history before GP evaluation (for GETDPHI_PREV, GETDTHETA_PREV, etc.)
+    // Capture temporal history before GP evaluation (for GETDPHI_PREV, GETDTHETA_PREV, GETDIST_PREV, etc.)
     {
       VectorPathProvider pathProvider(path, aircraftState.getThisPathIndex());
       gp_scalar dPhi = executeGetDPhi(pathProvider, aircraftState, 0.0f);
       gp_scalar dTheta = executeGetDTheta(pathProvider, aircraftState, 0.0f);
-      aircraftState.recordErrorHistory(dPhi, dTheta, simTimeMsec);
+      gp_vec3 targetPos = getInterpolatedTargetPosition(
+          pathProvider, static_cast<int32_t>(aircraftState.getSimTimeMsec()), 0.0f);
+      gp_scalar distance = (targetPos - aircraftState.getPosition()).norm();
+      aircraftState.recordErrorHistory(dPhi, dTheta, distance, simTimeMsec);
     }
 
     // Evaluate immediately on this snapshot
