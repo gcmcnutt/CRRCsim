@@ -32,6 +32,8 @@
 #include "minisim.h"
 #include "autoc.h"
 #include "gp_evaluator_portable.h"
+#include "nn_evaluator_portable.h"
+#include "nn_serialization.h"
 
 #include <stdio.h>
 #include <iostream>
@@ -119,6 +121,8 @@ private:
   GPBytecodeInterpreter *interpreter = nullptr;
   bool isGPTreeData = false;
   bool isBytecodeData = false;
+  bool isNeuralNetData = false;
+  NNGenome nnGenome;
   std::vector<Path> path;
 };
 

@@ -29,6 +29,10 @@ set(MOD_INPUTDEV_SRCS
   $ENV{HOME}/GP/autoc/minisim.h
   $ENV{HOME}/GP/autoc/aircraft_state.h
   $ENV{HOME}/GP/autoc/gp_types.h
+  $ENV{HOME}/GP/autoc/nn_evaluator_portable.cc
+  $ENV{HOME}/GP/autoc/nn_evaluator_portable.h
+  $ENV{HOME}/GP/autoc/nn_serialization.cc
+  $ENV{HOME}/GP/autoc/nn_serialization.h
  )
 add_library(mod_inputdev ${MOD_INPUTDEV_SRCS})
 

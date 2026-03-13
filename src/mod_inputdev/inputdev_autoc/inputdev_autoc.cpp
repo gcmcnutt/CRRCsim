@@ -458,47 +458,47 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       // Reset data type flags
       isGPTreeData = false;
       isBytecodeData = false;
-      
-      // Detect if we have GP tree data or bytecode data
-      bool looksLikeBinaryArchive = false;
-      if (evalData.gp.size() >= 4) {
-        // Check for binary archive magic bytes (boost binary archive typically starts with specific patterns)
-        unsigned char firstBytes[4] = {
-          (unsigned char)evalData.gp[0], 
-          (unsigned char)evalData.gp[1], 
-          (unsigned char)evalData.gp[2], 
-          (unsigned char)evalData.gp[3]
-        };
-        // Binary archives often start with version info in binary format
-        looksLikeBinaryArchive = (firstBytes[0] >= 0x16 && firstBytes[0] <= 0x20) && 
-                                (firstBytes[1] == 0x00 || firstBytes[2] == 0x00);
-      }
-      
-      if (looksLikeBinaryArchive) {
-        // This looks like Boost binary serialized bytecode data
-        try {
-          boost::iostreams::array_source source(evalData.gp.data(), evalData.gp.size());
-          boost::iostreams::stream<boost::iostreams::array_source> bytecodeStream(source);
-          boost::archive::binary_iarchive archive(bytecodeStream);
-          interpreter = new GPBytecodeInterpreter();
-          archive >> *interpreter;
-          isBytecodeData = true;
-        } catch (const std::exception& e) {
-          std::cerr << "Error loading bytecode data: " << e.what() << std::endl;
-          return;
+      isNeuralNetData = false;
+
+      // Dispatch based on ControllerType enum from evalData
+      switch (evalData.controllerType) {
+        case ControllerType::NEURAL_NET: {
+          if (!nn_deserialize(reinterpret_cast<const uint8_t*>(evalData.gp.data()),
+                              evalData.gp.size(), nnGenome)) {
+            std::cerr << "Error deserializing NN genome" << std::endl;
+            return;
+          }
+          isNeuralNetData = true;
+          break;
         }
-      } else {
-        // This looks like GP tree data
-        try {
-          boost::iostreams::array_source source(evalData.gp.data(), evalData.gp.size());
-          boost::iostreams::stream<boost::iostreams::array_source> gpStream(source);
-          gp = new MyGP();
-          gp->load(gpStream);
-          gp->resolveNodeValues(adfNs);
-          isGPTreeData = true;
-        } catch (const std::exception& e) {
-          std::cerr << "Error loading GP tree data: " << e.what() << std::endl;
-          return;
+        case ControllerType::BYTECODE: {
+          try {
+            boost::iostreams::array_source source(evalData.gp.data(), evalData.gp.size());
+            boost::iostreams::stream<boost::iostreams::array_source> bytecodeStream(source);
+            boost::archive::binary_iarchive archive(bytecodeStream);
+            interpreter = new GPBytecodeInterpreter();
+            archive >> *interpreter;
+            isBytecodeData = true;
+          } catch (const std::exception& e) {
+            std::cerr << "Error loading bytecode data: " << e.what() << std::endl;
+            return;
+          }
+          break;
+        }
+        case ControllerType::GP_TREE:
+        default: {
+          try {
+            boost::iostreams::array_source source(evalData.gp.data(), evalData.gp.size());
+            boost::iostreams::stream<boost::iostreams::array_source> gpStream(source);
+            gp = new MyGP();
+            gp->load(gpStream);
+            gp->resolveNodeValues(adfNs);
+            isGPTreeData = true;
+          } catch (const std::exception& e) {
+            std::cerr << "Error loading GP tree data: " << e.what() << std::endl;
+            return;
+          }
+          break;
         }
       }
       // Cache quat dot past reset
@@ -991,6 +991,10 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       gp->NthMyGene(0)->evaluate(path, *gp, 0);
     } else if (isBytecodeData) {
       interpreter->evaluate(aircraftState, path, 0.0);
+    } else if (isNeuralNetData) {
+      VectorPathProvider pathProvider(path, aircraftState.getThisPathIndex());
+      NNControllerBackend nnBackend(nnGenome);
+      nnBackend.evaluate(aircraftState, pathProvider);
     }
 
     // Save post-eval state for results

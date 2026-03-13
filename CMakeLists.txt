@@ -289,6 +289,8 @@ set(AUTOC_HEADERS
   $ENV{HOME}/GP/autoc/minisim.h
   $ENV{HOME}/GP/autoc/gp_bytecode.h
   $ENV{HOME}/GP/autoc/autoc.h
+  $ENV{HOME}/GP/autoc/nn_evaluator_portable.h
+  $ENV{HOME}/GP/autoc/nn_serialization.h
 )
 
 add_executable (crrcsim WIN32 ${CRRCSIM_SRCS} ${AUTOC_HEADERS})
