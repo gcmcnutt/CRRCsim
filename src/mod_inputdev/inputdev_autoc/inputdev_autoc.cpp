@@ -548,6 +548,10 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       gPendingCommand = PendingCommand{};
       aircraftStates.clear();
       aircraftState.clearHistory();  // Reset temporal history for new path
+      // Reset commands for new path (NN needs zero-start per path, not per tick)
+      aircraftState.setPitchCommand(0.0f);
+      aircraftState.setRollCommand(0.0f);
+      aircraftState.setThrottleCommand(0.0f);
       gCurrentPhysicsTrace.clear();  // Clear physics trace for new path
 
       // Set worker identity globals for FDM trace capture
@@ -752,15 +756,18 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 
 
     // Update sim state in AircraftState in-place to preserve temporal history
-    // Commands always start at zero before GP evaluation (prevents pollution across re-evals)
     aircraftState.setThisPathIndex(pathIndex);
     aircraftState.setRelVel(v);
     aircraftState.setVelocity(velocity_vector);
     aircraftState.setOrientation(q);
     aircraftState.setPosition(p);
-    aircraftState.setPitchCommand(0.0f);
-    aircraftState.setRollCommand(0.0f);
-    aircraftState.setThrottleCommand(0.0f);
+    // GP trees use SETROLL(x) side effects — zero commands first to prevent pollution.
+    // NN controller reads previous commands as feedback inputs — preserve them.
+    if (!isNeuralNetData) {
+      aircraftState.setPitchCommand(0.0f);
+      aircraftState.setRollCommand(0.0f);
+      aircraftState.setThrottleCommand(0.0f);
+    }
     aircraftState.setSimTimeMsec(simTimeMsec);
 
     CrashReason crashReason = CrashReason::None;
