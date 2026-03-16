@@ -18,30 +18,20 @@ set(MOD_INPUTDEV_SRCS
   inputdev_software/inputdev_software.cpp
   inputdev_zhenhua/inputdev_zhenhua.cpp
   inputdev_ct6a/inputdev_ct6a.cpp
-  $ENV{HOME}/GP/autoc/autoc-eval.cc
-  $ENV{HOME}/GP/autoc/gp_bytecode.cc
-  $ENV{HOME}/GP/autoc/gp_bytecode.h
-  $ENV{HOME}/GP/autoc/gp_evaluator_portable.cc
-  $ENV{HOME}/GP/autoc/gp_evaluator_portable.h
-  $ENV{HOME}/GP/autoc/gp_evaluator_desktop.cc
-  $ENV{HOME}/GP/autoc/gp_evaluator_desktop.h
-  $ENV{HOME}/GP/autoc/autoc.h
-  $ENV{HOME}/GP/autoc/minisim.h
-  $ENV{HOME}/GP/autoc/aircraft_state.h
-  $ENV{HOME}/GP/autoc/gp_types.h
+  ${CMAKE_SOURCE_DIR}/src/nn/evaluator.cc
+  ${CMAKE_SOURCE_DIR}/src/nn/serialization.cc
+  ${CMAKE_SOURCE_DIR}/src/eval/sensor_math.cc
  )
 add_library(mod_inputdev ${MOD_INPUTDEV_SRCS})
 
 set (MOD_INPUTDEV_LIBS    )
 set (MOD_INPUTDEV_INCDIRS )
-    
+
 include_directories(
   ${MOD_INPUTDEV_EXT_INCDIRS}
   ${EIGEN3_INCLUDE_DIR}
-  $ENV{HOME}/GP/autoc
-  $ENV{HOME}/GP/include
+  ${CMAKE_SOURCE_DIR}/include
 )
 add_compile_options(-Wno-write-strings)
-add_definitions(-DGP_BUILD)
 
 link_directories      ( ${MOD_INPUTDEV_LINKDIRS} )

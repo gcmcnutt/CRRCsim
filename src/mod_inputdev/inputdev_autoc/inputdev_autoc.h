@@ -27,11 +27,12 @@
 #include "../inputdev.h"
 #include "../../mod_misc/SimpleXMLTransfer.h"
 
-#include "gp.h"
-#include "gp_bytecode.h"
-#include "minisim.h"
-#include "autoc.h"
-#include "gp_evaluator_portable.h"
+#include "autoc/rpc/protocol.h"
+#include "autoc/autoc.h"
+#include "autoc/nn/evaluator.h"
+#include "autoc/nn/serialization.h"
+#include "autoc/eval/sensor_math.h"
+#include "autoc/util/socket_wrapper.h"
 
 #include <stdio.h>
 #include <iostream>
@@ -39,16 +40,13 @@
 #include <array>
 #include <unistd.h>
 
-#include <boost/circular_buffer.hpp>
-
 using namespace std;
-using boost::asio::ip::tcp;
 
 // #define DETAILED_LOGGING 1
 
 #define FEET_TO_METERS 0.3048
-#define EVAL_UPDATE_INTERVAL_MSEC_DEFAULT 100   // Sensor+GP cadence (~10Hz)
-#define COMPUTE_LATENCY_MSEC_DEFAULT 40         // GP compute + scheduling latency
+#define EVAL_UPDATE_INTERVAL_MSEC_DEFAULT 100   // Sensor+NN cadence (~10Hz)
+#define COMPUTE_LATENCY_MSEC_DEFAULT 40         // NN compute + scheduling latency
 #define SIM_FPS 25.0                            // ~40 Hz physics tick assumption for overflow calc
 
 // Settable at runtime (see inputdev_autoc.cpp).
@@ -85,19 +83,21 @@ public:
 
 private:
   unsigned short int callbackPort;
-  tcp::socket *socket_;
+  TcpSocket *socket_ = nullptr;
 
   unsigned long lastUpdateTimeMsec = 0;
   unsigned long cycleCounter = 0;
   bool simCrashed = false;
-  bool gpInitialized = false;
 
   gp_scalar pitchCommand = 0;
   gp_scalar rollCommand = 0;
   gp_scalar throttleCommand = 0;
 
-  // diagnostics
-  boost::circular_buffer<unsigned long> buffer{15};
+  // diagnostics ring buffer
+  static constexpr int DIAG_BUFFER_SIZE = 15;
+  std::array<unsigned long, DIAG_BUFFER_SIZE> diagBuffer{};
+  int diagIndex = 0;
+  int diagCount = 0;
 
   // here's the work to do and results
   bool evalDataEmpty = true;
@@ -114,11 +114,8 @@ private:
 
   int evalCounter = 0;  // Total evaluations this worker has processed
 
-  // work in progress
-  MyGP *gp = nullptr;
-  GPBytecodeInterpreter *interpreter = nullptr;
-  bool isGPTreeData = false;
-  bool isBytecodeData = false;
+  // NN controller
+  NNGenome nnGenome;
   std::vector<Path> path;
 };
 

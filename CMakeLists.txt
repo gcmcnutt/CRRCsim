@@ -6,8 +6,7 @@
 # There is a script called cmake.sh for your convenience.
 
 
-cmake_minimum_required(VERSION 2.4.6)
-cmake_policy(VERSION 2.6)
+cmake_minimum_required(VERSION 3.11)
 
 project (crrcsim)
 
@@ -21,10 +20,8 @@ INCLUDE (CheckLibraryExists)
 INCLUDE (CheckCXXSourceCompiles)
 
 find_package(Eigen3 REQUIRED)
-find_package(Boost REQUIRED COMPONENTS thread system serialization)
 
-# Add GP_BUILD definition for autoc integration
-add_definitions(-DGP_BUILD)
+# Cereal is provided by parent autoc CMakeLists.txt via FetchContent
 
 option(ENABLE_PROFILING "Build with frame pointers and debug info for perf/FlameGraph" OFF)
 option(PERFORMANCE_BUILD "Build with high performance flags (keeps debug symbols for core dumps)" OFF)
@@ -238,8 +235,8 @@ set(CRRCSIM_SRCS
 # Set up include directories BEFORE add_subdirectory so they're inherited
 include_directories(${CRRCSIM_INCDIRS}
   ${EIGEN3_INCLUDE_DIRS}
-  $ENV{HOME}/GP/autoc
-  $ENV{HOME}/GP/include
+  ${CMAKE_SOURCE_DIR}/include
+  ${cereal_SOURCE_DIR}/include
 )
 message(STATUS "Eigen3 include dirs: ${EIGEN3_INCLUDE_DIRS}")
 
@@ -284,11 +281,12 @@ set (CRRCSIM_LIBS
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in ${CMAKE_BINARY_DIR}/crrc_config.h)
 
 # Track external headers from autoc as dependencies
-# CMake doesn't automatically track headers outside the source tree
 set(AUTOC_HEADERS
-  $ENV{HOME}/GP/autoc/minisim.h
-  $ENV{HOME}/GP/autoc/gp_bytecode.h
-  $ENV{HOME}/GP/autoc/autoc.h
+  ${CMAKE_SOURCE_DIR}/include/autoc/rpc/protocol.h
+  ${CMAKE_SOURCE_DIR}/include/autoc/autoc.h
+  ${CMAKE_SOURCE_DIR}/include/autoc/nn/evaluator.h
+  ${CMAKE_SOURCE_DIR}/include/autoc/nn/serialization.h
+  ${CMAKE_SOURCE_DIR}/include/autoc/eval/sensor_math.h
 )
 
 add_executable (crrcsim WIN32 ${CRRCSIM_SRCS} ${AUTOC_HEADERS})
@@ -300,9 +298,7 @@ if(USE_SANITIZER)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
 endif()
 
-target_link_directories(crrcsim PUBLIC $ENV{HOME}/GP/lib)
-
-target_link_libraries (crrcsim ${CRRCSIM_LIBS} gp Eigen3::Eigen ${Boost_LIBRARIES})
+target_link_libraries (crrcsim ${CRRCSIM_LIBS} Eigen3::Eigen)
 
 message("")
 message("Build options:")
