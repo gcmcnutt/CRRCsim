@@ -3,7 +3,7 @@
 ## Build and Test Policy
 DO NOT run builds or tests yourself. After making code changes, inform the user that:
 - The code needs to be rebuilt: `cd build && make -j8`
-- Testing can be done with: `cd /home/gmcnutt/GP/autoc && timeout 300 ../build/autoc -c autoc_diag.cfg`
+- Testing can be done with: `cd /home/gmcnutt/autoc && timeout 300 build/autoc -c autoc_diag.cfg`
 
 The user will run these commands and share results.
 

@@ -21,16 +21,7 @@ INCLUDE (CheckCXXSourceCompiles)
 
 find_package(Eigen3 REQUIRED)
 
-# Cereal for RPC serialization (shared with autoc)
-include(FetchContent)
-FetchContent_Declare(
-  cereal
-  GIT_REPOSITORY https://github.com/USCiLab/cereal.git
-  GIT_TAG v1.3.2
-)
-set(JUST_INSTALL_CEREAL ON CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(cereal)
-include_directories(${cereal_SOURCE_DIR}/include)
+# Cereal is provided by parent autoc CMakeLists.txt via FetchContent
 
 option(ENABLE_PROFILING "Build with frame pointers and debug info for perf/FlameGraph" OFF)
 option(PERFORMANCE_BUILD "Build with high performance flags (keeps debug symbols for core dumps)" OFF)
@@ -244,7 +235,8 @@ set(CRRCSIM_SRCS
 # Set up include directories BEFORE add_subdirectory so they're inherited
 include_directories(${CRRCSIM_INCDIRS}
   ${EIGEN3_INCLUDE_DIRS}
-  $ENV{HOME}/GP/autoc/include
+  ${CMAKE_SOURCE_DIR}/include
+  ${cereal_SOURCE_DIR}/include
 )
 message(STATUS "Eigen3 include dirs: ${EIGEN3_INCLUDE_DIRS}")
 
@@ -290,11 +282,11 @@ CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in ${CMAKE_BINARY_DIR}
 
 # Track external headers from autoc as dependencies
 set(AUTOC_HEADERS
-  $ENV{HOME}/GP/autoc/include/autoc/rpc/protocol.h
-  $ENV{HOME}/GP/autoc/include/autoc/autoc.h
-  $ENV{HOME}/GP/autoc/include/autoc/nn/evaluator.h
-  $ENV{HOME}/GP/autoc/include/autoc/nn/serialization.h
-  $ENV{HOME}/GP/autoc/include/autoc/eval/sensor_math.h
+  ${CMAKE_SOURCE_DIR}/include/autoc/rpc/protocol.h
+  ${CMAKE_SOURCE_DIR}/include/autoc/autoc.h
+  ${CMAKE_SOURCE_DIR}/include/autoc/nn/evaluator.h
+  ${CMAKE_SOURCE_DIR}/include/autoc/nn/serialization.h
+  ${CMAKE_SOURCE_DIR}/include/autoc/eval/sensor_math.h
 )
 
 add_executable (crrcsim WIN32 ${CRRCSIM_SRCS} ${AUTOC_HEADERS})

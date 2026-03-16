@@ -18,9 +18,9 @@ set(MOD_INPUTDEV_SRCS
   inputdev_software/inputdev_software.cpp
   inputdev_zhenhua/inputdev_zhenhua.cpp
   inputdev_ct6a/inputdev_ct6a.cpp
-  $ENV{HOME}/GP/autoc/src/nn/evaluator.cc
-  $ENV{HOME}/GP/autoc/src/nn/serialization.cc
-  $ENV{HOME}/GP/autoc/src/eval/sensor_math.cc
+  ${CMAKE_SOURCE_DIR}/src/nn/evaluator.cc
+  ${CMAKE_SOURCE_DIR}/src/nn/serialization.cc
+  ${CMAKE_SOURCE_DIR}/src/eval/sensor_math.cc
  )
 add_library(mod_inputdev ${MOD_INPUTDEV_SRCS})
 
@@ -30,7 +30,7 @@ set (MOD_INPUTDEV_INCDIRS )
 include_directories(
   ${MOD_INPUTDEV_EXT_INCDIRS}
   ${EIGEN3_INCLUDE_DIR}
-  $ENV{HOME}/GP/autoc/include
+  ${CMAKE_SOURCE_DIR}/include
 )
 add_compile_options(-Wno-write-strings)
 
