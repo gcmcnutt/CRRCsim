@@ -31,33 +31,16 @@
 #include "inputdev_autoc.h"
 #include <chrono>
 #include <stdio.h>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/iostreams/stream.hpp>
-#include <boost/iostreams/device/back_inserter.hpp>
 #include <cstdlib>
 #include <sstream>
 
 using namespace std::chrono;
 using namespace std;
-using boost::asio::ip::tcp;
 
 
 // DETAILED_LOGGING controls noisy RNG trace output - leave undefined for normal use
 
 namespace {
-
-// Hash serialized data instead of raw memory to avoid padding issues
-template<typename T>
-std::pair<const void*, size_t> serializeForHash(const T& data, std::vector<char>& buffer) {
-  buffer.clear();
-  boost::iostreams::back_insert_device<std::vector<char>> inserter(buffer);
-  boost::iostreams::stream<boost::iostreams::back_insert_device<std::vector<char>>> stream(inserter);
-  boost::archive::binary_oarchive archive(stream);
-  archive << data;
-  stream.flush();
-  return std::make_pair(buffer.data(), buffer.size());
-}
 
 // Runtime-configurable intervals (sim time)
 unsigned long parseIntervalFromEnv(const char* name, unsigned long fallback) {
@@ -102,8 +85,8 @@ ScenarioMetadata scenarioForPathIndex(const EvalData& evalData, size_t idx) {
 } // namespace
 
 // Global intervals used by AUTOC input (declared in header)
-unsigned long gEvalUpdateIntervalMsec = EVAL_UPDATE_INTERVAL_MSEC_DEFAULT;   // sensor/GP cadence
-unsigned long gComputeLatencyMsec = COMPUTE_LATENCY_MSEC_DEFAULT;           // simulated GP compute latency (sensor→output)
+unsigned long gEvalUpdateIntervalMsec = EVAL_UPDATE_INTERVAL_MSEC_DEFAULT;   // sensor/NN cadence
+unsigned long gComputeLatencyMsec = COMPUTE_LATENCY_MSEC_DEFAULT;           // simulated NN compute latency (sensor→output)
 
 unsigned long getCycleCounterOverflow() {
   // a few cycles after the last update, we assume crash, no flight updates, etc
@@ -113,8 +96,20 @@ unsigned long getCycleCounterOverflow() {
 
 static bool gInDeterministicTest = false;
 
-// Reference to the global aircraftState used by GP evaluation (from autoc-eval.cc)
-extern AircraftState aircraftState;
+// Global aircraftState used by NN evaluation (was in autoc-eval.cc)
+AircraftState aircraftState;
+
+std::string crashReasonToString(CrashReason type) {
+  switch (type) {
+  case CrashReason::None: return "None";
+  case CrashReason::Boot: return "Boot";
+  case CrashReason::Sim: return "Sim";
+  case CrashReason::Eval: return "Eval";
+  case CrashReason::Time: return "Time";
+  case CrashReason::Distance: return "Distance";
+  default: return "*?*";
+  }
+}
 
 // Physics trace buffer for collecting detailed FDM state
 // Cleared at start of each evaluation, sent back with EvalResults only for elite reeval
@@ -238,9 +233,6 @@ struct PendingCommand {
 };
 static PendingCommand gPendingCommand;
 
-void MyGP::evaluate() {}
-void MyGP::evalTask(WorkerContext& context) {}
-
 #ifdef DETAILED_LOGGING
 char *get_iso8601_timestamp(char *buf, size_t len)
 {
@@ -282,17 +274,8 @@ T_TX_InterfaceAUTOC::~T_TX_InterfaceAUTOC()
 #if DEBUG_TX_INTERFACE > 0
   printf("T_TX_InterfaceAUTOC::~T_TX_InterfaceAUTOC()\n");
 #endif
-  // Clean up GP and bytecode interpreter
-  if (gp)
-  {
-    delete gp;
-    gp = nullptr;
-  }
-  if (interpreter)
-  {
-    delete interpreter;
-    interpreter = nullptr;
-  }
+  delete socket_;
+  socket_ = nullptr;
 }
 
 int T_TX_InterfaceAUTOC::init(SimpleXMLTransfer *config)
@@ -300,16 +283,13 @@ int T_TX_InterfaceAUTOC::init(SimpleXMLTransfer *config)
 #if DEBUG_TX_INTERFACE > 0
   printf("int T_TX_InterfaceAUTOC::init(SimpleXMLTransfer* config)\n");
 #endif
-  // Allow runtime override of GP eval cadence and compute latency (sim time).
+  // Allow runtime override of NN eval cadence and compute latency (sim time).
   gEvalUpdateIntervalMsec = parseIntervalFromEnv("AUTOC_EVAL_INTERVAL_MSEC", EVAL_UPDATE_INTERVAL_MSEC_DEFAULT);
   gComputeLatencyMsec = parseIntervalFromEnv("AUTOC_COMPUTE_LATENCY_MSEC", COMPUTE_LATENCY_MSEC_DEFAULT);
   T_TX_Interface::init(config);
 
-  boost::asio::io_context io_context;
-  socket_ = new tcp::socket(io_context);
-  tcp::resolver resolver(io_context);
-  auto endpoints = resolver.resolve("localhost", std::to_string(cfg->callback_port));
-  boost::asio::connect(*socket_, endpoints);
+  socket_ = new TcpSocket();
+  socket_->connect("127.0.0.1", cfg->callback_port);
   return (0);
 }
 
@@ -330,7 +310,10 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
   unsigned long simTimeMsec = Global::Simulation->getSimulationTimeSinceReset();
 
   // Always emit the last cached commands each frame; eval only on cadence
-  buffer.push_back(simTimeMsec);
+  diagBuffer[diagIndex % DIAG_BUFFER_SIZE] = simTimeMsec;
+  diagIndex++;
+  if (diagCount < DIAG_BUFFER_SIZE) diagCount++;
+
   const unsigned long overflowLimit = getCycleCounterOverflow();
   bool shouldEval = (simTimeMsec > lastUpdateTimeMsec + gEvalUpdateIntervalMsec) || (++cycleCounter > overflowLimit);
   if (shouldEval)
@@ -343,9 +326,10 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 
       // dump out the buffer time steps
       printf("  buffer: ");
-      unsigned long last = buffer[0];
-      for (auto &t : buffer)
-      {
+      int start = (diagCount < DIAG_BUFFER_SIZE) ? 0 : diagIndex;
+      unsigned long last = diagBuffer[start % DIAG_BUFFER_SIZE];
+      for (int i = 0; i < diagCount; i++) {
+        unsigned long t = diagBuffer[(start + i) % DIAG_BUFFER_SIZE];
         printf("%ld(%ld) ", t, t - last);
         last = t;
       }
@@ -372,14 +356,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     lastUpdateTimeMsec = simTimeMsec;
     cycleCounter = 0;
 
-    // initialize the GP once
-    if (!gpInitialized)
-    {
-      initializeSimGP();
-      gpInitialized = true;
-    }
-
-    // reload from the GP code?
+    // reload from the NN code?
     if (evalDataEmpty)
     {
       evalData = receiveRPC<EvalData>(*socket_);
@@ -392,19 +369,6 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       // Set flag for RNG tracing when entering deterministic test
       gInDeterministicTest = (!evalData.scenarioList.empty() &&
                               evalData.scenarioList.front().enableDeterministicLogging);
-
-      // Enable determinism tracker on first deterministic test
-      static bool trackerInitialized = false;
-      if (gInDeterministicTest && !trackerInitialized) {
-        // Determinism tracker disabled
-        trackerInitialized = true;
-      }
-
-      // Log job receipt with hash verification
-      // (disabled)
-
-      // Log scenario metadata hash during determinism test
-      // (disabled)
 
       evalDataEmpty = false;
       priorPathSelector = -1;
@@ -443,64 +407,13 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       aircraftStates.clear();
       debugSamplesCurrentPath.clear();
 
-      // Clean up previous interpreters
-      if (gp)
-      {
-        delete gp;
-        gp = nullptr;
+      // Deserialize NN genome
+      if (!nn_deserialize(reinterpret_cast<const uint8_t*>(evalData.gp.data()),
+                          evalData.gp.size(), nnGenome)) {
+        std::cerr << "Error deserializing NN genome" << std::endl;
+        return;
       }
-      if (interpreter)
-      {
-        delete interpreter;
-        interpreter = nullptr;
-      }
-      
-      // Reset data type flags
-      isGPTreeData = false;
-      isBytecodeData = false;
-      isNeuralNetData = false;
 
-      // Dispatch based on ControllerType enum from evalData
-      switch (evalData.controllerType) {
-        case ControllerType::NEURAL_NET: {
-          if (!nn_deserialize(reinterpret_cast<const uint8_t*>(evalData.gp.data()),
-                              evalData.gp.size(), nnGenome)) {
-            std::cerr << "Error deserializing NN genome" << std::endl;
-            return;
-          }
-          isNeuralNetData = true;
-          break;
-        }
-        case ControllerType::BYTECODE: {
-          try {
-            boost::iostreams::array_source source(evalData.gp.data(), evalData.gp.size());
-            boost::iostreams::stream<boost::iostreams::array_source> bytecodeStream(source);
-            boost::archive::binary_iarchive archive(bytecodeStream);
-            interpreter = new GPBytecodeInterpreter();
-            archive >> *interpreter;
-            isBytecodeData = true;
-          } catch (const std::exception& e) {
-            std::cerr << "Error loading bytecode data: " << e.what() << std::endl;
-            return;
-          }
-          break;
-        }
-        case ControllerType::GP_TREE:
-        default: {
-          try {
-            boost::iostreams::array_source source(evalData.gp.data(), evalData.gp.size());
-            boost::iostreams::stream<boost::iostreams::array_source> gpStream(source);
-            gp = new MyGP();
-            gp->load(gpStream);
-            gp->resolveNodeValues(adfNs);
-            isGPTreeData = true;
-          } catch (const std::exception& e) {
-            std::cerr << "Error loading GP tree data: " << e.what() << std::endl;
-            return;
-          }
-          break;
-        }
-      }
       // Cache quat dot past reset
       quatDotPast[0] = quatDotPast[1] = quatDotPast[2] = quatDotPast[3] = 0.0;
       return;
@@ -537,10 +450,6 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 #endif
 
       // Reset simulation with wind seed
-      // This will:
-      // 1. Set RNG to windSeed
-      // 2. Call Init_mod_windfield() which creates thermals (consuming RNG deterministically)
-      // 3. Call initialize_gust() which resets all RandGauss objects to phase=0
       Global::Simulation->reset(activeScenario.windSeed);
       simCrashed = false;
       lastUpdateTimeMsec = 0;
@@ -565,20 +474,17 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 #ifdef DETAILED_LOGGING
       // Start ordered event logging for this path (noisy RNG trace)
       RandGaussTrace::startEventLog(1000);
-#endif
-#ifdef DETAILED_LOGGING
       std::cerr << "AUTOC deterministic path start pathSelector=" << pathSelector
                 << " pathVariant=" << activeScenario.pathVariantIndex
                 << " windVariant=" << activeScenario.windVariantIndex
                 << " windSeed=" << activeScenario.windSeed << std::endl;
 #endif
-      
+
       // Record initial aircraft state at time 0 to match path start
-      // Get initial position and orientation after reset
       gp_vec3 initialPos{static_cast<gp_scalar>(Global::aircraft->getPos()(0) * FEET_TO_METERS),
                                 static_cast<gp_scalar>(Global::aircraft->getPos()(1) * FEET_TO_METERS),
                                 static_cast<gp_scalar>(Global::aircraft->getPos()(2) * FEET_TO_METERS)};
-      
+
       EOM01* eom01 = dynamic_cast<EOM01*>(Global::aircraft->getFDM());
       gp_quat initialQuat;
       if (eom01) {
@@ -587,15 +493,15 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
         initialQuat = gp_quat::Identity();
       }
       initialQuat.normalize();
-      
+
       CRRCMath::Vector3 fdm_velocity = Global::aircraft->getFDM()->getVel();
       gp_vec3 initialVel{
           static_cast<gp_scalar>(fdm_velocity(0) * FEET_TO_METERS),
-          static_cast<gp_scalar>(fdm_velocity(1) * FEET_TO_METERS), 
+          static_cast<gp_scalar>(fdm_velocity(1) * FEET_TO_METERS),
           static_cast<gp_scalar>(fdm_velocity(2) * FEET_TO_METERS)
       };
       gp_scalar initialSpeed = initialVel.norm();
-      
+
       AircraftState initialState{0, initialSpeed, initialVel, initialQuat, initialPos,
                                  static_cast<gp_scalar>(0.0f), static_cast<gp_scalar>(0.0f), static_cast<gp_scalar>(0.0f), 0};
       aircraftStates.push_back(initialState);
@@ -673,21 +579,6 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       // Increment evaluation counter BEFORE any logging (needed for warmup check)
       evalCounter++;
 
-      // re-initialize aircraft state from incoming payload
-      // cfgfile->setAttributeOverwrite("launch.velocity_rel", std::to_string(mainToSim.aircraftState.dRelVel / FEET_TO_METERS));
-      // cfgfile->setAttributeOverwrite("launch.altitude", std::to_string(-mainToSim.aircraftState.position[2] / FEET_TO_METERS));
-      // cfgfile->setAttributeOverwrite("launch.angle", 0.0); // TODO we need real orientation applied
-
-      // aircraft.setPitchCommand(mainToSim.aircraftState.pitchCommand);
-      // aircraft.setRollCommand(mainToSim.aircraftState.rollCommand);
-      // aircraft.setThrottleCommand(mainToSim.aircraftState.throttleCommand);
-
-      // cfg->getCurLocCfgPtr(cfgfile)->setAttributeOverwrite("start.position", "");
-      // cfg->getCurLocCfgPtr(cfgfile)->setAttributeOverwrite("launch.rel_front", "0.0");
-      // cfg->getCurLocCfgPtr(cfgfile)->setAttributeOverwrite("launch.rel_right", "0.0");
-
-      // aircraft.aircraft_orientation = mainToSim.aircraftState.aircraft_orientation;
-
       // reset commands to default
       inputs->pitch = pitchCommand = 0;
       inputs->aileron = rollCommand = 0;
@@ -716,25 +607,15 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 
     // Access native quaternion from EOM01 FDM instead of reconstructing from Euler angles
     gp_quat q;
-    
+
     // Try to cast to EOM01 to access native quaternion components
     EOM01* eom01 = dynamic_cast<EOM01*>(Global::aircraft->getFDM());
     if (eom01) {
       // Use native quaternion components from EOM01 (w, x, y, z format)
       q = gp_quat(eom01->getQuatW(), eom01->getQuatX(), eom01->getQuatY(), eom01->getQuatZ());
-      
-#ifdef DETAILED_LOGGING
-      {
-        char tbuf[100];
-        printf("%s: quaternion_native: w=%8.4f x=%8.4f y=%8.4f z=%8.4f\n",
-               get_iso8601_timestamp(tbuf, sizeof(tbuf)),
-               eom01->getQuatW(), eom01->getQuatX(), eom01->getQuatY(), eom01->getQuatZ());
-      }
-#endif
     } else {
       // ERROR: We must use native quaternion for consistency - no fallback allowed
       std::cerr << "FATAL ERROR: FDM is not EOM01 type - cannot access native quaternion!" << std::endl;
-      std::cerr << "This will cause quaternion inconsistency between simulators." << std::endl;
       exit(1);
     }
     q.normalize();
@@ -754,20 +635,13 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       pathIndex++;
     }
 
-
     // Update sim state in AircraftState in-place to preserve temporal history
     aircraftState.setThisPathIndex(pathIndex);
     aircraftState.setRelVel(v);
     aircraftState.setVelocity(velocity_vector);
     aircraftState.setOrientation(q);
     aircraftState.setPosition(p);
-    // GP trees use SETROLL(x) side effects — zero commands first to prevent pollution.
     // NN controller reads previous commands as feedback inputs — preserve them.
-    if (!isNeuralNetData) {
-      aircraftState.setPitchCommand(0.0f);
-      aircraftState.setRollCommand(0.0f);
-      aircraftState.setThrottleCommand(0.0f);
-    }
     aircraftState.setSimTimeMsec(simTimeMsec);
 
     CrashReason crashReason = CrashReason::None;
@@ -837,19 +711,10 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       RandGaussTrace::dumpAndClearEventLog();
 #endif
 
-      // Dtest logging disabled
-
       // prepare for the next path if any
       if (++pathSelector < evalData.pathList.size())
       {
         path = evalData.pathList.at(pathSelector);
-#ifdef DETAILED_LOGGING
-        ScenarioMetadata nextScenario = scenarioForPathIndex(evalData, static_cast<size_t>(pathSelector));
-        std::cerr << "AUTOC deterministic path start pathSelector=" << pathSelector
-                  << " pathVariant=" << nextScenario.pathVariantIndex
-                  << " windVariant=" << nextScenario.windVariantIndex
-                  << " windSeed=" << nextScenario.windSeed << std::endl;
-#endif
       }
       else
       {
@@ -867,122 +732,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       return;
     }
 
-    // BASELINE CONTROLLER DISABLED FOR GP-ONLY LEARNING TEST
-    // approximate pitch/roll/throttle to achieve goal
-
-    // *** ROLL: Calculate the vector from craft to target in world frame
-    /* COMMENTED OUT - BASELINE CONTROLLER DISABLED
-    gp_vec3 craftToTarget = path.at(aircraftState.getThisPathIndex()).start - aircraftState.getPosition();
-
-#ifdef DETAILED_LOGGING
-    {
-      char tbuf[1000];
-      printf("%s: path_target: pathIdx=%d target[%8.2f,%8.2f,%8.2f] aircraft[%8.2f,%8.2f,%8.2f] vector[%8.2f,%8.2f,%8.2f] dist=%8.2f\n",
-             get_iso8601_timestamp(tbuf, sizeof(tbuf)),
-             aircraftState.getThisPathIndex(),
-             path.at(aircraftState.getThisPathIndex()).start[0],
-             path.at(aircraftState.getThisPathIndex()).start[1], 
-             path.at(aircraftState.getThisPathIndex()).start[2],
-             aircraftState.getPosition()[0], aircraftState.getPosition()[1], aircraftState.getPosition()[2],
-             craftToTarget[0], craftToTarget[1], craftToTarget[2],
-             craftToTarget.norm());
-    }
-#endif
-
-    // Transform the craft-to-target vector to body frame
-    gp_vec3 target_local = aircraftState.getOrientation().inverse() * craftToTarget;
-
-#ifdef DETAILED_LOGGING
-    {
-      char tbuf[1000];
-      Eigen::Matrix<gp_scalar,3,3> rotMatrix = aircraftState.getOrientation().toRotationMatrix();
-      printf("%s: coordinate_transform: world_vector[%8.2f,%8.2f,%8.2f] -> body_vector[%8.2f,%8.2f,%8.2f]\n",
-             get_iso8601_timestamp(tbuf, sizeof(tbuf)),
-             craftToTarget[0], craftToTarget[1], craftToTarget[2],
-             target_local[0], target_local[1], target_local[2]);
-      printf("%s: rotation_matrix: X[%8.2f,%8.2f,%8.2f] Y[%8.2f,%8.2f,%8.2f] Z[%8.2f,%8.2f,%8.2f]\n",
-             get_iso8601_timestamp(tbuf, sizeof(tbuf)),
-             rotMatrix(0,0), rotMatrix(0,1), rotMatrix(0,2),
-             rotMatrix(1,0), rotMatrix(1,1), rotMatrix(1,2),
-             rotMatrix(2,0), rotMatrix(2,1), rotMatrix(2,2));
-    }
-#endif
-
-    // Project the craft-to-target vector onto the body YZ plane
-    gp_vec3 projectedVector(0, target_local.y(), target_local.z());
-
-    // Calculate the angle between the projected vector and the body Z-axis
-    gp_scalar rollEstimate = std::atan2(projectedVector.y(), -projectedVector.z());
-
-    // *** PITCH: Calculate the vector from craft to target in world frame if it did rotate
-    gp_quat rollRotation(Eigen::AngleAxis<gp_scalar>(rollEstimate, gp_vec3::UnitX()));
-    gp_quat virtualOrientation = aircraftState.getOrientation() * rollRotation;
-
-    // Transform target vector to new virtual orientation
-    gp_vec3 newLocalTargetVector = virtualOrientation.inverse() * craftToTarget;
-
-    // Calculate pitch angle
-    gp_scalar pitchEstimate = std::atan2(-newLocalTargetVector.z(), newLocalTargetVector.x());
-
-    // // now try to determine if pitch up or pitch down makes more sense
-    // if (std::abs(pitchEstimate) > M_PI / 2) {
-    //   pitchEstimate = (pitchEstimate > 0) ? pitchEstimate - M_PI : pitchEstimate + M_PI;
-    //   rollEstimate = -rollEstimate;
-    // }
-
-    // range is -1:1 
-    // Keep baseline estimates identical to minisim - no experimental changes
-    gp_scalar rollCmd = std::clamp(rollEstimate / static_cast<gp_scalar>(M_PI), static_cast<gp_scalar>(-1.0f), static_cast<gp_scalar>(1.0f));    // Clamp to prevent extreme values
-    gp_scalar pitchCmd = std::clamp(pitchEstimate / static_cast<gp_scalar>(M_PI), static_cast<gp_scalar>(-1.0f), static_cast<gp_scalar>(1.0f));  // Clamp to prevent extreme values
-    aircraftState.setRollCommand(rollCmd);
-    aircraftState.setPitchCommand(pitchCmd);
-    END COMMENTED OUT SECTION */
-
-    // Controls persist from previous timestep - GP will make incremental adjustments
-
-#ifdef DETAILED_LOGGING
-    // BASELINE CONTROLLER LOGGING ALSO DISABLED
-    /* COMMENTED OUT - BASELINE CONTROLLER VARIABLES UNDEFINED
-    // Store baseline controller estimates for comparison
-    gp_scalar baselineRoll = rollCmd;
-    gp_scalar baselinePitch = pitchCmd;
-    
-    {
-      char tbuf[1000];
-      printf("%s: control_calculation: rollEst_rad=%8.2f pitchEst_rad=%8.2f -> rollCmd=%8.2f pitchCmd=%8.2f\n",
-             get_iso8601_timestamp(tbuf, sizeof(tbuf)),
-             rollEstimate, pitchEstimate,
-             rollEstimate / M_PI, pitchEstimate / M_PI);
-      printf("%s: projectedVector[%8.2f,%8.2f,%8.2f] rollEst=atan2(%8.2f,%8.2f)\n",
-             get_iso8601_timestamp(tbuf, sizeof(tbuf)),
-             projectedVector.x(), projectedVector.y(), projectedVector.z(),
-             projectedVector.y(), -projectedVector.z());
-    }
-    END COMMENTED OUT SECTION */
-#endif
-
-    // THROTTLE BASELINE CONTROLLER ALSO DISABLED
-    /* COMMENTED OUT - BASELINE CONTROLLER DISABLED
-    // Throttle estimate range is -1:1
-    {
-      gp_scalar distance = (path.at(aircraftState.getThisPathIndex()).start - aircraftState.getPosition()).norm();
-      gp_scalar throttleEstimate = std::clamp((distance - static_cast<gp_scalar>(10.0f)) / aircraftState.getRelVel(), static_cast<gp_scalar>(-1.0f), static_cast<gp_scalar>(1.0f));
-      aircraftState.setThrottleCommand(throttleEstimate);
-    }
-    END COMMENTED OUT SECTION */
-
-#ifdef DETAILED_LOGGING
-    {
-      char tbuf[100];
-      printf("%s: state: v:%f posX:%f posY:%f posZ:%f pCmd:%f rCmd:%f tCmd:%f %ld %d\n",
-             get_iso8601_timestamp(tbuf, sizeof(tbuf)),
-             aircraftState.getRelVel(), aircraftState.getPosition()[0], aircraftState.getPosition()[1], aircraftState.getPosition()[2],
-             aircraftState.getPitchCommand(), aircraftState.getRollCommand(), aircraftState.getThrottleCommand(),
-             simTimeMsec, Global::Simulation->getState());
-    }
-#endif
-
-    // Capture temporal history before GP evaluation (for GETDPHI_PREV, GETDTHETA_PREV, GETDIST_PREV, etc.)
+    // Capture temporal history before NN evaluation (for GETDPHI_PREV, GETDTHETA_PREV, GETDIST_PREV, etc.)
     {
       VectorPathProvider pathProvider(path, aircraftState.getThisPathIndex());
       gp_scalar dPhi = executeGetDPhi(pathProvider, aircraftState, 0.0f);
@@ -993,12 +743,8 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       aircraftState.recordErrorHistory(dPhi, dTheta, distance, simTimeMsec);
     }
 
-    // Evaluate immediately on this snapshot
-    if (isGPTreeData) {
-      gp->NthMyGene(0)->evaluate(path, *gp, 0);
-    } else if (isBytecodeData) {
-      interpreter->evaluate(aircraftState, path, 0.0);
-    } else if (isNeuralNetData) {
+    // Evaluate NN controller
+    {
       VectorPathProvider pathProvider(path, aircraftState.getThisPathIndex());
       NNControllerBackend nnBackend(nnGenome);
       nnBackend.evaluate(aircraftState, pathProvider);
@@ -1162,41 +908,25 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     gPendingCommand.valid = true;
 
 #ifdef DETAILED_LOGGING
-    // Log key sensor values that GP can access for diagnostics
+    // Log key sensor values that NN can access for diagnostics
     {
       char tbuf[100];
-      // Calculate some key sensor values the GP would see
       gp_vec3 velocity_body = aircraftState.getOrientation().inverse() * aircraftState.getVelocity();
-      gp_scalar alpha = std::atan2(-velocity_body.z(), velocity_body.x()); // GETALPHA
-      gp_scalar beta = std::atan2(velocity_body.y(), velocity_body.x());   // GETBETA
-      gp_scalar vel = aircraftState.getRelVel();                          // GETVEL
-      gp_scalar dhome = (gp_vec3(0, 0, SIM_INITIAL_ALTITUDE) - aircraftState.getPosition()).norm(); // GETDHOME
-      
-      // Calculate roll and pitch angles from quaternion for logging
+      gp_scalar alpha = std::atan2(-velocity_body.z(), velocity_body.x());
+      gp_scalar beta = std::atan2(velocity_body.y(), velocity_body.x());
+      gp_scalar vel = aircraftState.getRelVel();
+      gp_scalar dhome = (gp_vec3(0, 0, SIM_INITIAL_ALTITUDE) - aircraftState.getPosition()).norm();
+
       gp_vec3 euler = aircraftState.getOrientation().toRotationMatrix().eulerAngles(2, 1, 0);
-      gp_scalar roll_rad = euler[2];   // Roll angle (rotation around X-axis)
-      gp_scalar pitch_rad = euler[1];  // Pitch angle (rotation around Y-axis)
-      
-      printf("%s: gp_sensors: vel=%8.2f alpha_deg=%8.2f beta_deg=%8.2f dhome=%8.2f velx=%8.2f vely=%8.2f velz=%8.2f roll_rad=%8.4f pitch_rad=%8.4f\n",
+      gp_scalar roll_rad = euler[2];
+      gp_scalar pitch_rad = euler[1];
+
+      printf("%s: nn_sensors: vel=%8.2f alpha_deg=%8.2f beta_deg=%8.2f dhome=%8.2f velx=%8.2f vely=%8.2f velz=%8.2f roll_rad=%8.4f pitch_rad=%8.4f\n",
              get_iso8601_timestamp(tbuf, sizeof(tbuf)),
              vel, alpha * 180.0/M_PI, beta * 180.0/M_PI, dhome,
              aircraftState.getVelocity().x(), aircraftState.getVelocity().y(), aircraftState.getVelocity().z(),
              roll_rad, pitch_rad);
     }
-#endif
-
-#ifdef DETAILED_LOGGING
-    // BASELINE COMPARISON LOGGING ALSO DISABLED
-    /* COMMENTED OUT - BASELINE CONTROLLER VARIABLES UNDEFINED  
-    // Log the baseline vs GP-modified control commands
-    {
-      char tbuf[100];
-      printf("%s: control_comparison: baseline[roll=%8.2f pitch=%8.2f] -> gp_output[roll=%8.2f pitch=%8.2f throttle=%8.2f]\n",
-             get_iso8601_timestamp(tbuf, sizeof(tbuf)),
-             baselineRoll, baselinePitch,
-             rollCommand, pitchCommand, throttleCommand);
-    }
-    END COMMENTED OUT SECTION */
 #endif
   }
 
@@ -1209,15 +939,14 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
   }
 
   // convert cached values to crrcsim scales and return every frame
-  // NOTE: Critical fix - GP/bytecode expects different coordinate conventions than crrcsim
   inputs->elevator = -pitchCommand / 2.0;         // invert from -1:1 to -0.5:0.5 (crrcsim convention)
   inputs->aileron = rollCommand / 2.0;            // from -1:1 to -0.5:0.5
   inputs->throttle = throttleCommand / 2.0 + 0.5; // from -1:1 to 0:1
-  
+
 #ifdef DETAILED_LOGGING
   {
     char tbuf[1000];
-    printf("%s: final_inputs: elevator:%8.2f aileron:%8.2f throttle:%8.2f (from pitch:%8.2f roll:%8.2f throttle:%8.2f) simTime:%ld eval:%s pending:%s\n", 
+    printf("%s: final_inputs: elevator:%8.2f aileron:%8.2f throttle:%8.2f (from pitch:%8.2f roll:%8.2f throttle:%8.2f) simTime:%ld eval:%s pending:%s\n",
            get_iso8601_timestamp(tbuf, sizeof(tbuf)),
            inputs->elevator, inputs->aileron, inputs->throttle,
            pitchCommand, rollCommand, throttleCommand,
