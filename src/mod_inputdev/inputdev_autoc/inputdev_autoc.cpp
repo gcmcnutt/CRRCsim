@@ -29,6 +29,7 @@
 #include "../../mod_misc/crrc_rand.h"
 #include "../../mod_windfield/windfield.h"
 #include "inputdev_autoc.h"
+#include <algorithm>
 #include <chrono>
 #include <stdio.h>
 #include <cstdlib>
@@ -233,6 +234,15 @@ struct PendingCommand {
 };
 static PendingCommand gPendingCommand;
 
+// Servo slew rate limits in NN command space [-1,1], enforced at command-apply time.
+// Full range = 2.0; per-step limit = rate(%/sec) * 2.0 * 0.1s.
+static const float SLEW_PITCH    = 0.40f;  // 200%/sec
+static const float SLEW_ROLL     = 0.40f;  // 200%/sec
+static const float SLEW_THROTTLE = 0.60f;  // 300%/sec
+static float prevPitch    = 0.0f;
+static float prevRoll     = 0.0f;
+static float prevThrottle = 0.0f;
+
 #ifdef DETAILED_LOGGING
 char *get_iso8601_timestamp(char *buf, size_t len)
 {
@@ -350,6 +360,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       lastUpdateTimeMsec = simTimeMsec;
       cycleCounter = 0;
       gPendingCommand = PendingCommand{};
+      prevPitch = prevRoll = prevThrottle = 0.0f;
       return;
     }
 
@@ -375,6 +386,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       pathSelector = 0;
       path = evalData.pathList.at(pathSelector);
       gPendingCommand = PendingCommand{};
+      prevPitch = prevRoll = prevThrottle = 0.0f;
       evalResults.aircraftStateList.clear();
       evalResults.crashReasonList.clear();
       evalResults.pathList = evalData.pathList;
@@ -455,6 +467,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       lastUpdateTimeMsec = 0;
       pathIndex = 0;
       gPendingCommand = PendingCommand{};
+      prevPitch = prevRoll = prevThrottle = 0.0f;
       aircraftStates.clear();
       aircraftState.clearHistory();  // Reset temporal history for new path
       // Reset commands for new path (NN needs zero-start per path, not per tick)
@@ -930,11 +943,14 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 #endif
   }
 
-  // Apply pending commands when latency expires
+  // Apply pending commands when latency expires, with servo slew rate limiting.
   if (gPendingCommand.valid && simTimeMsec >= gPendingCommand.readyTimeMsec) {
-    pitchCommand = gPendingCommand.pitch;
-    rollCommand = gPendingCommand.roll;
-    throttleCommand = gPendingCommand.throttle;
+    pitchCommand    = std::clamp(gPendingCommand.pitch,    prevPitch    - SLEW_PITCH,    prevPitch    + SLEW_PITCH);
+    rollCommand     = std::clamp(gPendingCommand.roll,     prevRoll     - SLEW_ROLL,     prevRoll     + SLEW_ROLL);
+    throttleCommand = std::clamp(gPendingCommand.throttle, prevThrottle - SLEW_THROTTLE, prevThrottle + SLEW_THROTTLE);
+    prevPitch    = pitchCommand;
+    prevRoll     = rollCommand;
+    prevThrottle = throttleCommand;
     gPendingCommand.valid = false;
   }
 
