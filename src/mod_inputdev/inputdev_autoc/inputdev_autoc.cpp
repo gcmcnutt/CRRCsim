@@ -105,8 +105,8 @@ std::string crashReasonToString(CrashReason type) {
   case CrashReason::Boot: return "Boot";
   case CrashReason::Sim: return "Sim";
   case CrashReason::Eval: return "Eval";
-  case CrashReason::Time: return "Time";
-  case CrashReason::Distance: return "Distance";
+  case CrashReason::TimeLimit: return "TimeLimit";
+  case CrashReason::RabbitComplete: return "RabbitComplete";
   default: return "*?*";
   }
 }
@@ -664,12 +664,12 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 
     if (simTimeMsec > SIM_TOTAL_TIME_MSEC)
     {
-      crashReason = CrashReason::Time;
+      crashReason = CrashReason::TimeLimit;
     }
 
     if (pathIndex >= path.size() - 3)
     {
-      crashReason = CrashReason::Distance;
+      crashReason = CrashReason::RabbitComplete;
     }
 
     // crashed or out of time or off the end of the list
