@@ -76,7 +76,7 @@
           </outside>
         </v3>
       </thermal>
-      <arena_thermals enabled="1">
+      <arena_thermals enabled="0">
         <bounds x_min="-150" x_max="150" y_min="-150" y_max="150" />
         <count_min>0</count_min>
         <count_max>5</count_max>
@@ -89,7 +89,7 @@
         <height_m>300</height_m>
       </arena_thermals>
       <start position="field" />
-      <wind velocity="12" direction="330" turbulence="1" />
+      <wind velocity="0" direction="0" turbulence="0" />
     </location>
   </locations>
   <inputMethod method="Mouse">
