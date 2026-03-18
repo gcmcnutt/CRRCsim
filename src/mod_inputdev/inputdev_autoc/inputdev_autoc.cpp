@@ -517,6 +517,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 
       AircraftState initialState{0, initialSpeed, initialVel, initialQuat, initialPos,
                                  static_cast<gp_scalar>(0.0f), static_cast<gp_scalar>(0.0f), static_cast<gp_scalar>(0.0f), 0};
+      initialState.setRabbitPosition(path[0].start);
       aircraftStates.push_back(initialState);
       if (debugSamplesCurrentPath.empty()) {
         DebugSample sample;
@@ -753,6 +754,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       gp_vec3 targetPos = getInterpolatedTargetPosition(
           pathProvider, static_cast<int32_t>(aircraftState.getSimTimeMsec()), 0.0f);
       gp_scalar distance = (targetPos - aircraftState.getPosition()).norm();
+      aircraftState.setRabbitPosition(targetPos);
       aircraftState.recordErrorHistory(dPhi, dTheta, distance, simTimeMsec);
     }
 
