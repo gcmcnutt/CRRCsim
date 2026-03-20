@@ -320,8 +320,8 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
   unsigned long simTimeMsec = Global::Simulation->getSimulationTimeSinceReset();
 
   // Always emit the last cached commands each frame; eval only on cadence
-  diagBuffer[diagIndex % DIAG_BUFFER_SIZE] = simTimeMsec;
-  diagIndex++;
+  diagBuffer[diagIndex] = simTimeMsec;
+  diagIndex = (diagIndex + 1) % DIAG_BUFFER_SIZE;
   if (diagCount < DIAG_BUFFER_SIZE) diagCount++;
 
   const unsigned long overflowLimit = getCycleCounterOverflow();
