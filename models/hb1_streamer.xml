@@ -26,8 +26,13 @@ Extra drag and slightly softer pitch authority to match the mushy feel seen in r
     <!-- Reference speed lowered to match ~10-11 m/s cruise with streamer -->
     <ref chord="0.178" span="0.762" area="0.136" speed="11.0" />
     <misc Alpha_0="0" eta_loc="0.25" CG_arm="0.25" span_eff="0.82" />
-    <!-- Pitch softened: less elevator authority, more damping -->
-    <m Cm_0="0.015" Cm_a="-0.55" Cm_q="-3.6" Cm_de="-0.22" />
+    <!-- Pitch calibrated from 2026-03-22 flight data (018 analysis):
+         Sim SS pitch was 295°/s vs flight 127°/s (2.3× too fast).
+         Split correction: Cm_de -0.22→-0.144 (35% less authority) +
+         Cm_q -3.6→-5.5 (53% more damping from streamer drag).
+         Roll already matches (sim 287 ≈ flight 270°/s).
+         For variations: Cm_q=-3.6 (no streamer) to -5.5 (25ft streamer). -->
+    <m Cm_0="0.015" Cm_a="-0.55" Cm_q="-5.5" Cm_de="-0.144" />
     <lift CL_0="0.18" CL_max="1.2" CL_min="-0.9" CL_a="4.7" CL_q="5.5"
        CL_de="0.55" CL_drop="0.1" CL_CD0="0.35" />
     <!-- Extra drag to represent streamer loading -->
