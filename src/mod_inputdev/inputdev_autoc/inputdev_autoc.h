@@ -46,7 +46,7 @@ using namespace std;
 
 #define FEET_TO_METERS 0.3048
 #define EVAL_UPDATE_INTERVAL_MSEC_DEFAULT 100   // Sensor+NN cadence (~10Hz)
-#define COMPUTE_LATENCY_MSEC_DEFAULT 40         // NN compute + scheduling latency
+#define COMPUTE_LATENCY_MSEC_DEFAULT 50         // Bench-measured: fetch(35)+eval(5)+send(10)=50ms
 #define SIM_FPS 25.0                            // ~40 Hz physics tick assumption for overflow calc
 
 // Settable at runtime (see inputdev_autoc.cpp).
