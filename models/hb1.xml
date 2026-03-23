@@ -42,12 +42,26 @@ Key changes: Increased roll/pitch authority, increased power, reduced damping.
       <author>Claude Code</author>
       <en>Updated geometry and mass properties to match 30in span HB1 (505g), retuned aero/prop for real-flight tracking.</en>
     </change>
+    <change>
+      <date>2026-03-22</date>
+      <author>Claude Code</author>
+      <en>Flight dynamics calibration from 2026-03-22 flight data (018 analysis).
+Physics-based audit: sim steady-state pitch=515°/s vs flight=127°/s (4× too fast).
+Roll matched well (sim 287 vs flight 270°/s). Split pitch correction between
+Cm_de (-0.32→-0.16, 2× less authority) and Cm_q (-3.0→-6.0, 2× more damping).
+Streamer (25ft crepe) adds significant pitch damping — modeled via increased Cm_q.
+Prior tuning contaminated by unmodeled INAV PT3 filter and 35% expo (both now disabled).
+For variations: Cm_q range models streamer length (off=-3, short=-4.5, full=-6).</en>
+    </change>
   </changelog>
   <aero version="1" units="1">
     <!-- Geometry updated to match 7in chord, 30in span, trimmed at ~15 m/s -->
     <ref chord="0.178" span="0.762" area="0.136" speed="15.0" />
     <misc Alpha_0="0" eta_loc="0.25" CG_arm="0.25" span_eff="0.82" />
-    <m Cm_0="0.015" Cm_a="-0.55" Cm_q="-3.0" Cm_de="-0.32" />
+    <!-- Pitch: Cm_de reduced 2× (real elevon less effective), Cm_q doubled (streamer drag) -->
+    <!-- Combined: 4× reduction in pitch rate to match flight 127°/s vs prior 515°/s -->
+    <!-- For variations: Cm_q=-3 (no streamer) to -6 (full 25ft streamer) -->
+    <m Cm_0="0.015" Cm_a="-0.55" Cm_q="-6.0" Cm_de="-0.16" />
     <lift CL_0="0.18" CL_max="1.2" CL_min="-0.9" CL_a="4.7" CL_q="5.5"
        CL_de="0.55" CL_drop="0.1" CL_CD0="0.35" />
     <drag CD_prof="0.045" Uexp_CD="-0.5" CD_stall="0" CD_CLsq="0.04" CD_AIsq="0.05"
