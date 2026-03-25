@@ -32,6 +32,7 @@
 #include "autoc/nn/evaluator.h"
 #include "autoc/nn/serialization.h"
 #include "autoc/eval/sensor_math.h"
+#include "autoc/eval/variation_generator.h"
 #include "autoc/util/socket_wrapper.h"
 
 #include <stdio.h>
@@ -105,7 +106,9 @@ private:
   int pathSelector = 0;
   int pathIndex = 0;
   gp_scalar rabbitOdometer = 0.0f;
-  gp_scalar crrcsimRabbitSpeed = 13.0f;  // Will be set from scenario metadata
+  gp_scalar crrcsimRabbitSpeed = 0.0f;   // Set from speed profile at path start — 0 = uninitialized
+  std::vector<RabbitSpeedPoint> rabbitSpeedProfile;  // Time-varying profile (generated per path)
+  RabbitSpeedConfig rabbitSpeedConfig = RabbitSpeedConfig::defaultConfig();
   EvalData evalData;
   EvalResults evalResults;
   std::vector<AircraftState> aircraftStates;

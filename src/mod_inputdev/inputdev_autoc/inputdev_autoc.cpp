@@ -29,6 +29,7 @@
 #include "../../mod_misc/crrc_rand.h"
 #include "../../mod_windfield/windfield.h"
 #include "inputdev_autoc.h"
+#include "autoc/eval/variation_generator.h"
 #include <algorithm>
 #include <chrono>
 #include <stdio.h>
@@ -473,9 +474,14 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       lastUpdateTimeMsec = 0;
       pathIndex = 0;
       rabbitOdometer = 0.0f;
-      // Set rabbit speed from scenario metadata if available
-      if (!evalData.scenarioList.empty() && evalData.scenarioList[0].rabbitSpeed > 0.0) {
-        crrcsimRabbitSpeed = static_cast<gp_scalar>(evalData.scenarioList[0].rabbitSpeed);
+      // Generate rabbit speed profile from per-scenario seed + global config
+      rabbitSpeedConfig = evalData.rabbitSpeedConfig;
+      {
+        unsigned int seed = activeScenario.rabbitSpeedSeed;
+        double totalDurationSec = SIM_TOTAL_TIME_MSEC / 1000.0;
+        rabbitSpeedProfile = generateSpeedProfile(seed, rabbitSpeedConfig, totalDurationSec);
+        crrcsimRabbitSpeed = static_cast<gp_scalar>(
+            getSpeedAtTime(rabbitSpeedProfile, 0.0));
       }
       gPendingCommand = PendingCommand{};
       prevPitch = prevRoll = prevThrottle = 0.0f;
@@ -659,7 +665,11 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     }
 
     // Advance rabbit odometer each eval tick (using dt computed before lastUpdateTimeMsec was updated)
+    // Rabbit speed varies over time (from per-scenario profile)
     if (evalDtSec > 0.0f && evalDtSec < 1.0f) {  // Guard against huge jumps
+      double simTimeSec = simTimeMsec / 1000.0;
+      crrcsimRabbitSpeed = static_cast<gp_scalar>(
+          getSpeedAtTime(rabbitSpeedProfile, simTimeSec));
       rabbitOdometer += crrcsimRabbitSpeed * evalDtSec;
     }
 
