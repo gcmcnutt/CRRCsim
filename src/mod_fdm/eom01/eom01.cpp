@@ -405,7 +405,7 @@ void EOM01::ls_aux(CRRCMath::Vector3 v_V_local_airmass, CRRCMath::Vector3 v_V_gu
   v_P_CG_Rwy(0) = Sea_level_radius * Latitude;
   v_P_CG_Rwy(1) = Sea_level_radius * Longitude;
   v_P_CG_Rwy(2) = Sea_level_radius - Radius_to_vehicle;
-  
+
   /* end of ls_aux */
 }
 

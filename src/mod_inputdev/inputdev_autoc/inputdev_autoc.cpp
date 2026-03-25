@@ -386,12 +386,15 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       evalDataEmpty = false;
       priorPathSelector = -1;
       pathSelector = 0;
-      path = evalData.pathList.at(pathSelector);
       gPendingCommand = PendingCommand{};
       prevPitch = prevRoll = prevThrottle = 0.0f;
       evalResults.aircraftStateList.clear();
       evalResults.crashReasonList.clear();
+
+      // Paths stay at canonical origin (Z=0). Aircraft operates in raw FDM coords.
+      // Origin offset (captured at FDM reset) bridges raw→virtual for NN sensor math.
       evalResults.pathList = evalData.pathList;
+      path = evalResults.pathList.at(pathSelector);
       evalResults.gp = evalData.gp;
       evalResults.gpHash = evalData.gpHash;
       if (evalResults.gpHash == 0 && !evalResults.gp.empty()) {
@@ -448,9 +451,10 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       Global::windDirectionOffset = activeScenario.windDirectionOffset;
 
       // Entry position offsets (see specs/005-entry-fitness-ramp)
-      Global::entryNorthOffset = activeScenario.entryNorthOffset;
-      Global::entryEastOffset = activeScenario.entryEastOffset;
-      Global::entryAltOffset = activeScenario.entryAltOffset;
+      // Scenario offsets are NED meters; CRRCSim operates in feet
+      Global::entryNorthOffset = activeScenario.entryNorthOffset / FEET_TO_METERS;
+      Global::entryEastOffset = activeScenario.entryEastOffset / FEET_TO_METERS;
+      Global::entryAltOffset = activeScenario.entryAltOffset / FEET_TO_METERS;
 
 #ifdef DETAILED_LOGGING
       std::cerr << "VARIATIONS1: heading=" << (Global::entryHeadingOffset * 180.0/M_PI)
@@ -524,8 +528,12 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 
       AircraftState initialState{0, initialSpeed, initialVel, initialQuat, initialPos,
                                  static_cast<gp_scalar>(0.0f), static_cast<gp_scalar>(0.0f), static_cast<gp_scalar>(0.0f), 0};
+      initialState.setOriginOffset(initialPos);  // raw→virtual: like xiao arm point
       initialState.setRabbitPosition(path[0].start);
       aircraftStates.push_back(initialState);
+
+      // Carry origin offset to the running aircraftState (used for subsequent ticks)
+      aircraftState.setOriginOffset(initialPos);
       if (debugSamplesCurrentPath.empty()) {
         DebugSample sample;
         sample.pathIndex = pathSelector;
@@ -641,7 +649,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     }
     q.normalize();
 
-    // position
+    // position — raw FDM coordinates (sim altitude ~-25m NED)
     gp_vec3 p{static_cast<gp_scalar>(Global::aircraft->getPos()(0) * FEET_TO_METERS),
               static_cast<gp_scalar>(Global::aircraft->getPos()(1) * FEET_TO_METERS),
               static_cast<gp_scalar>(Global::aircraft->getPos()(2) * FEET_TO_METERS)};
@@ -674,7 +682,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 
     CrashReason crashReason = CrashReason::None;
 
-    // out of bounds?
+    // out of bounds? (raw FDM position)
     gp_scalar distanceFromOrigin = std::sqrt(aircraftState.getPosition()[0] * aircraftState.getPosition()[0] +
                                           aircraftState.getPosition()[1] * aircraftState.getPosition()[1]);
     if (aircraftState.getPosition()[2] < SIM_MAX_ELEVATION || // too high
@@ -740,9 +748,9 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 #endif
 
       // prepare for the next path if any
-      if (++pathSelector < evalData.pathList.size())
+      if (++pathSelector < evalResults.pathList.size())
       {
-        path = evalData.pathList.at(pathSelector);
+        path = evalResults.pathList.at(pathSelector);
       }
       else
       {
@@ -767,7 +775,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       gp_scalar dTheta = executeGetDTheta(pathProvider, aircraftState, rabbitOdometer, 0.0f);
       gp_vec3 targetPos = getInterpolatedTargetPosition(
           pathProvider, rabbitOdometer, 0.0f);
-      gp_scalar distance = (targetPos - aircraftState.getPosition()).norm();
+      gp_scalar distance = (targetPos - aircraftState.getVirtualPosition()).norm();
       aircraftState.setRabbitPosition(targetPos);
       aircraftState.recordErrorHistory(dPhi, dTheta, distance, simTimeMsec);
     }
@@ -944,7 +952,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       gp_scalar alpha = std::atan2(-velocity_body.z(), velocity_body.x());
       gp_scalar beta = std::atan2(velocity_body.y(), velocity_body.x());
       gp_scalar vel = aircraftState.getRelVel();
-      gp_scalar dhome = (gp_vec3(0, 0, SIM_INITIAL_ALTITUDE) - aircraftState.getPosition()).norm();
+      gp_scalar dhome = aircraftState.getVirtualPosition().norm();  // distance from virtual origin
 
       gp_vec3 euler = aircraftState.getOrientation().toRotationMatrix().eulerAngles(2, 1, 0);
       gp_scalar roll_rad = euler[2];
