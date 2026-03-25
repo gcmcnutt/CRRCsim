@@ -536,6 +536,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
                                  static_cast<gp_scalar>(0.0f), static_cast<gp_scalar>(0.0f), static_cast<gp_scalar>(0.0f), 0};
       initialState.setOriginOffset(initialPos);  // raw→virtual: like xiao arm point
       initialState.setRabbitPosition(path[0].start);
+      initialState.setRabbitSpeed(crrcsimRabbitSpeed);
       aircraftStates.push_back(initialState);
 
       // Carry origin offset to the running aircraftState (used for subsequent ticks)
