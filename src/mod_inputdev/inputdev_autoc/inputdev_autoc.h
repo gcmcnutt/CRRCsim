@@ -104,6 +104,8 @@ private:
   int priorPathSelector = -1;
   int pathSelector = 0;
   int pathIndex = 0;
+  gp_scalar rabbitOdometer = 0.0f;
+  gp_scalar crrcsimRabbitSpeed = 13.0f;  // Will be set from scenario metadata
   EvalData evalData;
   EvalResults evalResults;
   std::vector<AircraftState> aircraftStates;

@@ -364,6 +364,8 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       return;
     }
 
+    // Compute dt before updating lastUpdateTimeMsec (used for rabbit odometer advancement)
+    gp_scalar evalDtSec = static_cast<gp_scalar>(simTimeMsec - lastUpdateTimeMsec) / 1000.0f;
     lastUpdateTimeMsec = simTimeMsec;
     cycleCounter = 0;
 
@@ -466,6 +468,11 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       simCrashed = false;
       lastUpdateTimeMsec = 0;
       pathIndex = 0;
+      rabbitOdometer = 0.0f;
+      // Set rabbit speed from scenario metadata if available
+      if (!evalData.scenarioList.empty() && evalData.scenarioList[0].rabbitSpeed > 0.0) {
+        crrcsimRabbitSpeed = static_cast<gp_scalar>(evalData.scenarioList[0].rabbitSpeed);
+      }
       gPendingCommand = PendingCommand{};
       prevPitch = prevRoll = prevThrottle = 0.0f;
       aircraftStates.clear();
@@ -643,8 +650,13 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       p = gp_vec3::Zero();
     }
 
-    // search for location of next timestamp using time-based targeting
-    while (pathIndex < path.size() - 2 && (path.at(pathIndex).simTimeMsec < simTimeMsec))
+    // Advance rabbit odometer each eval tick (using dt computed before lastUpdateTimeMsec was updated)
+    if (evalDtSec > 0.0f && evalDtSec < 1.0f) {  // Guard against huge jumps
+      rabbitOdometer += crrcsimRabbitSpeed * evalDtSec;
+    }
+
+    // search for path segment by distance (odometer-based)
+    while (pathIndex < static_cast<int>(path.size()) - 2 && path.at(pathIndex).distanceFromStart < rabbitOdometer)
     {
       pathIndex++;
     }
@@ -657,6 +669,8 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     aircraftState.setPosition(p);
     // NN controller reads previous commands as feedback inputs — preserve them.
     aircraftState.setSimTimeMsec(simTimeMsec);
+    aircraftState.setRabbitOdometer(rabbitOdometer);
+    aircraftState.setRabbitSpeed(crrcsimRabbitSpeed);
 
     CrashReason crashReason = CrashReason::None;
 
@@ -749,10 +763,10 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     // Capture temporal history before NN evaluation (for GETDPHI_PREV, GETDTHETA_PREV, GETDIST_PREV, etc.)
     {
       VectorPathProvider pathProvider(path, aircraftState.getThisPathIndex());
-      gp_scalar dPhi = executeGetDPhi(pathProvider, aircraftState, 0.0f);
-      gp_scalar dTheta = executeGetDTheta(pathProvider, aircraftState, 0.0f);
+      gp_scalar dPhi = executeGetDPhi(pathProvider, aircraftState, rabbitOdometer, 0.0f);
+      gp_scalar dTheta = executeGetDTheta(pathProvider, aircraftState, rabbitOdometer, 0.0f);
       gp_vec3 targetPos = getInterpolatedTargetPosition(
-          pathProvider, static_cast<int32_t>(aircraftState.getSimTimeMsec()), 0.0f);
+          pathProvider, rabbitOdometer, 0.0f);
       gp_scalar distance = (targetPos - aircraftState.getPosition()).norm();
       aircraftState.setRabbitPosition(targetPos);
       aircraftState.recordErrorHistory(dPhi, dTheta, distance, simTimeMsec);
