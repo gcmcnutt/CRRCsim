@@ -58,9 +58,10 @@ Extra drag and slightly softer pitch authority to match the mushy feel seen in r
            CD_ELsq=0.05 adds significant drag at full elevator — contributes to
            the degenerate full-pitch penalty being too low. Keep for now. -->
     <!-- CD_stall: 0→0.10 (post-stall drag penalty, makes full pitch costly) -->
-    <!-- 019 throttle tuning pass 3: 0.13 gave 73% cruise (flight=55%).
-         0.13→0.11 to close remaining 15% gap. Target ~60-65% cruise. -->
-    <drag CD_prof="0.11" Uexp_CD="-0.5" CD_stall="0.10" CD_CLsq="0.04" CD_AIsq="0.05"
+    <!-- 019 throttle tuning pass 4: 0.11 too slippery — idle glide 16m/s vs real 10m/s.
+         Back to 0.14: flight cruise ~14m/s at 20-40% power, idle ~10m/s.
+         F=6.5 stays — issue was drag not thrust. -->
+    <drag CD_prof="0.14" Uexp_CD="-0.5" CD_stall="0.10" CD_CLsq="0.04" CD_AIsq="0.05"
        CD_ELsq="0.05" />
     <Y CY_b="-0.12" CY_p="-0.05" CY_r="0.08" CY_dr="0" CY_da="0.03" />
     <!-- Roll: 019 analysis sim 1.2-2× flight. Cl_da 0.14→0.10 (~30% reduction) -->
@@ -82,9 +83,9 @@ Extra drag and slightly softer pitch authority to match the mushy feel seen in r
       <sample filename="electric.wav" type="1" pitchfactor="0.007" maxvolume="1" />
     </sound>
     <power units="1">
-      <!-- 019 throttle tuning pass 2: keep F=6.5 for modulation headroom.
-           CD_prof 0.15→0.13 reduces cruise power requirement (~65% target).
-           Vmax may increase slightly — monitor. Flight: cruise 13m/s at 55%. -->
+      <!-- 019 throttle tuning pass 4: F=6.5, CD_prof=0.14.
+           Steady flight analysis: flight cruises 14m/s at 20-40% power.
+           Idle glide should be ~10m/s not 16m/s — need more drag. -->
       <automagic F="6.5" V="11.1">
         <battery throttle_min="0">
           <automagic T="420" />
