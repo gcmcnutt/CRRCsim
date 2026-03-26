@@ -58,10 +58,12 @@ Extra drag and slightly softer pitch authority to match the mushy feel seen in r
            CD_ELsq=0.05 adds significant drag at full elevator — contributes to
            the degenerate full-pitch penalty being too low. Keep for now. -->
     <!-- CD_stall: 0→0.10 (post-stall drag penalty, makes full pitch costly) -->
-    <!-- 019 throttle tuning pass 4: 0.11 too slippery — idle glide 16m/s vs real 10m/s.
-         Back to 0.14: flight cruise ~14m/s at 20-40% power, idle ~10m/s.
-         F=6.5 stays — issue was drag not thrust. -->
-    <drag CD_prof="0.14" Uexp_CD="-0.5" CD_stall="0.10" CD_CLsq="0.04" CD_AIsq="0.05"
+    <!-- 019 throttle tuning pass 5: 0.14 still too slippery — idle glide 16m/s vs real 10m/s.
+         Steady-flight analysis: sim 30% too fast at zero throttle.
+         Left turns at 20-35° nearly matched flight (66% vs 65%, 15.5 vs 15.0 m/s).
+         0.14→0.18: targeting idle glide ~12m/s to close the gap.
+         F=6.5 stays — thrust OK (full power sim 15 vs flight 17, close enough). -->
+    <drag CD_prof="0.18" Uexp_CD="-0.5" CD_stall="0.10" CD_CLsq="0.04" CD_AIsq="0.05"
        CD_ELsq="0.05" />
     <Y CY_b="-0.12" CY_p="-0.05" CY_r="0.08" CY_dr="0" CY_da="0.03" />
     <!-- Roll: 019 analysis sim 1.2-2× flight. Cl_da 0.14→0.10 (~30% reduction) -->
