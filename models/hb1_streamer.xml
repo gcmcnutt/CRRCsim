@@ -66,8 +66,8 @@ Extra drag and slightly softer pitch authority to match the mushy feel seen in r
     <drag CD_prof="0.18" Uexp_CD="-0.5" CD_stall="0.10" CD_CLsq="0.04" CD_AIsq="0.05"
        CD_ELsq="0.05" />
     <Y CY_b="-0.12" CY_p="-0.05" CY_r="0.08" CY_dr="0" CY_da="0.03" />
-    <!-- Roll: 020 analysis sim 0.41× flight (Mar 22 data). Cl_da 0.10→0.14, Cl_p -0.55→-0.39 (2× gain) -->
-    <l Cl_b="-0.06" Cl_p="-0.39" Cl_r="0.05" Cl_dr="0" Cl_da="0.14" />
+    <!-- Roll: 020 pass 2. BIG1(0.10/-0.55)=0.41× flt, BIG2(0.14/-0.39)=2.15× flt. Split: target ~1× -->
+    <l Cl_b="-0.06" Cl_p="-0.47" Cl_r="0.05" Cl_dr="0" Cl_da="0.12" />
     <n Cn_b="0.03" Cn_p="-0.005" Cn_r="-0.015" Cn_dr="0"
        Cn_da="-0.010" />
   </aero>
