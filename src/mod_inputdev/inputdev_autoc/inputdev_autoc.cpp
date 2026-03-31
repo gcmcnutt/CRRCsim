@@ -241,14 +241,6 @@ struct PendingCommand {
 };
 static PendingCommand gPendingCommand;
 
-// Servo slew rate limits in NN command space [-1,1], enforced at command-apply time.
-// Full range = 2.0; per-step limit = rate(%/sec) * 2.0 * 0.1s.
-static const float SLEW_PITCH    = 0.40f;  // 200%/sec
-static const float SLEW_ROLL     = 0.40f;  // 200%/sec
-static const float SLEW_THROTTLE = 0.60f;  // 300%/sec
-static float prevPitch    = 0.0f;
-static float prevRoll     = 0.0f;
-static float prevThrottle = 0.0f;
 
 #ifdef DETAILED_LOGGING
 char *get_iso8601_timestamp(char *buf, size_t len)
@@ -995,14 +987,12 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 #endif
   }
 
-  // Apply pending commands when latency expires, with servo slew rate limiting.
+  // Apply pending commands when latency expires (no slew rate limiting — matches
+  // hardware path where Xiao writes NN outputs directly to MSP_SET_RAW_RC).
   if (gPendingCommand.valid && simTimeMsec >= gPendingCommand.readyTimeMsec) {
-    pitchCommand    = std::clamp(gPendingCommand.pitch,    prevPitch    - SLEW_PITCH,    prevPitch    + SLEW_PITCH);
-    rollCommand     = std::clamp(gPendingCommand.roll,     prevRoll     - SLEW_ROLL,     prevRoll     + SLEW_ROLL);
-    throttleCommand = std::clamp(gPendingCommand.throttle, prevThrottle - SLEW_THROTTLE, prevThrottle + SLEW_THROTTLE);
-    prevPitch    = pitchCommand;
-    prevRoll     = rollCommand;
-    prevThrottle = throttleCommand;
+    pitchCommand    = gPendingCommand.pitch;
+    rollCommand     = gPendingCommand.roll;
+    throttleCommand = gPendingCommand.throttle;
     gPendingCommand.valid = false;
   }
 
