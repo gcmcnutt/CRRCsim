@@ -50,6 +50,38 @@ using namespace std;
 #define COMPUTE_LATENCY_MSEC_DEFAULT 30         // Bench-measured: consolidated MSP fetch(12)+eval(5)+send(12)=29ms
 #define SIM_FPS 25.0                            // ~40 Hz physics tick assumption for overflow calc
 
+// ACRO mode rate PID — converts NN rate commands to surface deflections
+// NN output [-1,1] → desired rate [-max_rate, +max_rate] rad/s
+// PID: error = desired_rate - actual_rate (rad/s) → surface deflection [-1,1]
+// All rate math in rad/s to match FDM and AircraftState convention.
+//
+// Max angular rates (deg/s config, converted to rad/s in PID code)
+// From INAV: rate_param * 10 + 200
+#define ACRO_MAX_RATE_ROLL  560.0               // roll_rate=36 → 560 deg/s ≈ 9.77 rad/s
+#define ACRO_MAX_RATE_PITCH 400.0               // pitch_rate=20 → 400 deg/s ≈ 6.98 rad/s
+#define ACRO_MAX_RATE_YAW   240.0               // yaw_rate=4 → 240 deg/s ≈ 4.19 rad/s
+
+// PID gains — empirical for CRRCSim FDM (NOT direct copies of INAV gains)
+// INAV's gains are tuned for its own internal units and servo response.
+// These are starting points derived from INAV config, tuned for CRRCSim.
+// FF: feedforward (proportional to desired rate)
+// P:  proportional to rate error
+// I:  integral of rate error
+#define ACRO_FF_ROLL   50.0
+#define ACRO_P_ROLL     5.0
+#define ACRO_I_ROLL     7.0
+#define ACRO_FF_PITCH  50.0
+#define ACRO_P_PITCH    5.0
+#define ACRO_I_PITCH    7.0
+#define ACRO_FF_YAW    60.0
+#define ACRO_P_YAW      6.0
+#define ACRO_I_YAW     10.0
+
+// PID output scaling — divides PID sum to produce [-1,1] surface deflection
+// At full roll rate: FF*9.77/SCALE ≈ 50*9.77/500 ≈ 0.98 → reasonable
+// Tune this to match FDM rate response. Too low = overshoot, too high = sluggish.
+#define ACRO_PID_SCALE 500.0
+
 // Settable at runtime (see inputdev_autoc.cpp).
 extern unsigned long gEvalUpdateIntervalMsec;
 extern unsigned long gComputeLatencyMsec;
