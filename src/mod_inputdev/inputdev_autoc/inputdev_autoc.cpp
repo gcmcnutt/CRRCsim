@@ -359,7 +359,6 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       lastUpdateTimeMsec = simTimeMsec;
       cycleCounter = 0;
       gPendingCommand = PendingCommand{};
-      prevPitch = prevRoll = prevThrottle = 0.0f;
       return;
     }
 
@@ -386,7 +385,6 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       priorPathSelector = -1;
       pathSelector = 0;
       gPendingCommand = PendingCommand{};
-      prevPitch = prevRoll = prevThrottle = 0.0f;
       evalResults.aircraftStateList.clear();
       evalResults.crashReasonList.clear();
 
@@ -482,7 +480,6 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
             getSpeedAtTime(rabbitSpeedProfile, 0.0));
       }
       gPendingCommand = PendingCommand{};
-      prevPitch = prevRoll = prevThrottle = 0.0f;
       aircraftStates.clear();
       aircraftState.clearHistory();  // Reset temporal history for new path
       // Reset commands for new path (NN needs zero-start per path, not per tick)
