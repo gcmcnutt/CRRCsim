@@ -993,56 +993,11 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     gPendingCommand.valid = false;
   }
 
-  // ACRO rate PID: convert NN rate commands to surface deflections.
-  // NN output [-1,1] is the desired angular rate as a fraction of max rate.
-  // PID compares desired vs actual body rate (both rad/s) → surface deflection [-1,1].
-  //
-  // All rate math is in rad/s to match:
-  //   - FDM body rates (getOmegaBody() returns rad/s)
-  //   - NN gyro inputs (AircraftState gyroRates_ in rad/s)
-  //   - AircraftState convention (see COORDINATE_CONVENTIONS.md)
-  //
-  // The PID gains (ACRO_FF/P/I) and ACRO_PID_SCALE are empirical tuning knobs
-  // for the CRRCSim FDM, NOT direct copies of INAV's gains. INAV's gains are
-  // tuned for its own internal units and servo response. CRRCSim needs its own
-  // tuning to produce similar rate-tracking behavior.
-  {
-    EOM01* eom01_acro = dynamic_cast<EOM01*>(Global::aircraft->getFDM());
-    if (eom01_acro) {
-      CRRCMath::Vector3 omega = eom01_acro->getOmegaBody();  // rad/s
-      double pRadS = omega(0);  // roll rate
-      double qRadS = omega(1);  // pitch rate
-      double rRadS = omega(2);  // yaw rate
-
-      // NN commands [-1,1] → desired rates (rad/s)
-      double maxRollRadS  = ACRO_MAX_RATE_ROLL  * M_PI / 180.0;  // 560 deg/s → ~9.77 rad/s
-      double maxPitchRadS = ACRO_MAX_RATE_PITCH * M_PI / 180.0;  // 400 deg/s → ~6.98 rad/s
-      double desiredRoll  = rollCommand  * maxRollRadS;
-      double desiredPitch = pitchCommand * maxPitchRadS;
-
-      // Rate error (rad/s)
-      double errRoll  = desiredRoll  - pRadS;
-      double errPitch = desiredPitch - qRadS;
-
-      // Integrate (with anti-windup clamp in rad)
-      double dt = (gAcroLastTimeMsec > 0 && simTimeMsec > gAcroLastTimeMsec)
-                  ? (simTimeMsec - gAcroLastTimeMsec) / 1000.0
-                  : 0.01;  // fallback 10ms
-      gAcroLastTimeMsec = simTimeMsec;
-      gAcroIntegralRoll  = std::clamp(gAcroIntegralRoll  + errRoll  * dt, -10.0, 10.0);
-      gAcroIntegralPitch = std::clamp(gAcroIntegralPitch + errPitch * dt, -10.0, 10.0);
-
-      // PID output: FF*command + P*error + I*integral (no D term)
-      // Output normalized to ~[-1,1] by ACRO_PID_SCALE
-      double outRoll  = (ACRO_FF_ROLL  * desiredRoll  + ACRO_P_ROLL  * errRoll  + ACRO_I_ROLL  * gAcroIntegralRoll)  / ACRO_PID_SCALE;
-      double outPitch = (ACRO_FF_PITCH * desiredPitch + ACRO_P_PITCH * errPitch + ACRO_I_PITCH * gAcroIntegralPitch) / ACRO_PID_SCALE;
-
-      // Replace NN commands with PID output (clamped to [-1,1])
-      pitchCommand    = std::clamp(outPitch, -1.0, 1.0);
-      rollCommand     = std::clamp(outRoll,  -1.0, 1.0);
-      // throttle passes through directly (no rate PID for throttle)
-    }
-  }
+  // ACRO rate PID is DISABLED — NN outputs go directly to surfaces (MANUAL mode).
+  // The PID code is preserved in git history (021 branch) for future use.
+  // Current mode: NN output [-1,1] → direct surface deflection, same as 020.
+  // Gyro rates are still provided as NN inputs (AircraftState.gyroRates_)
+  // but the NN learns to use them for its own stabilization, not through a PID.
 
   // convert cached values to crrcsim scales and return every frame
   inputs->elevator = -pitchCommand / 2.0;         // invert from -1:1 to -0.5:0.5 (crrcsim convention)
