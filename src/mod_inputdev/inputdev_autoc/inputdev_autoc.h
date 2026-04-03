@@ -56,31 +56,37 @@ using namespace std;
 // All rate math in rad/s to match FDM and AircraftState convention.
 //
 // Max angular rates (deg/s config, converted to rad/s in PID code)
-// From INAV: rate_param * 10 + 200
-#define ACRO_MAX_RATE_ROLL  560.0               // roll_rate=36 → 560 deg/s ≈ 9.77 rad/s
-#define ACRO_MAX_RATE_PITCH 400.0               // pitch_rate=20 → 400 deg/s ≈ 6.98 rad/s
-#define ACRO_MAX_RATE_YAW   240.0               // yaw_rate=4 → 240 deg/s ≈ 4.19 rad/s
+// Set to match actual FDM rate capability at full surface deflection.
+// Real aircraft (Mar 27 flight): roll ~430°/s, pitch ~300°/s.
+// These are NOT the INAV rate_param config values (560/400/240).
+#define ACRO_MAX_RATE_ROLL  430.0               // flight measured max roll ≈ 7.50 rad/s
+#define ACRO_MAX_RATE_PITCH 300.0               // flight measured max pitch ≈ 5.24 rad/s
+#define ACRO_MAX_RATE_YAW   180.0               // estimated (no rudder, yaw from coupling)
 
 // PID gains — empirical for CRRCSim FDM (NOT direct copies of INAV gains)
 // INAV's gains are tuned for its own internal units and servo response.
-// These are starting points derived from INAV config, tuned for CRRCSim.
+// These must be strong enough that at ZERO command, P+I can counter
+// aerodynamic coupling (sideslip→roll, etc.) to hold attitude.
+// Rule of thumb: P * max_disturbance_rate / SCALE should produce
+// enough surface deflection to counter the disturbance.
 // FF: feedforward (proportional to desired rate)
-// P:  proportional to rate error
-// I:  integral of rate error
+// P:  proportional to rate error — must be large enough to hold attitude
+// I:  integral of rate error — drives steady-state error to zero
 #define ACRO_FF_ROLL   50.0
-#define ACRO_P_ROLL     5.0
-#define ACRO_I_ROLL     7.0
+#define ACRO_P_ROLL    40.0
+#define ACRO_I_ROLL    15.0
 #define ACRO_FF_PITCH  50.0
-#define ACRO_P_PITCH    5.0
-#define ACRO_I_PITCH    7.0
+#define ACRO_P_PITCH   40.0
+#define ACRO_I_PITCH   15.0
 #define ACRO_FF_YAW    60.0
-#define ACRO_P_YAW      6.0
-#define ACRO_I_YAW     10.0
+#define ACRO_P_YAW     40.0
+#define ACRO_I_YAW     15.0
 
 // PID output scaling — divides PID sum to produce [-1,1] surface deflection
-// At full roll rate: FF*9.77/SCALE ≈ 50*9.77/500 ≈ 0.98 → reasonable
+// At full roll (7.50 rad/s): FF*7.50/SCALE = 50*7.50/350 = 1.07 (clamped, full authority)
+// At full pitch (5.24 rad/s): FF*5.24/SCALE = 50*5.24/350 = 0.75 (good authority + P/I headroom)
 // Tune this to match FDM rate response. Too low = overshoot, too high = sluggish.
-#define ACRO_PID_SCALE 500.0
+#define ACRO_PID_SCALE 350.0
 
 // Settable at runtime (see inputdev_autoc.cpp).
 extern unsigned long gEvalUpdateIntervalMsec;
