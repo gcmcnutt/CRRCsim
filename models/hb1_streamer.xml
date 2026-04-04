@@ -48,7 +48,17 @@ Extra drag and slightly softer pitch authority to match the mushy feel seen in r
          CL_drop 0.1→0.5 (sharp lift loss post-stall, not gentle mush)
          CD_stall 0→0.10 (significant drag spike at stall — punishes full pitch)
          CL_min -0.9→-0.5 (inverted stall also sharper) -->
-    <lift CL_0="0.18" CL_max="0.9" CL_min="-0.5" CL_a="4.7" CL_q="5.5"
+    <!-- 021 analysis: CL_max=0.9 was the BOTTLENECK for pitch rate.
+         Linearized Cm_de gives 331 deg/s at full stick, but stall at 2.1g
+         capped actual rate to ~53 deg/s at 12 m/s. Flight data shows
+         173-236 deg/s at 13-25 m/s. Inferring CL_max from flight:
+           25 m/s / 192 deg/s → CL=0.92 (high-speed, reliable)
+           17 m/s / 218 deg/s → CL=1.55 (low-speed, transient overshoot)
+         Elevons are clipped near center — outside prop wash, no boost.
+         CL_max 0.9→1.2: foam flying wing, no prop wash on elevons.
+           At 12 m/s: 87 deg/s (was 53). At 17 m/s: 156 deg/s (flight ~200).
+         CL_min -0.5→-1.0: restore inverted authority for all-attitude flight. -->
+    <lift CL_0="0.18" CL_max="1.2" CL_min="-1.0" CL_a="4.7" CL_q="5.5"
        CL_de="0.55" CL_drop="0.5" CL_CD0="0.35" />
     <!-- Drag tuning history:
          Original: CD_prof=0.065 → sim Vmax≈32m/s (2× real 17m/s)
@@ -72,7 +82,10 @@ Extra drag and slightly softer pitch authority to match the mushy feel seen in r
     <!-- 021 flight 2026-04-03: sim 106°/s vs flight 500°/s at full stick (0.21x).
          Cl_da 0.12→0.18 (1.5x, expecting ~2.5-3.5x rate increase from nonlinear amplification).
          020 history: 0.10→0.41x, 0.14→2.15x, 0.12→0.94x (at cruise, old measurements). -->
-    <l Cl_b="-0.06" Cl_p="-0.47" Cl_r="0.05" Cl_dr="0" Cl_da="0.18" />
+    <!-- 021 analysis: linearized model p_ss = Cl_da*V/(|Cl_p|*b) = 346 deg/s at
+         0.18. Flight target 500 deg/s → need 1.44x. Cl_da 0.18→0.26.
+         Linearized prediction: 0.26*12/(0.47*0.762) = 499 deg/s. -->
+    <l Cl_b="-0.06" Cl_p="-0.47" Cl_r="0.05" Cl_dr="0" Cl_da="0.26" />
     <n Cn_b="0.03" Cn_p="-0.005" Cn_r="-0.015" Cn_dr="0"
        Cn_da="-0.010" />
   </aero>
