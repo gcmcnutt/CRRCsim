@@ -107,6 +107,10 @@ static bool gInDeterministicTest = false;
 // Global aircraftState used by NN evaluation (was in autoc-eval.cc)
 AircraftState aircraftState;
 
+// Raw→virtual origin offset for current path. Captured at path start from FDM position.
+// Used to convert raw FDM position to virtual coordinates for AircraftState.
+gp_vec3 pathOriginOffset = gp_vec3::Zero();
+
 std::string crashReasonToString(CrashReason type) {
   switch (type) {
   case CrashReason::None: return "None";
@@ -388,8 +392,8 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       evalResults.aircraftStateList.clear();
       evalResults.crashReasonList.clear();
 
-      // Paths stay at canonical origin (Z=0). Aircraft operates in raw FDM coords.
-      // Origin offset (captured at FDM reset) bridges raw→virtual for NN sensor math.
+      // Paths stay at canonical origin (Z=0). Aircraft position stored as virtual
+      // (raw - pathOriginOffset). Origin offset captured at FDM reset per path.
       evalResults.pathList = evalData.pathList;
       path = evalResults.pathList.at(pathSelector);
       evalResults.gp = evalData.gp;
@@ -529,15 +533,20 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       };
       gp_scalar initialSpeed = initialVel.norm();
 
-      AircraftState initialState{0, initialSpeed, initialVel, initialQuat, initialPos,
+      // Canonical raw→virtual origin offset (NOT the actual FDM start position).
+      // Entry variations intentionally start the craft off-target — that offset
+      // must be visible to the fitness function as the aircraft's deviation from
+      // the path origin, not absorbed into pathOriginOffset.
+      pathOriginOffset = gp_vec3(0.0f, 0.0f, SIM_INITIAL_ALTITUDE);
+
+      // Virtual initial position = entry-variation deviation from canonical start.
+      // Without variations: (0,0,0). With variations: (entryNorth, entryEast, entryAlt).
+      gp_vec3 virtualInitialPos = initialPos - pathOriginOffset;
+      AircraftState initialState{0, initialSpeed, initialVel, initialQuat, virtualInitialPos,
                                  static_cast<gp_scalar>(0.0f), static_cast<gp_scalar>(0.0f), static_cast<gp_scalar>(0.0f), 0};
-      initialState.setOriginOffset(initialPos);  // raw→virtual: like xiao arm point
       initialState.setRabbitPosition(path[0].start);
       initialState.setRabbitSpeed(crrcsimRabbitSpeed);
       aircraftStates.push_back(initialState);
-
-      // Carry origin offset to the running aircraftState (used for subsequent ticks)
-      aircraftState.setOriginOffset(initialPos);
       if (debugSamplesCurrentPath.empty()) {
         DebugSample sample;
         sample.pathIndex = pathSelector;
@@ -682,7 +691,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     aircraftState.setRelVel(v);
     aircraftState.setVelocity(velocity_vector);
     aircraftState.setOrientation(q);
-    aircraftState.setPosition(p);
+    aircraftState.setPosition(p - pathOriginOffset);  // store virtual position
     // NN controller reads previous commands as feedback inputs — preserve them.
     aircraftState.setSimTimeMsec(simTimeMsec);
     aircraftState.setRabbitOdometer(rabbitOdometer);
@@ -699,11 +708,10 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 
     CrashReason crashReason = CrashReason::None;
 
-    // out of bounds? (raw FDM position)
-    gp_scalar distanceFromOrigin = std::sqrt(aircraftState.getPosition()[0] * aircraftState.getPosition()[0] +
-                                          aircraftState.getPosition()[1] * aircraftState.getPosition()[1]);
-    if (aircraftState.getPosition()[2] < SIM_MAX_ELEVATION || // too high
-        aircraftState.getPosition()[2] > SIM_MIN_ELEVATION || // too low
+    // out of bounds? Use raw FDM position (not virtual from aircraftState)
+    gp_scalar distanceFromOrigin = std::sqrt(p[0] * p[0] + p[1] * p[1]);
+    if (p[2] < SIM_MAX_ELEVATION || // too high
+        p[2] > SIM_MIN_ELEVATION || // too low
         distanceFromOrigin > SIM_PATH_RADIUS_LIMIT)
     { // too far
       crashReason = CrashReason::Eval;
@@ -735,8 +743,9 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       // save the crash state
       evalResults.crashReasonList.push_back(crashReason);
 
-      // save the results list
+      // save the results list (with origin offset for renderer raw reconstruction)
       ScenarioMetadata pathMeta = scenarioForPathIndex(evalData, static_cast<size_t>(pathSelector));
+      pathMeta.originOffset = pathOriginOffset;
       evalResults.scenarioList.push_back(pathMeta);
 
       std::vector<AircraftState> aircraftStatesCopy = aircraftStates;
@@ -792,7 +801,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       gp_scalar dTheta = executeGetDTheta(pathProvider, aircraftState, rabbitOdometer, 0.0f);
       gp_vec3 targetPos = getInterpolatedTargetPosition(
           pathProvider, rabbitOdometer, 0.0f);
-      gp_scalar distance = (targetPos - aircraftState.getVirtualPosition()).norm();
+      gp_scalar distance = (targetPos - aircraftState.getPosition()).norm();
       aircraftState.setRabbitPosition(targetPos);
       aircraftState.recordErrorHistory(dPhi, dTheta, distance, simTimeMsec);
     }
@@ -969,7 +978,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       gp_scalar alpha = std::atan2(-velocity_body.z(), velocity_body.x());
       gp_scalar beta = std::atan2(velocity_body.y(), velocity_body.x());
       gp_scalar vel = aircraftState.getRelVel();
-      gp_scalar dhome = aircraftState.getVirtualPosition().norm();  // distance from virtual origin
+      gp_scalar dhome = aircraftState.getPosition().norm();  // distance from virtual origin
 
       gp_vec3 euler = aircraftState.getOrientation().toRotationMatrix().eulerAngles(2, 1, 0);
       gp_scalar roll_rad = euler[2];
