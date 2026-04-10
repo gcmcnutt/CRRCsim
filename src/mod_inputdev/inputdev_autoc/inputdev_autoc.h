@@ -32,6 +32,7 @@
 #include "autoc/nn/evaluator.h"
 #include "autoc/nn/serialization.h"
 #include "autoc/eval/sensor_math.h"
+#include "autoc/nn/nn_input_computation.h"
 #include "autoc/eval/variation_generator.h"
 #include "autoc/util/socket_wrapper.h"
 

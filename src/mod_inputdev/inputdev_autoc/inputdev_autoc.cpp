@@ -794,16 +794,26 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       return;
     }
 
-    // Capture temporal history before NN evaluation (for GETDPHI_PREV, GETDTHETA_PREV, GETDIST_PREV, etc.)
+    // Capture temporal history before NN evaluation (direction cosines, 023)
     {
       VectorPathProvider pathProvider(path, aircraftState.getThisPathIndex());
-      gp_scalar dPhi = executeGetDPhi(pathProvider, aircraftState, rabbitOdometer, 0.0f);
-      gp_scalar dTheta = executeGetDTheta(pathProvider, aircraftState, rabbitOdometer, 0.0f);
       gp_vec3 targetPos = getInterpolatedTargetPosition(
           pathProvider, rabbitOdometer, 0.0f);
-      gp_scalar distance = (targetPos - aircraftState.getPosition()).norm();
+      gp_vec3 craftToTarget = targetPos - aircraftState.getPosition();
+      gp_vec3 target_local = aircraftState.getOrientation().inverse() * craftToTarget;
+      float distance = static_cast<float>(target_local.norm());
+
+      // Path tangent for singularity fallback
+      gp_vec3 posAhead = getInterpolatedTargetPosition(pathProvider, rabbitOdometer, 0.5f);
+      gp_vec3 tangent = posAhead - targetPos;
+      double tn = tangent.norm();
+      gp_vec3 tangent_body = (tn > 1e-6)
+          ? aircraftState.getOrientation().inverse() * (tangent / tn)
+          : gp_vec3::UnitX();
+
+      gp_vec3 dir = computeTargetDir(target_local, distance, tangent_body);
       aircraftState.setRabbitPosition(targetPos);
-      aircraftState.recordErrorHistory(dPhi, dTheta, distance, simTimeMsec);
+      aircraftState.recordErrorHistory(dir, distance, simTimeMsec);
     }
 
     // Evaluate NN controller
