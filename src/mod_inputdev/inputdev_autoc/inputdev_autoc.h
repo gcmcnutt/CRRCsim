@@ -50,7 +50,6 @@ using namespace std;
 #define EVAL_UPDATE_INTERVAL_MSEC_DEFAULT 100   // Sensor+NN cadence (~10Hz)
 #define COMPUTE_LATENCY_MSEC_DEFAULT 30         // Bench-measured: consolidated MSP fetch(12)+eval(5)+send(12)=29ms
 #define ENGAGE_DELAY_MSEC_DEFAULT 750           // Measured INAV MANUAL→autoc handoff delay (2026-04-07 flight)
-#define RC_FILTER_HZ_DEFAULT 20                 // pt3 LPF cutoff — matches INAV rc_filter_lpf_hz setting
 #define SIM_FPS 25.0                            // ~40 Hz physics tick assumption for overflow calc
 
 // ACRO mode rate PID — converts NN rate commands to surface deflections
@@ -165,23 +164,6 @@ private:
   int engageDelayTicksRemaining = 0;
   unsigned long engageDelayMsec = ENGAGE_DELAY_MSEC_DEFAULT;
   gp_scalar engageCoastThrottle = 0.0f;  // set per-scenario from entrySpeedFactor
-
-  // RC smoothing filter — pt3 (3rd-order cascade), replicates INAV rc_smoothing.c
-  // Runs every getInputData() call (FDM rate ~333Hz), smooths NN command steps.
-  // Applied to pitch, roll, throttle before FDM surface conversion.
-  struct Pt3Filter {
-    float state1 = 0, state2 = 0, state = 0;
-    float apply(float input, float k) {
-      state1 += k * (input - state1);
-      state2 += k * (state1 - state2);
-      state  += k * (state2 - state);
-      return state;
-    }
-    void reset(float val) { state1 = state2 = state = val; }
-  };
-  Pt3Filter rcFilterPitch, rcFilterRoll, rcFilterThrottle;
-  float rcFilterK = 0.0f;       // filter gain, computed from cutoff freq + FDM dt
-  int rcFilterHz = RC_FILTER_HZ_DEFAULT;  // cutoff frequency (0 = disabled)
 
   // NN controller
   NNGenome nnGenome;

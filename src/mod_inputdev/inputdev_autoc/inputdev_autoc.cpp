@@ -309,25 +309,6 @@ int T_TX_InterfaceAUTOC::init(SimpleXMLTransfer *config)
     std::cerr << "[AUTOC] EngageDelayMsec=" << engageDelayMsec << std::endl;
   }
 
-  // RC smoothing filter: pt3 LPF matching INAV rc_filter_lpf_hz
-  {
-    const char* env = std::getenv("AUTOC_RC_FILTER_HZ");
-    if (env && *env != '\0') {
-      rcFilterHz = atoi(env);
-    }
-    // Compute filter gain k from cutoff frequency and FDM dt.
-    // FDM dt is from autoc_config.xml <flightModel dt="0.003" />
-    // k = dT / (RC + dT) where RC = 1 / (2 * orderCutoffCorrection * pi * f_cut)
-    // orderCutoffCorrection for 3rd order = 1/sqrt(2^(1/3) - 1) ≈ 1.9615
-    if (rcFilterHz > 0) {
-      float dT = 0.003f;  // FDM timestep from autoc_config.xml
-      float correction = 1.0f / sqrtf(powf(2.0f, 1.0f / 3.0f) - 1.0f);
-      float RC = 1.0f / (2.0f * correction * static_cast<float>(M_PI) * rcFilterHz);
-      rcFilterK = dT / (RC + dT);
-    }
-    std::cerr << "[AUTOC] RCFilterHz=" << rcFilterHz << " k=" << rcFilterK << std::endl;
-  }
-
   T_TX_Interface::init(config);
 
   socket_ = new TcpSocket();
@@ -520,10 +501,6 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
           (engageDelayMsec + gEvalUpdateIntervalMsec - 1) / gEvalUpdateIntervalMsec);
       engageCoastThrottle = static_cast<gp_scalar>(
           CLAMP_DEF(2.0 * (activeScenario.entrySpeedFactor - 1.0), -1.0, 1.0));
-      // Pre-fill RC filters with engage delay commands (no transient on first frame)
-      rcFilterPitch.reset(0.0f);
-      rcFilterRoll.reset(0.0f);
-      rcFilterThrottle.reset(engageCoastThrottle);
       gAcroIntegralRoll = gAcroIntegralPitch = gAcroIntegralYaw = 0.0;
       gAcroLastTimeMsec = 0;
       gCurrentPhysicsTrace.clear();  // Clear physics trace for new path
@@ -1082,29 +1059,10 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
   // Gyro rates are still provided as NN inputs (AircraftState.gyroRates_)
   // but the NN learns to use them for its own stabilization, not through a PID.
 
-  // RC smoothing filter: pt3 applied every FDM frame (~333Hz), smooths the
-  // 10Hz NN command steps.  Replicates INAV rc_filter_lpf_hz on all channels.
-  // When disabled (rcFilterHz=0), passes through unfiltered.
-  float filteredPitch, filteredRoll, filteredThrottle;
-  if (rcFilterK > 0.0f) {
-    filteredPitch    = rcFilterPitch.apply(pitchCommand, rcFilterK);
-    filteredRoll     = rcFilterRoll.apply(rollCommand, rcFilterK);
-    filteredThrottle = rcFilterThrottle.apply(throttleCommand, rcFilterK);
-  } else {
-    filteredPitch    = pitchCommand;
-    filteredRoll     = rollCommand;
-    filteredThrottle = throttleCommand;
-  }
-
-  // Store filtered values in AircraftState for data.dat logging
-  aircraftState.setFilteredPitchCommand(filteredPitch);
-  aircraftState.setFilteredRollCommand(filteredRoll);
-  aircraftState.setFilteredThrottleCommand(filteredThrottle);
-
-  // convert filtered values to crrcsim scales and return every frame
-  inputs->elevator = -filteredPitch / 2.0;         // invert from -1:1 to -0.5:0.5 (crrcsim convention)
-  inputs->aileron = filteredRoll / 2.0;            // from -1:1 to -0.5:0.5
-  inputs->throttle = filteredThrottle / 2.0 + 0.5; // from -1:1 to 0:1
+  // convert cached values to crrcsim scales and return every frame
+  inputs->elevator = -pitchCommand / 2.0;         // invert from -1:1 to -0.5:0.5 (crrcsim convention)
+  inputs->aileron = rollCommand / 2.0;            // from -1:1 to -0.5:0.5
+  inputs->throttle = throttleCommand / 2.0 + 0.5; // from -1:1 to 0:1
 
 #ifdef DETAILED_LOGGING
   {
