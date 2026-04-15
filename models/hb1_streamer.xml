@@ -25,7 +25,9 @@ Extra drag and slightly softer pitch authority to match the mushy feel seen in r
   <aero version="1" units="1">
     <!-- Reference speed lowered to match ~10-11 m/s cruise with streamer -->
     <ref chord="0.178" span="0.762" area="0.136" speed="11.0" />
-    <misc Alpha_0="0" eta_loc="0.25" CG_arm="0.25" span_eff="0.82" />
+    <!-- 023: CG_arm 0.25→0.28, real craft is more neutral pitch trim.
+         At 0.25 the sim nose-dives on throttle cut instead of mushing level. -->
+    <misc Alpha_0="0" eta_loc="0.25" CG_arm="0.28" span_eff="0.82" />
     <!-- Pitch tuning history:
          Original: Cm_de=-0.22, Cm_q=-3.6
          018 attempt 1: Cm_de=-0.144, Cm_q=-5.5 → way too sluggish (39°/s)
@@ -39,6 +41,11 @@ Extra drag and slightly softer pitch authority to match the mushy feel seen in r
          For variations: Cm_q range -3.6 (no streamer) to -5.0 (25ft streamer). -->
     <!-- 021 flight 2026-04-03: sim 71°/s vs flight 200°/s at full stick (0.36x).
          Cm_de -0.24→-0.36 (1.5x, expecting ~2.5-3x rate increase from nonlinear amplification) -->
+    <!-- 023 flight-data comparison: Cm_0 adjustments FAILED.
+         -0.10: nose-dives on launch. -0.04: NN pegs full pitch-up (98% sat).
+         The pitch trim gap is NOT a simple Cm_0 offset — likely involves
+         alpha regime, launch dynamics, or CG_arm interaction.
+         Reverted to original +0.015.  Keep drag/thrust changes only. -->
     <m Cm_0="0.015" Cm_a="-0.55" Cm_q="-4.2" Cm_de="-0.36" />
     <!-- Lift/stall tuning (019 step 2):
          CL_max=1.2 + CL_drop=0.1 + CD_stall=0 meant the wing barely stalls.
@@ -58,8 +65,10 @@ Extra drag and slightly softer pitch authority to match the mushy feel seen in r
          CL_max 0.9→1.2: foam flying wing, no prop wash on elevons.
            At 12 m/s: 87 deg/s (was 53). At 17 m/s: 156 deg/s (flight ~200).
          CL_min -0.5→-1.0: restore inverted authority for all-attitude flight. -->
+    <!-- 023: CL_drop 0.5→0.15 (mushy stall, no snap roll — matches real foam wing).
+         CD_stall stays 0.10 (drag penalty still there, just no sharp lift break). -->
     <lift CL_0="0.18" CL_max="1.2" CL_min="-1.0" CL_a="4.7" CL_q="5.5"
-       CL_de="0.55" CL_drop="0.5" CL_CD0="0.35" />
+       CL_de="0.55" CL_drop="0.15" CL_CD0="0.35" />
     <!-- Drag tuning history:
          Original: CD_prof=0.065 → sim Vmax≈32m/s (2× real 17m/s)
          018: CD_prof=0.18 → sim Vmax≈18m/s (good!) but drag curve too steep —
@@ -75,7 +84,9 @@ Extra drag and slightly softer pitch authority to match the mushy feel seen in r
          Left turns at 20-35° nearly matched flight (66% vs 65%, 15.5 vs 15.0 m/s).
          0.14→0.18: targeting idle glide ~12m/s to close the gap.
          F=6.5 stays — thrust OK (full power sim 15 vs flight 17, close enough). -->
-    <drag CD_prof="0.18" Uexp_CD="-0.5" CD_stall="0.10" CD_CLsq="0.04" CD_AIsq="0.05"
+    <!-- 023 flight-data comparison: sim cruise at 81% throttle, real at 60%.
+         CD_prof 0.18→0.15 (17% less drag) + thrust F 6.5→7.5 (15% more) to close gap. -->
+    <drag CD_prof="0.15" Uexp_CD="-0.5" CD_stall="0.10" CD_CLsq="0.04" CD_AIsq="0.05"
        CD_ELsq="0.05" />
     <Y CY_b="-0.12" CY_p="-0.05" CY_r="0.08" CY_dr="0" CY_da="0.03" />
     <!-- Roll: 020 pass 2. BIG1(0.10/-0.55)=0.41× flt, BIG2(0.14/-0.39)=2.15× flt. Split: target ~1× -->
@@ -85,8 +96,15 @@ Extra drag and slightly softer pitch authority to match the mushy feel seen in r
     <!-- 021 analysis: linearized model p_ss = Cl_da*V/(|Cl_p|*b) = 346 deg/s at
          0.18. Flight target 500 deg/s → need 1.44x. Cl_da 0.18→0.26.
          Linearized prediction: 0.26*12/(0.47*0.762) = 499 deg/s. -->
-    <l Cl_b="-0.06" Cl_p="-0.47" Cl_r="0.05" Cl_dr="0" Cl_da="0.26" />
-    <n Cn_b="0.03" Cn_p="-0.005" Cn_r="-0.015" Cn_dr="0"
+    <!-- 023 flight-data comparison: sim peak 900°/s vs real MANUAL 615°/s.
+         Cl_da 0.26→0.18 (~30% reduction, targeting ~630°/s peak). -->
+    <!-- 023: Cl_da 0.18 felt sluggish at cruise. 0.22 splits between 0.18 (sluggish)
+         and 0.26 (too hot). Linearized: 0.22*13/(0.47*0.762) = 520°/s (real ~615). -->
+    <l Cl_b="-0.06" Cl_p="-0.47" Cl_r="0.05" Cl_dr="0" Cl_da="0.22" />
+    <!-- 023: Cn_b 0.03→0.07, Cn_r -0.015→-0.04.  Real HB1 has vertical fin
+         behind motor — significantly more yaw stability than a pure flying wing.
+         Comparable to sailplanes with fin (F3F=0.038, Pilatus=0.044). -->
+    <n Cn_b="0.07" Cn_p="-0.005" Cn_r="-0.04" Cn_dr="0"
        Cn_da="-0.010" />
   </aero>
   <config version="1">
@@ -106,7 +124,8 @@ Extra drag and slightly softer pitch authority to match the mushy feel seen in r
       <!-- 019 throttle tuning pass 4: F=6.5, CD_prof=0.14.
            Steady flight analysis: flight cruises 14m/s at 20-40% power.
            Idle glide should be ~10m/s not 16m/s — need more drag. -->
-      <automagic F="6.5" V="11.1">
+      <!-- 023: F 6.5→7.5 to match real cruise throttle (~60% vs sim 81%) -->
+      <automagic F="7.5" V="11.1">
         <battery throttle_min="0">
           <automagic T="420" />
           <shaft J="0" brake="0">
