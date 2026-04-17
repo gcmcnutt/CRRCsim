@@ -100,11 +100,30 @@ Extra drag and slightly softer pitch authority to match the mushy feel seen in r
          Cl_da 0.26→0.18 (~30% reduction, targeting ~630°/s peak). -->
     <!-- 023: Cl_da 0.18 felt sluggish at cruise. 0.22 splits between 0.18 (sluggish)
          and 0.26 (too hot). Linearized: 0.22*13/(0.47*0.762) = 520°/s (real ~615). -->
-    <l Cl_b="-0.06" Cl_p="-0.47" Cl_r="0.05" Cl_dr="0" Cl_da="0.22" />
+    <!-- 023 adjust4: Cl_b tuning history:
+         -0.06 (original): sideslip self-corrects well but maybe too much?
+         -0.01: sideslip unchecked → yaw/roll 0.314 (4x too high)
+         -0.03: still 0.344 — not enough correction
+         -0.05: close to original.  Motor mount height + vertical fin give
+         real effective dihedral despite flat wing planform.  The fin behind
+         the motor acts like a low dihedral equivalent. -->
+    <l Cl_b="-0.05" Cl_p="-0.47" Cl_r="0.05" Cl_dr="0" Cl_da="0.22" />
     <!-- 023: Cn_b 0.03→0.07, Cn_r -0.015→-0.04.  Real HB1 has vertical fin
          behind motor — significantly more yaw stability than a pure flying wing.
          Comparable to sailplanes with fin (F3F=0.038, Pilatus=0.044). -->
-    <n Cn_b="0.07" Cn_p="-0.005" Cn_r="-0.04" Cn_dr="0"
+    <!-- 023 adjust4: adverse yaw and roll-yaw coupling.
+         Flight data (2026-04-03): mean 8.5° yaw change per roll event,
+         39 deg/s mean yaw rate during 0.5-0.8s roll events at ~500 deg/s.
+         Real yaw/roll ratio ≈ 0.078.
+
+         First attempt: Cn_da=-0.015, Cn_p=-0.012, Cl_b=-0.01 produced
+         yaw/roll ratio 0.314 (4x too high) — Cl_b too low let sideslip
+         build unchecked.
+
+         Revised: Cn_da=-0.010 (original), Cn_p=-0.008 (slight increase
+         from -0.005), Cl_b=-0.03 (moderate dihedral correction).
+         Target yaw/roll ratio ~0.08-0.12. -->
+    <n Cn_b="0.07" Cn_p="-0.008" Cn_r="-0.04" Cn_dr="0"
        Cn_da="-0.010" />
   </aero>
   <config version="1">
