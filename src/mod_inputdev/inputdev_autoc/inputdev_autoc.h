@@ -32,6 +32,7 @@
 #include "autoc/nn/evaluator.h"
 #include "autoc/nn/serialization.h"
 #include "autoc/eval/sensor_math.h"
+#include "autoc/nn/nn_input_computation.h"
 #include "autoc/eval/variation_generator.h"
 #include "autoc/util/socket_wrapper.h"
 
@@ -48,6 +49,7 @@ using namespace std;
 #define FEET_TO_METERS 0.3048
 #define EVAL_UPDATE_INTERVAL_MSEC_DEFAULT 100   // Sensor+NN cadence (~10Hz)
 #define COMPUTE_LATENCY_MSEC_DEFAULT 30         // Bench-measured: consolidated MSP fetch(12)+eval(5)+send(12)=29ms
+#define ENGAGE_DELAY_MSEC_DEFAULT 750           // Measured INAV MANUAL→autoc handoff delay (2026-04-07 flight)
 #define SIM_FPS 25.0                            // ~40 Hz physics tick assumption for overflow calc
 
 // ACRO mode rate PID — converts NN rate commands to surface deflections
@@ -156,6 +158,12 @@ private:
   int workerPid = 0;
 
   int evalCounter = 0;  // Total evaluations this worker has processed
+
+  // Engage delay window — simulates INAV handoff delay (NN runs but stick
+  // is held at {0,0,cruise_throttle} for the first N ticks of each scenario).
+  int engageDelayTicksRemaining = 0;
+  unsigned long engageDelayMsec = ENGAGE_DELAY_MSEC_DEFAULT;
+  gp_scalar engageCoastThrottle = 0.0f;  // set per-scenario from entrySpeedFactor
 
   // NN controller
   NNGenome nnGenome;

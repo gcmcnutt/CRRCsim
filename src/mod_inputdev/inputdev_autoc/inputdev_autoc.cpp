@@ -299,6 +299,16 @@ int T_TX_InterfaceAUTOC::init(SimpleXMLTransfer *config)
   // Allow runtime override of NN eval cadence and compute latency (sim time).
   gEvalUpdateIntervalMsec = parseIntervalFromEnv("AUTOC_EVAL_INTERVAL_MSEC", EVAL_UPDATE_INTERVAL_MSEC_DEFAULT);
   gComputeLatencyMsec = parseIntervalFromEnv("AUTOC_COMPUTE_LATENCY_MSEC", COMPUTE_LATENCY_MSEC_DEFAULT);
+
+  // Engage delay: coast time before NN outputs reach surfaces (models INAV handoff)
+  {
+    const char* env = std::getenv("AUTOC_ENGAGE_DELAY_MSEC");
+    if (env && *env != '\0') {
+      engageDelayMsec = strtoul(env, nullptr, 10);
+    }
+    std::cerr << "[AUTOC] EngageDelayMsec=" << engageDelayMsec << std::endl;
+  }
+
   T_TX_Interface::init(config);
 
   socket_ = new TcpSocket();
@@ -485,11 +495,12 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       }
       gPendingCommand = PendingCommand{};
       aircraftStates.clear();
-      aircraftState.clearHistory();  // Reset temporal history for new path
-      // Reset commands for new path (NN needs zero-start per path, not per tick)
-      aircraftState.setPitchCommand(0.0f);
-      aircraftState.setRollCommand(0.0f);
-      aircraftState.setThrottleCommand(0.0f);
+      // Engage delay: coast for N ticks before NN outputs reach surfaces.
+      // Coast throttle derived from entry speed variation.
+      engageDelayTicksRemaining = static_cast<int>(
+          (engageDelayMsec + gEvalUpdateIntervalMsec - 1) / gEvalUpdateIntervalMsec);
+      engageCoastThrottle = static_cast<gp_scalar>(
+          CLAMP_DEF(2.0 * (activeScenario.entrySpeedFactor - 1.0), -1.0, 1.0));
       gAcroIntegralRoll = gAcroIntegralPitch = gAcroIntegralYaw = 0.0;
       gAcroLastTimeMsec = 0;
       gCurrentPhysicsTrace.clear();  // Clear physics trace for new path
@@ -546,7 +557,27 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
                                  static_cast<gp_scalar>(0.0f), static_cast<gp_scalar>(0.0f), static_cast<gp_scalar>(0.0f), 0};
       initialState.setRabbitPosition(path[0].start);
       initialState.setRabbitSpeed(crrcsimRabbitSpeed);
-      aircraftStates.push_back(initialState);
+
+      // Copy initial state to the global aircraftState BEFORE history pre-fill
+      // so resetHistory() uses the correct position/orientation (not leftover
+      // from the previous scenario).
+      aircraftState = initialState;
+
+      // Pre-fill history buffer with initial geometry so the NN starts with
+      // consistent direction cosines instead of zeros.
+      {
+        gp_vec3 tangent;
+        if (path.size() > 1)
+          tangent = path[1].start - path[0].start;
+        else
+          tangent = gp_vec3::UnitX();
+        double tn = tangent.norm();
+        if (tn > 1e-6) tangent = tangent / tn;
+        else tangent = gp_vec3::UnitX();
+        aircraftState.resetHistory(path[0].start, tangent);
+      }
+
+      aircraftStates.push_back(aircraftState);
       if (debugSamplesCurrentPath.empty()) {
         DebugSample sample;
         sample.pathIndex = pathSelector;
@@ -794,16 +825,26 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       return;
     }
 
-    // Capture temporal history before NN evaluation (for GETDPHI_PREV, GETDTHETA_PREV, GETDIST_PREV, etc.)
+    // Capture temporal history before NN evaluation (direction cosines, 023)
     {
       VectorPathProvider pathProvider(path, aircraftState.getThisPathIndex());
-      gp_scalar dPhi = executeGetDPhi(pathProvider, aircraftState, rabbitOdometer, 0.0f);
-      gp_scalar dTheta = executeGetDTheta(pathProvider, aircraftState, rabbitOdometer, 0.0f);
       gp_vec3 targetPos = getInterpolatedTargetPosition(
           pathProvider, rabbitOdometer, 0.0f);
-      gp_scalar distance = (targetPos - aircraftState.getPosition()).norm();
+      gp_vec3 craftToTarget = targetPos - aircraftState.getPosition();
+      gp_vec3 target_local = aircraftState.getOrientation().inverse() * craftToTarget;
+      float distance = static_cast<float>(target_local.norm());
+
+      // Path tangent for singularity fallback
+      gp_vec3 posAhead = getInterpolatedTargetPosition(pathProvider, rabbitOdometer, 0.5f);
+      gp_vec3 tangent = posAhead - targetPos;
+      double tn = tangent.norm();
+      gp_vec3 tangent_body = (tn > 1e-6)
+          ? aircraftState.getOrientation().inverse() * (tangent / tn)
+          : gp_vec3::UnitX();
+
+      gp_vec3 dir = computeTargetDir(target_local, distance, tangent_body);
       aircraftState.setRabbitPosition(targetPos);
-      aircraftState.recordErrorHistory(dPhi, dTheta, distance, simTimeMsec);
+      aircraftState.recordErrorHistory(dir, distance, simTimeMsec);
     }
 
     // Evaluate NN controller
@@ -963,10 +1004,20 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       debugSamplesCurrentPath.push_back(sample);
     }
 
-    // Stage commands to be applied after compute latency
-    gPendingCommand.pitch = aircraftState.getPitchCommand();
-    gPendingCommand.roll = aircraftState.getRollCommand();
-    gPendingCommand.throttle = aircraftState.getThrottleCommand();
+    // Stage commands to be applied after compute latency.
+    // During engage delay window: hold stick centered (pitch/roll=0) with
+    // cruise throttle derived from entry speed variation — aircraft coasts
+    // on momentum, matching real handoff.
+    if (engageDelayTicksRemaining > 0) {
+      gPendingCommand.pitch = 0.0f;
+      gPendingCommand.roll = 0.0f;
+      gPendingCommand.throttle = engageCoastThrottle;
+      engageDelayTicksRemaining--;
+    } else {
+      gPendingCommand.pitch = aircraftState.getPitchCommand();
+      gPendingCommand.roll = aircraftState.getRollCommand();
+      gPendingCommand.throttle = aircraftState.getThrottleCommand();
+    }
     gPendingCommand.readyTimeMsec = simTimeMsec + gComputeLatencyMsec;
     gPendingCommand.valid = true;
 
