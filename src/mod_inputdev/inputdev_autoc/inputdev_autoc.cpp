@@ -96,12 +96,6 @@ static double gAcroIntegralPitch = 0.0;
 static double gAcroIntegralYaw = 0.0;
 static unsigned long gAcroLastTimeMsec = 0;
 
-unsigned long getCycleCounterOverflow() {
-  // a few cycles after the last update, we assume crash, no flight updates, etc
-  unsigned long overflow = static_cast<unsigned long>(SIM_FPS * gEvalUpdateIntervalMsec / 1000.0);
-  return overflow > 0 ? overflow : 1;
-}
-
 static bool gInDeterministicTest = false;
 
 // Global aircraftState used by NN evaluation (was in autoc-eval.cc)
@@ -309,6 +303,39 @@ int T_TX_InterfaceAUTOC::init(SimpleXMLTransfer *config)
     std::cerr << "[AUTOC] EngageDelayMsec=" << engageDelayMsec << std::endl;
   }
 
+  // Compute frame-counter cadence triple and enforce integrality at startup.
+  // Constraint: outer cycleLength_ms must divide gEvalUpdateIntervalMsec
+  // exactly. CTime already rounds cycleLength to a multiple of
+  // (Global::dt * 1000). See spec 024 WI4.
+  {
+    isHeadless = (config->getInt("video.enabled", 1) == 0);
+    SimpleXMLTransfer* video = config->getChild("video", true);
+    const int fps = video->attributeAsInt("fps", 0);
+    const double dtMs = 1000.0 * static_cast<double>(Global::dt);
+    const unsigned long cycleLengthMs =
+      (fps > 0 && dtMs > 0.0)
+        ? static_cast<unsigned long>(static_cast<int>(1000.0 / fps / dtMs) * dtMs + 0.5)
+        : 0UL;
+    if (cycleLengthMs == 0 || gEvalUpdateIntervalMsec % cycleLengthMs != 0) {
+      std::cerr << "[AUTOC] FATAL: cadence triple not integral. "
+                << "video.fps=" << fps
+                << " Global::dt=" << Global::dt
+                << " cycleLengthMs=" << cycleLengthMs
+                << " gEvalUpdateIntervalMsec=" << gEvalUpdateIntervalMsec
+                << " — evalInterval must be an integer multiple of cycleLength."
+                << std::endl;
+      std::exit(1);
+    }
+    framesPerEval = gEvalUpdateIntervalMsec / cycleLengthMs;
+    std::cerr << "[AUTOC] cadence: video.fps=" << fps
+              << " dt=" << Global::dt
+              << " cycleLengthMs=" << cycleLengthMs
+              << " evalIntervalMsec=" << gEvalUpdateIntervalMsec
+              << " framesPerEval=" << framesPerEval
+              << " headless=" << (isHeadless ? "true" : "false")
+              << std::endl;
+  }
+
   T_TX_Interface::init(config);
 
   socket_ = new TcpSocket();
@@ -337,8 +364,15 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
   diagIndex = (diagIndex + 1) % DIAG_BUFFER_SIZE;
   if (diagCount < DIAG_BUFFER_SIZE) diagCount++;
 
-  const unsigned long overflowLimit = getCycleCounterOverflow();
-  bool shouldEval = (simTimeMsec > lastUpdateTimeMsec + gEvalUpdateIntervalMsec) || (++cycleCounter > overflowLimit);
+  // Frame-counter cadence (both headless and video):
+  //  - Outer frame is a fixed cycleLength_ms (CTime). framesPerEval was
+  //    validated at init to divide gEvalUpdateIntervalMsec exactly, so every
+  //    framesPerEval-th outer frame fires eval with zero drift.
+  //  - simTimeMsec is stamped into diagBuffer for drift logging in video mode.
+  //  - A "way late" stall (wall-clock pause in video mode, computer hiccup,
+  //    etc.) shows up as a simTime leap > SIM_MAX_INTERVAL_MSEC and is caught
+  //    by the jump reset below, which clears counters and bookkeeping.
+  bool shouldEval = (++cycleCounter >= framesPerEval);
   if (shouldEval)
   {
 #ifdef DETAILED_LOGGING

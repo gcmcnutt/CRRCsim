@@ -50,7 +50,6 @@ using namespace std;
 #define EVAL_UPDATE_INTERVAL_MSEC_DEFAULT 100   // Sensor+NN cadence (~10Hz)
 #define COMPUTE_LATENCY_MSEC_DEFAULT 30         // Bench-measured: consolidated MSP fetch(12)+eval(5)+send(12)=29ms
 #define ENGAGE_DELAY_MSEC_DEFAULT 750           // Measured INAV MANUAL→autoc handoff delay (2026-04-07 flight)
-#define SIM_FPS 25.0                            // ~40 Hz physics tick assumption for overflow calc
 
 // ACRO mode rate PID — converts NN rate commands to surface deflections
 // NN output [-1,1] → desired rate [-max_rate, +max_rate] rad/s
@@ -93,7 +92,6 @@ using namespace std;
 // Settable at runtime (see inputdev_autoc.cpp).
 extern unsigned long gEvalUpdateIntervalMsec;
 extern unsigned long gComputeLatencyMsec;
-unsigned long getCycleCounterOverflow();
 
 class T_TX_InterfaceAUTOC : public T_TX_Interface
 {
@@ -128,6 +126,8 @@ private:
 
   unsigned long lastUpdateTimeMsec = 0;
   unsigned long cycleCounter = 0;
+  unsigned long framesPerEval = 0;   // set in init(); NN eval fires every framesPerEval-th outer frame
+  bool isHeadless = false;           // set in init() from video.enabled — diagnostic only (both modes use the same cadence path)
   bool simCrashed = false;
 
   gp_scalar pitchCommand = 0;
