@@ -40,6 +40,7 @@
 #include <iostream>
 #include <cmath>
 #include <array>
+#include <memory>
 #include <unistd.h>
 
 using namespace std;
@@ -137,8 +138,13 @@ private:
   unsigned long engageDelayMsec = ENGAGE_DELAY_MSEC_DEFAULT;
   gp_scalar engageCoastThrottle = 0.0f;  // set per-scenario from entrySpeedFactor
 
-  // NN controller
+  // NN controller. `nnController_` is re-seeded each time a fresh
+  // nnGenome arrives; the backend holds recurrent hidden state across
+  // ticks within a span, and reset() is called on span start (spec 027).
+  // std::unique_ptr so we can rebuild when the genome changes without
+  // needing a default-constructed NNControllerBackend.
   NNGenome nnGenome;
+  std::unique_ptr<NNControllerBackend> nnController_;
   std::vector<Path> path;
 };
 

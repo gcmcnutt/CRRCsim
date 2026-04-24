@@ -470,6 +470,11 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
         return;
       }
 
+      // Build/rebuild the NN controller for the new genome. Recurrent
+      // hidden state (spec 027) lives inside the backend and is reset
+      // per-span below.
+      nnController_ = std::make_unique<NNControllerBackend>(nnGenome);
+
       // Cache quat dot past reset
       quatDotPast[0] = quatDotPast[1] = quatDotPast[2] = quatDotPast[3] = 0.0;
       return;
@@ -529,6 +534,9 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
           (engageDelayMsec + gEvalUpdateIntervalMsec - 1) / gEvalUpdateIntervalMsec);
       engageCoastThrottle = static_cast<gp_scalar>(
           CLAMP_DEF(2.0 * (activeScenario.entrySpeedFactor - 1.0), -1.0, 1.0));
+      // Zero recurrent NN state at span start (spec 027 Q4: h_t resets
+      // on new scenario; no-op for feedforward genomes).
+      if (nnController_) nnController_->reset();
       gCurrentPhysicsTrace.clear();  // Clear physics trace for new path
 
       // Set worker identity globals for FDM trace capture
@@ -873,11 +881,13 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       aircraftState.recordErrorHistory(dir, distance, simTimeMsec);
     }
 
-    // Evaluate NN controller
-    {
+    // Evaluate NN controller. Use the per-span member `nnController_` so
+    // recurrent hidden state (spec 027) persists across ticks. Fired on
+    // NN-eval cadence only — the `shouldEval` gate above enforces this,
+    // matching clarify Q4's hidden-state-advances-on-NN-tick contract.
+    if (nnController_) {
       VectorPathProvider pathProvider(path, aircraftState.getThisPathIndex());
-      NNControllerBackend nnBackend(nnGenome);
-      nnBackend.evaluate(aircraftState, pathProvider);
+      nnController_->evaluate(aircraftState, pathProvider);
     }
 
     // Save post-eval state for results
