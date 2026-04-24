@@ -34,6 +34,7 @@
 #include "autoc/eval/sensor_math.h"
 #include "autoc/nn/nn_input_computation.h"
 #include "autoc/eval/variation_generator.h"
+#include "autoc/eval/acro_pid.h"
 #include "autoc/util/socket_wrapper.h"
 
 #include <stdio.h>
@@ -88,6 +89,17 @@ using namespace std;
 // At full pitch (5.24 rad/s): FF*5.24/SCALE = 50*5.24/350 = 0.75 (good authority + P/I headroom)
 // Tune this to match FDM rate response. Too low = overshoot, too high = sluggish.
 #define ACRO_PID_SCALE 350.0
+
+// Inner-loop filter cutoffs — sim-cadence-derived (NOT copied from INAV's
+// 25/10 values). Sim runs ACRO PID at the outer-frame tick (20 Hz), so
+// cutoffs are placed at multiples of that rate:
+//   GYRO_LPF_HZ = 40 → 2× outer frame, 4× NN command rate (10 Hz), 1/5 FDM
+//   DTERM_LPF_HZ = 20 → outer-frame rate, dormant while D gain is 0
+// See specs/026-nn-temporal-state/research.md § "Sim PID implementation
+// notes" for derivation. Discrete α computed at filter init from:
+//   α = exp(-2π · fc · dt)
+#define ACRO_GYRO_LPF_HZ  40.0
+#define ACRO_DTERM_LPF_HZ 20.0
 
 // Settable at runtime (see inputdev_autoc.cpp).
 extern unsigned long gEvalUpdateIntervalMsec;
