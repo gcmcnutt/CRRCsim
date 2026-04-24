@@ -34,7 +34,6 @@
 #include "autoc/eval/sensor_math.h"
 #include "autoc/nn/nn_input_computation.h"
 #include "autoc/eval/variation_generator.h"
-#include "autoc/eval/acro_pid.h"
 #include "autoc/util/socket_wrapper.h"
 
 #include <stdio.h>
@@ -52,54 +51,15 @@ using namespace std;
 #define COMPUTE_LATENCY_MSEC_DEFAULT 30         // Bench-measured: consolidated MSP fetch(12)+eval(5)+send(12)=29ms
 #define ENGAGE_DELAY_MSEC_DEFAULT 750           // Measured INAV MANUAL→autoc handoff delay (2026-04-07 flight)
 
-// ACRO mode rate PID — converts NN rate commands to surface deflections
-// NN output [-1,1] → desired rate [-max_rate, +max_rate] rad/s
-// PID: error = desired_rate - actual_rate (rad/s) → surface deflection [-1,1]
-// All rate math in rad/s to match FDM and AircraftState convention.
-//
-// Max angular rates (deg/s config, converted to rad/s in PID code)
-// Set to match actual FDM rate capability at full surface deflection.
+// Max angular rates — used only to express NN rate-equivalent command in
+// `rateCmdP/Q` diagnostic columns (see PidInternals). Behaviorally the NN
+// output is a direct surface deflection in [-1,+1]; no PID in the loop.
 // Real aircraft (Mar 27 flight): roll ~430°/s, pitch ~300°/s.
-// These are NOT the INAV rate_param config values (560/400/240).
+// 026 attempted an external ACRO rate PID; it failed (fitness + bang-bang
+// got worse). See specs/026-nn-temporal-state/findings.md. 027 is pursuing
+// NN-internal memory instead.
 #define ACRO_MAX_RATE_ROLL  430.0               // flight measured max roll ≈ 7.50 rad/s
 #define ACRO_MAX_RATE_PITCH 300.0               // flight measured max pitch ≈ 5.24 rad/s
-#define ACRO_MAX_RATE_YAW   180.0               // estimated (no rudder, yaw from coupling)
-
-// PID gains — empirical for CRRCSim FDM (NOT direct copies of INAV gains)
-// INAV's gains are tuned for its own internal units and servo response.
-// These must be strong enough that at ZERO command, P+I can counter
-// aerodynamic coupling (sideslip→roll, etc.) to hold attitude.
-// Rule of thumb: P * max_disturbance_rate / SCALE should produce
-// enough surface deflection to counter the disturbance.
-// FF: feedforward (proportional to desired rate)
-// P:  proportional to rate error — must be large enough to hold attitude
-// I:  integral of rate error — drives steady-state error to zero
-#define ACRO_FF_ROLL   50.0
-#define ACRO_P_ROLL    40.0
-#define ACRO_I_ROLL    15.0
-#define ACRO_FF_PITCH  50.0
-#define ACRO_P_PITCH   40.0
-#define ACRO_I_PITCH   15.0
-#define ACRO_FF_YAW    60.0
-#define ACRO_P_YAW     40.0
-#define ACRO_I_YAW     15.0
-
-// PID output scaling — divides PID sum to produce [-1,1] surface deflection
-// At full roll (7.50 rad/s): FF*7.50/SCALE = 50*7.50/350 = 1.07 (clamped, full authority)
-// At full pitch (5.24 rad/s): FF*5.24/SCALE = 50*5.24/350 = 0.75 (good authority + P/I headroom)
-// Tune this to match FDM rate response. Too low = overshoot, too high = sluggish.
-#define ACRO_PID_SCALE 350.0
-
-// Inner-loop filter cutoffs — sim-cadence-derived (NOT copied from INAV's
-// 25/10 values). Sim runs ACRO PID at the outer-frame tick (20 Hz), so
-// cutoffs are placed at multiples of that rate:
-//   GYRO_LPF_HZ = 40 → 2× outer frame, 4× NN command rate (10 Hz), 1/5 FDM
-//   DTERM_LPF_HZ = 20 → outer-frame rate, dormant while D gain is 0
-// See specs/026-nn-temporal-state/research.md § "Sim PID implementation
-// notes" for derivation. Discrete α computed at filter init from:
-//   α = exp(-2π · fc · dt)
-#define ACRO_GYRO_LPF_HZ  40.0
-#define ACRO_DTERM_LPF_HZ 20.0
 
 // Settable at runtime (see inputdev_autoc.cpp).
 extern unsigned long gEvalUpdateIntervalMsec;

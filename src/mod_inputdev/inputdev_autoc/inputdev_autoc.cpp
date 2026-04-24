@@ -90,27 +90,6 @@ ScenarioMetadata scenarioForPathIndex(const EvalData& evalData, size_t idx) {
 unsigned long gEvalUpdateIntervalMsec = EVAL_UPDATE_INTERVAL_MSEC_DEFAULT;   // sensor/NN cadence
 unsigned long gComputeLatencyMsec = COMPUTE_LATENCY_MSEC_DEFAULT;           // simulated NN compute latency (sensor→output)
 
-// ACRO mode rate PID state
-static double gAcroIntegralRoll = 0.0;
-static double gAcroIntegralPitch = 0.0;
-static double gAcroIntegralYaw = 0.0;
-static unsigned long gAcroLastTimeMsec = 0;
-
-// ACRO inner-loop filter state — 1-pole LPF on body rate feeding PID error.
-// Applied at PID tick rate (outer-frame, ~20 Hz). See ACRO_GYRO_LPF_HZ.
-// Yaw not wired; HB1 has no controllable rudder (spec 026 clarification Q3).
-static double gAcroGyroLpfP = 0.0;   // filtered body-X rate (roll)
-static double gAcroGyroLpfQ = 0.0;   // filtered body-Y rate (pitch)
-static bool   gAcroGyroLpfPrimed = false;
-
-// ACRO D-term PT2 biquad state. Dormant while D gain = 0; kept here so the
-// filter can be activated by setting ACRO_D_ROLL / ACRO_D_PITCH nonzero
-// without restructuring. See ACRO_DTERM_LPF_HZ.
-static double gAcroDtermPrevErrRoll = 0.0;
-static double gAcroDtermPrevErrPitch = 0.0;
-static double gAcroDtermStage1Roll = 0.0, gAcroDtermStage2Roll = 0.0;
-static double gAcroDtermStage1Pitch = 0.0, gAcroDtermStage2Pitch = 0.0;
-
 static bool gInDeterministicTest = false;
 
 // Global aircraftState used by NN evaluation (was in autoc-eval.cc)
@@ -550,15 +529,6 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
           (engageDelayMsec + gEvalUpdateIntervalMsec - 1) / gEvalUpdateIntervalMsec);
       engageCoastThrottle = static_cast<gp_scalar>(
           CLAMP_DEF(2.0 * (activeScenario.entrySpeedFactor - 1.0), -1.0, 1.0));
-      gAcroIntegralRoll = gAcroIntegralPitch = gAcroIntegralYaw = 0.0;
-      gAcroLastTimeMsec = 0;
-      // ACRO inner-loop filter state reset — primed on first measurement
-      // to avoid initial ramp-up from zero.
-      gAcroGyroLpfP = gAcroGyroLpfQ = 0.0;
-      gAcroGyroLpfPrimed = false;
-      gAcroDtermPrevErrRoll = gAcroDtermPrevErrPitch = 0.0;
-      gAcroDtermStage1Roll = gAcroDtermStage2Roll = 0.0;
-      gAcroDtermStage1Pitch = gAcroDtermStage2Pitch = 0.0;
       gCurrentPhysicsTrace.clear();  // Clear physics trace for new path
 
       // Set worker identity globals for FDM trace capture
@@ -1109,91 +1079,29 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     gPendingCommand.valid = false;
   }
 
-  // ACRO rate PID — converts NN rate commands to surface deflections.
-  // NN output `pitchCommand` / `rollCommand` is desired body rate fraction
-  // ([-1, +1] × ACRO_MAX_RATE_* → rad/s). FF + P + I on rate error, no D
-  // initially. Output normalized to [-1, +1] by ACRO_PID_SCALE, then
-  // bridged to crrcsim surface conventions below. Pitch and roll only —
-  // yaw stays passive (HB1 has no controllable rudder; see spec
-  // specs/026-nn-temporal-state/spec.md clarification Q3). Throttle
-  // passthrough unchanged.
-  //
-  // All rate math in rad/s, matching FDM (getOmegaBody), AircraftState
-  // gyroRates_, and COORDINATE_CONVENTIONS.md. Re-enables the 021 design
-  // that was shelved on 2026-04-07; see spec 026 and research § "Sim PID
-  // implementation notes" for rationale.
+  // NN outputs are direct surface commands (unity pass-through). 026's
+  // external ACRO PID experiment went NO-GO — see
+  // specs/026-nn-temporal-state/findings.md. Only thing kept is
+  // observational diagnostic capture: rateCmd expresses what the NN
+  // output would mean as a body rate if a PID were active, rateAch is
+  // the actual body rate, FF term mirrors the unity command. P/I/integ
+  // all zero.
   {
     EOM01* eom01_acro = dynamic_cast<EOM01*>(Global::aircraft->getFDM());
-    if (eom01_acro) {
-      CRRCMath::Vector3 omega = eom01_acro->getOmegaBody();  // rad/s
-      double pRadS = omega(0);  // roll rate
-      double qRadS = omega(1);  // pitch rate
-
-      // dt for integrator + LPF. getInputData fires once per outer frame
-      // (cycleLength_ms); fallback to 50 ms if clock hasn't been set yet.
-      double dt = (gAcroLastTimeMsec > 0 && simTimeMsec > gAcroLastTimeMsec)
-                  ? (simTimeMsec - gAcroLastTimeMsec) / 1000.0
-                  : 0.050;
-      gAcroLastTimeMsec = simTimeMsec;
-
-      // 1-pole LPF on measured rate before PID error. Prime to first sample
-      // on span start to avoid ramp-up from zero.
-      if (!gAcroGyroLpfPrimed) {
-        gAcroGyroLpfP = pRadS;
-        gAcroGyroLpfQ = qRadS;
-        gAcroGyroLpfPrimed = true;
-      } else {
-        const double alpha = std::exp(-2.0 * M_PI * ACRO_GYRO_LPF_HZ * dt);
-        gAcroGyroLpfP = alpha * gAcroGyroLpfP + (1.0 - alpha) * pRadS;
-        gAcroGyroLpfQ = alpha * gAcroGyroLpfQ + (1.0 - alpha) * qRadS;
-      }
-
-      // NN commands [-1,1] → desired rates (rad/s)
+    if (eom01_acro && !aircraftStates.empty()) {
+      CRRCMath::Vector3 omega = eom01_acro->getOmegaBody();
       const double maxRollRadS  = ACRO_MAX_RATE_ROLL  * M_PI / 180.0;
       const double maxPitchRadS = ACRO_MAX_RATE_PITCH * M_PI / 180.0;
-      const double desiredRoll  = rollCommand  * maxRollRadS;
-      const double desiredPitch = pitchCommand * maxPitchRadS;
-
-      // Single-axis FF+P+I via shared helper (see autoc/eval/acro_pid.h).
-      const AcroPidGains gainsRoll{ACRO_FF_ROLL,  ACRO_P_ROLL,  ACRO_I_ROLL,  ACRO_PID_SCALE};
-      const AcroPidGains gainsPitch{ACRO_FF_PITCH, ACRO_P_PITCH, ACRO_I_PITCH, ACRO_PID_SCALE};
-      const AcroPidResult resRoll  = acroPidStep(gainsRoll,
-          {desiredRoll,  gAcroGyroLpfP, dt}, gAcroIntegralRoll,  10.0);
-      const AcroPidResult resPitch = acroPidStep(gainsPitch,
-          {desiredPitch, gAcroGyroLpfQ, dt}, gAcroIntegralPitch, 10.0);
-      gAcroIntegralRoll  = resRoll.newIntegral;
-      gAcroIntegralPitch = resPitch.newIntegral;
-
-      // Track rate errors for a future D-term without affecting behavior now.
-      gAcroDtermPrevErrRoll  = resRoll.error;
-      gAcroDtermPrevErrPitch = resPitch.error;
-
-      // Replace NN rate commands with PID surface outputs, clamped.
-      pitchCommand = resPitch.clamped;
-      rollCommand  = resRoll.clamped;
-      // throttle passes through directly (INAV ACRO is also throttle-passthrough)
-
-      // Snapshot PID internals onto the most-recent AircraftState push
-      // so autoc can render them into data.dat. PID terms are post-scale
-      // so summing FF+P+I reproduces the (pre-clamp) surface output.
-      if (!aircraftStates.empty()) {
-        PidInternals pid;
-        pid.rateCmdP = static_cast<float>(desiredRoll);
-        pid.rateCmdQ = static_cast<float>(desiredPitch);
-        pid.rateAchP = static_cast<float>(pRadS);
-        pid.rateAchQ = static_cast<float>(qRadS);
-        pid.ffP = static_cast<float>(resRoll.ffTerm);
-        pid.ffQ = static_cast<float>(resPitch.ffTerm);
-        pid.pP  = static_cast<float>(resRoll.pTerm);
-        pid.pQ  = static_cast<float>(resPitch.pTerm);
-        pid.iP  = static_cast<float>(resRoll.iTerm);
-        pid.iQ  = static_cast<float>(resPitch.iTerm);
-        pid.intP = static_cast<float>(resRoll.newIntegral);
-        pid.intQ = static_cast<float>(resPitch.newIntegral);
-        pid.sat = (resPitch.saturated ? 0x1 : 0)
-                | (resRoll.saturated  ? 0x2 : 0);
-        aircraftStates.back().setPidInternals(pid);
-      }
+      PidInternals pid;
+      pid.rateCmdP = static_cast<float>(rollCommand  * maxRollRadS);
+      pid.rateCmdQ = static_cast<float>(pitchCommand * maxPitchRadS);
+      pid.rateAchP = static_cast<float>(omega(0));
+      pid.rateAchQ = static_cast<float>(omega(1));
+      pid.ffP = static_cast<float>(rollCommand);
+      pid.ffQ = static_cast<float>(pitchCommand);
+      pid.sat = (std::abs(pitchCommand) >= 1.0 ? 0x1 : 0)
+              | (std::abs(rollCommand)  >= 1.0 ? 0x2 : 0);
+      aircraftStates.back().setPidInternals(pid);
     }
   }
 
