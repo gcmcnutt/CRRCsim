@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <crrcsimConfig version="2">
-  <video enabled="0" color_depth="8" multisamples="0" fps="25">
+  <video enabled="0" color_depth="8" multisamples="0" fps="20">
     <skybox texture_offset="0.00000" />
     <fullscreen fUse="0" />
     <zoom field_of_view="35" autozoom="0.050000001" />
@@ -154,7 +154,7 @@
   <windVectors fUse="0" />
   <modelViewWindow fUse="2" />
   <simulation slowMotion="0" slowTimeScale="0.5">
-    <flightModel dt="0.003" />
+    <flightModel dt="0.005" />
     <display_mode fUse="0" />
   </simulation>
   <!-- Point sim at streamer-tuned HB1 to mirror current test setup -->

@@ -90,18 +90,6 @@ ScenarioMetadata scenarioForPathIndex(const EvalData& evalData, size_t idx) {
 unsigned long gEvalUpdateIntervalMsec = EVAL_UPDATE_INTERVAL_MSEC_DEFAULT;   // sensor/NN cadence
 unsigned long gComputeLatencyMsec = COMPUTE_LATENCY_MSEC_DEFAULT;           // simulated NN compute latency (sensor→output)
 
-// ACRO mode rate PID state
-static double gAcroIntegralRoll = 0.0;
-static double gAcroIntegralPitch = 0.0;
-static double gAcroIntegralYaw = 0.0;
-static unsigned long gAcroLastTimeMsec = 0;
-
-unsigned long getCycleCounterOverflow() {
-  // a few cycles after the last update, we assume crash, no flight updates, etc
-  unsigned long overflow = static_cast<unsigned long>(SIM_FPS * gEvalUpdateIntervalMsec / 1000.0);
-  return overflow > 0 ? overflow : 1;
-}
-
 static bool gInDeterministicTest = false;
 
 // Global aircraftState used by NN evaluation (was in autoc-eval.cc)
@@ -309,6 +297,39 @@ int T_TX_InterfaceAUTOC::init(SimpleXMLTransfer *config)
     std::cerr << "[AUTOC] EngageDelayMsec=" << engageDelayMsec << std::endl;
   }
 
+  // Compute frame-counter cadence triple and enforce integrality at startup.
+  // Constraint: outer cycleLength_ms must divide gEvalUpdateIntervalMsec
+  // exactly. CTime already rounds cycleLength to a multiple of
+  // (Global::dt * 1000). See spec 024 WI4.
+  {
+    isHeadless = (config->getInt("video.enabled", 1) == 0);
+    SimpleXMLTransfer* video = config->getChild("video", true);
+    const int fps = video->attributeAsInt("fps", 0);
+    const double dtMs = 1000.0 * static_cast<double>(Global::dt);
+    const unsigned long cycleLengthMs =
+      (fps > 0 && dtMs > 0.0)
+        ? static_cast<unsigned long>(static_cast<int>(1000.0 / fps / dtMs) * dtMs + 0.5)
+        : 0UL;
+    if (cycleLengthMs == 0 || gEvalUpdateIntervalMsec % cycleLengthMs != 0) {
+      std::cerr << "[AUTOC] FATAL: cadence triple not integral. "
+                << "video.fps=" << fps
+                << " Global::dt=" << Global::dt
+                << " cycleLengthMs=" << cycleLengthMs
+                << " gEvalUpdateIntervalMsec=" << gEvalUpdateIntervalMsec
+                << " — evalInterval must be an integer multiple of cycleLength."
+                << std::endl;
+      std::exit(1);
+    }
+    framesPerEval = gEvalUpdateIntervalMsec / cycleLengthMs;
+    std::cerr << "[AUTOC] cadence: video.fps=" << fps
+              << " dt=" << Global::dt
+              << " cycleLengthMs=" << cycleLengthMs
+              << " evalIntervalMsec=" << gEvalUpdateIntervalMsec
+              << " framesPerEval=" << framesPerEval
+              << " headless=" << (isHeadless ? "true" : "false")
+              << std::endl;
+  }
+
   T_TX_Interface::init(config);
 
   socket_ = new TcpSocket();
@@ -337,8 +358,15 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
   diagIndex = (diagIndex + 1) % DIAG_BUFFER_SIZE;
   if (diagCount < DIAG_BUFFER_SIZE) diagCount++;
 
-  const unsigned long overflowLimit = getCycleCounterOverflow();
-  bool shouldEval = (simTimeMsec > lastUpdateTimeMsec + gEvalUpdateIntervalMsec) || (++cycleCounter > overflowLimit);
+  // Frame-counter cadence (both headless and video):
+  //  - Outer frame is a fixed cycleLength_ms (CTime). framesPerEval was
+  //    validated at init to divide gEvalUpdateIntervalMsec exactly, so every
+  //    framesPerEval-th outer frame fires eval with zero drift.
+  //  - simTimeMsec is stamped into diagBuffer for drift logging in video mode.
+  //  - A "way late" stall (wall-clock pause in video mode, computer hiccup,
+  //    etc.) shows up as a simTime leap > SIM_MAX_INTERVAL_MSEC and is caught
+  //    by the jump reset below, which clears counters and bookkeeping.
+  bool shouldEval = (++cycleCounter >= framesPerEval);
   if (shouldEval)
   {
 #ifdef DETAILED_LOGGING
@@ -442,6 +470,11 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
         return;
       }
 
+      // Build/rebuild the NN controller for the new genome. Recurrent
+      // hidden state (spec 027) lives inside the backend and is reset
+      // per-span below.
+      nnController_ = std::make_unique<NNControllerBackend>(nnGenome);
+
       // Cache quat dot past reset
       quatDotPast[0] = quatDotPast[1] = quatDotPast[2] = quatDotPast[3] = 0.0;
       return;
@@ -501,8 +534,9 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
           (engageDelayMsec + gEvalUpdateIntervalMsec - 1) / gEvalUpdateIntervalMsec);
       engageCoastThrottle = static_cast<gp_scalar>(
           CLAMP_DEF(2.0 * (activeScenario.entrySpeedFactor - 1.0), -1.0, 1.0));
-      gAcroIntegralRoll = gAcroIntegralPitch = gAcroIntegralYaw = 0.0;
-      gAcroLastTimeMsec = 0;
+      // Zero recurrent NN state at span start (spec 027 Q4: h_t resets
+      // on new scenario; no-op for feedforward genomes).
+      if (nnController_) nnController_->reset();
       gCurrentPhysicsTrace.clear();  // Clear physics trace for new path
 
       // Set worker identity globals for FDM trace capture
@@ -847,11 +881,13 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       aircraftState.recordErrorHistory(dir, distance, simTimeMsec);
     }
 
-    // Evaluate NN controller
-    {
+    // Evaluate NN controller. Use the per-span member `nnController_` so
+    // recurrent hidden state (spec 027) persists across ticks. Fired on
+    // NN-eval cadence only — the `shouldEval` gate above enforces this,
+    // matching clarify Q4's hidden-state-advances-on-NN-tick contract.
+    if (nnController_) {
       VectorPathProvider pathProvider(path, aircraftState.getThisPathIndex());
-      NNControllerBackend nnBackend(nnGenome);
-      nnBackend.evaluate(aircraftState, pathProvider);
+      nnController_->evaluate(aircraftState, pathProvider);
     }
 
     // Save post-eval state for results
@@ -1053,11 +1089,31 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     gPendingCommand.valid = false;
   }
 
-  // ACRO rate PID is DISABLED — NN outputs go directly to surfaces (MANUAL mode).
-  // The PID code is preserved in git history (021 branch) for future use.
-  // Current mode: NN output [-1,1] → direct surface deflection, same as 020.
-  // Gyro rates are still provided as NN inputs (AircraftState.gyroRates_)
-  // but the NN learns to use them for its own stabilization, not through a PID.
+  // NN outputs are direct surface commands (unity pass-through). 026's
+  // external ACRO PID experiment went NO-GO — see
+  // specs/026-nn-temporal-state/findings.md. Only thing kept is
+  // observational diagnostic capture: rateCmd expresses what the NN
+  // output would mean as a body rate if a PID were active, rateAch is
+  // the actual body rate, FF term mirrors the unity command. P/I/integ
+  // all zero.
+  {
+    EOM01* eom01_acro = dynamic_cast<EOM01*>(Global::aircraft->getFDM());
+    if (eom01_acro && !aircraftStates.empty()) {
+      CRRCMath::Vector3 omega = eom01_acro->getOmegaBody();
+      const double maxRollRadS  = ACRO_MAX_RATE_ROLL  * M_PI / 180.0;
+      const double maxPitchRadS = ACRO_MAX_RATE_PITCH * M_PI / 180.0;
+      PidInternals pid;
+      pid.rateCmdP = static_cast<float>(rollCommand  * maxRollRadS);
+      pid.rateCmdQ = static_cast<float>(pitchCommand * maxPitchRadS);
+      pid.rateAchP = static_cast<float>(omega(0));
+      pid.rateAchQ = static_cast<float>(omega(1));
+      pid.ffP = static_cast<float>(rollCommand);
+      pid.ffQ = static_cast<float>(pitchCommand);
+      pid.sat = (std::abs(pitchCommand) >= 1.0 ? 0x1 : 0)
+              | (std::abs(rollCommand)  >= 1.0 ? 0x2 : 0);
+      aircraftStates.back().setPidInternals(pid);
+    }
+  }
 
   // convert cached values to crrcsim scales and return every frame
   inputs->elevator = -pitchCommand / 2.0;         // invert from -1:1 to -0.5:0.5 (crrcsim convention)
