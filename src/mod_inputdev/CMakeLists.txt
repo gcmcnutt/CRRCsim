@@ -18,11 +18,14 @@ set(MOD_INPUTDEV_SRCS
   inputdev_software/inputdev_software.cpp
   inputdev_zhenhua/inputdev_zhenhua.cpp
   inputdev_ct6a/inputdev_ct6a.cpp
-  ${CMAKE_SOURCE_DIR}/src/nn/evaluator.cc
-  ${CMAKE_SOURCE_DIR}/src/nn/serialization.cc
-  ${CMAKE_SOURCE_DIR}/src/eval/sensor_math.cc
  )
 add_library(mod_inputdev ${MOD_INPUTDEV_SRCS})
+
+# T003 (030 M1): link autoc_common rather than cherry-picking sources.
+# Restores Constitution IV (Unified Build): single source of truth for
+# autoc-side .cc files, no risk of new files in src/nn/ or src/eval/
+# silently breaking the crrcsim link (the 028 telemetry incident).
+target_link_libraries(mod_inputdev autoc_common)
 
 set (MOD_INPUTDEV_LIBS    )
 set (MOD_INPUTDEV_INCDIRS )
