@@ -517,35 +517,35 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       lastUpdateTimeMsec = 0;
       pathIndex = 0;
       rabbitOdometer = 0.0f;
-      // Generate rabbit speed profile from per-scenario seed + global config
       rabbitSpeedConfig = evalData.rabbitSpeedConfig;
-      {
-        unsigned int seed = activeScenario.rabbitSpeedSeed;
-        double totalDurationSec = SIM_TOTAL_TIME_MSEC / 1000.0;
-        rabbitSpeedProfile = generateSpeedProfile(seed, rabbitSpeedConfig, totalDurationSec);
-        crrcsimRabbitSpeed = static_cast<gp_scalar>(
-            getSpeedAtTime(rabbitSpeedProfile, 0.0));
-      }
       gPendingCommand = PendingCommand{};
       aircraftStates.clear();
       // 030 M11.preA — clear per-path tracker buffers (no-op in pathgen mode)
       trackerCameraViewSteps_.clear();
       trackerTargetSampleSteps_.clear();
-      // 030 M11.preA — In tracker mode, skip pathgen scenario bookkeeping
-      // (rabbitOdometer/pathIndex/rabbitSpeedProfile/engageDelay are all
-      // unused). Default-init them so the per-tick body's branches don't
-      // see stale state from prior pathgen runs.
+      // 030 M11.preA — Mode-aware scenario bookkeeping. Pathgen needs the
+      // rabbit-speed profile, engage-delay timing, and cruise throttle for
+      // INAV-handoff fidelity. Tracker mode uses none of these (no synthetic
+      // rabbit, NN commands fire from tick 0). 2026-05-08 fix: previously
+      // generateSpeedProfile ran unconditionally and the result was
+      // discarded in tracker mode — wasted CPU + memory. Moved into else.
       const bool trackerModeActive = (evalData.mode == Mode::TRACKER);
       if (trackerModeActive) {
         engageDelayTicksRemaining = 0;  // Chase commands fire from tick 0
         engageCoastThrottle = static_cast<gp_scalar>(0.0);
-        rabbitOdometer = 0.0f;
-        pathIndex = 0;
         rabbitSpeedProfile.clear();
         crrcsimRabbitSpeed = 0.0f;
       } else {
-        // Pathgen mode (existing): engage delay + cruise throttle for
-        // INAV-handoff fidelity.
+        // Pathgen mode (existing): generate per-scenario rabbit-speed profile
+        // from autoc-side seed; engage delay + cruise throttle for INAV
+        // handoff fidelity.
+        {
+          unsigned int seed = activeScenario.rabbitSpeedSeed;
+          double totalDurationSec = SIM_TOTAL_TIME_MSEC / 1000.0;
+          rabbitSpeedProfile = generateSpeedProfile(seed, rabbitSpeedConfig, totalDurationSec);
+          crrcsimRabbitSpeed = static_cast<gp_scalar>(
+              getSpeedAtTime(rabbitSpeedProfile, 0.0));
+        }
         engageDelayTicksRemaining = static_cast<int>(
             (engageDelayMsec + gEvalUpdateIntervalMsec - 1) / gEvalUpdateIntervalMsec);
         engageCoastThrottle = static_cast<gp_scalar>(
