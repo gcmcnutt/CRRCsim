@@ -535,7 +535,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       // (rabbitOdometer/pathIndex/rabbitSpeedProfile/engageDelay are all
       // unused). Default-init them so the per-tick body's branches don't
       // see stale state from prior pathgen runs.
-      const bool trackerModeActive = (evalData.mode == "tracker");
+      const bool trackerModeActive = (evalData.mode == Mode::TRACKER);
       if (trackerModeActive) {
         engageDelayTicksRemaining = 0;  // Chase commands fire from tick 0
         engageCoastThrottle = static_cast<gp_scalar>(0.0);
@@ -772,7 +772,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     // 030 M11.preA — Rabbit odometer + path index advancement is pathgen-
     // specific. In tracker mode the source-cursor inside trackerHelper_
     // drives target progression instead.
-    const bool trackerActiveTick = (evalData.mode == "tracker");
+    const bool trackerActiveTick = (evalData.mode == Mode::TRACKER);
     if (!trackerActiveTick) {
       // Pathgen mode (existing): advance rabbit odometer + walk path.
       if (evalDtSec > 0.0f && evalDtSec < 1.0f) {  // Guard against huge jumps
@@ -879,7 +879,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       // p_crash fires this scenario; arenaEgressCount = 1 if scenario
       // terminated via Eval (arena egress) else 0.
       evalResults.hullStrikeCount.push_back(
-          (evalData.mode == "tracker") ? trackerHelper_.hullFiredCount() : 0);
+          (evalData.mode == Mode::TRACKER) ? trackerHelper_.hullFiredCount() : 0);
       evalResults.arenaEgressCount.push_back(
           (crashReason == CrashReason::Eval) ? 1 : 0);
       // Only send physics trace data for elite reeval (expensive, only needed for divergence analysis)
@@ -932,7 +932,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     //     arena egress).
     //   Pathgen mode (existing): direction-cosine target-history capture,
     //     nnController_->evaluate against rabbit-odometer-driven path.
-    if (evalData.mode == "tracker") {
+    if (evalData.mode == Mode::TRACKER) {
       if (nnController_) {
         CrashReason trackerCrash =
             trackerHelper_.tick(aircraftState, *nnController_, evalData);
