@@ -6,6 +6,8 @@ set(MOD_INPUTDEV_SRCS
   inputdev_mnav/mnav.cpp
   inputdev_autoc/inputdev_autoc.cpp
   inputdev_autoc/inputdev_autoc.h
+  inputdev_autoc/crrcsim_tracker_helper.cpp
+  inputdev_autoc/crrcsim_tracker_helper.h
   inputdev_PPM/inputdev_PPM.cpp
   inputdev_rctran/inputdev_rctran.cpp
   inputdev_rctran2/inputdev_rctran2.cpp

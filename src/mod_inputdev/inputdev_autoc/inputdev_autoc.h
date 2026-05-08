@@ -36,6 +36,8 @@
 #include "autoc/eval/variation_generator.h"
 #include "autoc/util/socket_wrapper.h"
 
+#include "crrcsim_tracker_helper.h"   // 030 M11.preA
+
 #include <stdio.h>
 #include <iostream>
 #include <cmath>
@@ -146,6 +148,19 @@ private:
   NNGenome nnGenome;
   std::unique_ptr<NNControllerBackend> nnController_;
   std::vector<Path> path;
+
+  // 030 M11.preA — Tracker-mode helper (active when evalData.mode == "tracker").
+  // Encapsulates source-cursor + beacon history + crash hull + per-tick
+  // beacon projection / NN forward. Pathgen mode never touches this.
+  CrrcsimTrackerHelper trackerHelper_;
+
+  // 030 M11.preA — Per-path tracker-mode buffers, populated each NN tick
+  // from helper's lastCameraView/lastTargetSample. Pushed into
+  // evalResults.cameraViewList/targetTrajectoryList at path-end (mirrors
+  // minisim's M8b dmp output convention; keeps M2 dmp format identical
+  // across minisim/crrcsim per operator routing 2026-05-08).
+  std::vector<CameraViewSample> trackerCameraViewSteps_;
+  std::vector<CopiedTargetSample> trackerTargetSampleSteps_;
 };
 
 #endif

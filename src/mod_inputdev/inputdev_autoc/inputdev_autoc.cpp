@@ -528,12 +528,29 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       }
       gPendingCommand = PendingCommand{};
       aircraftStates.clear();
-      // Engage delay: coast for N ticks before NN outputs reach surfaces.
-      // Coast throttle derived from entry speed variation.
-      engageDelayTicksRemaining = static_cast<int>(
-          (engageDelayMsec + gEvalUpdateIntervalMsec - 1) / gEvalUpdateIntervalMsec);
-      engageCoastThrottle = static_cast<gp_scalar>(
-          CLAMP_DEF(2.0 * (activeScenario.entrySpeedFactor - 1.0), -1.0, 1.0));
+      // 030 M11.preA — clear per-path tracker buffers (no-op in pathgen mode)
+      trackerCameraViewSteps_.clear();
+      trackerTargetSampleSteps_.clear();
+      // 030 M11.preA — In tracker mode, skip pathgen scenario bookkeeping
+      // (rabbitOdometer/pathIndex/rabbitSpeedProfile/engageDelay are all
+      // unused). Default-init them so the per-tick body's branches don't
+      // see stale state from prior pathgen runs.
+      const bool trackerModeActive = (evalData.mode == "tracker");
+      if (trackerModeActive) {
+        engageDelayTicksRemaining = 0;  // Chase commands fire from tick 0
+        engageCoastThrottle = static_cast<gp_scalar>(0.0);
+        rabbitOdometer = 0.0f;
+        pathIndex = 0;
+        rabbitSpeedProfile.clear();
+        crrcsimRabbitSpeed = 0.0f;
+      } else {
+        // Pathgen mode (existing): engage delay + cruise throttle for
+        // INAV-handoff fidelity.
+        engageDelayTicksRemaining = static_cast<int>(
+            (engageDelayMsec + gEvalUpdateIntervalMsec - 1) / gEvalUpdateIntervalMsec);
+        engageCoastThrottle = static_cast<gp_scalar>(
+            CLAMP_DEF(2.0 * (activeScenario.entrySpeedFactor - 1.0), -1.0, 1.0));
+      }
       // Zero recurrent NN state at span start (spec 027 Q4: h_t resets
       // on new scenario; no-op for feedforward genomes).
       if (nnController_) nnController_->reset();
@@ -598,7 +615,8 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       aircraftState = initialState;
 
       // Pre-fill history buffer with initial geometry so the NN starts with
-      // consistent direction cosines instead of zeros.
+      // consistent direction cosines instead of zeros (pathgen-mode only;
+      // tracker mode uses TrackerHistoryWindow inside trackerHelper_ instead).
       {
         gp_vec3 tangent;
         if (path.size() > 1)
@@ -609,6 +627,20 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
         if (tn > 1e-6) tangent = tangent / tn;
         else tangent = gp_vec3::UnitX();
         aircraftState.resetHistory(path[0].start, tangent);
+      }
+
+      // 030 M11.preA — Tracker-mode helper scenario init (after chase
+      // pose is built from FDM post-reset state). Pre-fills 6-slot beacon
+      // history with source[0] projection × 6, seeds crash hull PRNG,
+      // resets NN recurrent state. No-op when mode != "tracker".
+      if (trackerModeActive
+          && pathSelector < static_cast<int>(evalData.sourceList.size())
+          && nnController_) {
+        const auto& source = evalData.sourceList.at(pathSelector);
+        if (!source.samples.empty()) {
+          trackerHelper_.initScenario(source, activeScenario, evalData,
+                                      aircraftState, *nnController_);
+        }
       }
 
       aircraftStates.push_back(aircraftState);
@@ -737,18 +769,22 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     }
 
     // Advance rabbit odometer each eval tick (using dt computed before lastUpdateTimeMsec was updated)
-    // Rabbit speed varies over time (from per-scenario profile)
-    if (evalDtSec > 0.0f && evalDtSec < 1.0f) {  // Guard against huge jumps
-      double simTimeSec = simTimeMsec / 1000.0;
-      crrcsimRabbitSpeed = static_cast<gp_scalar>(
-          getSpeedAtTime(rabbitSpeedProfile, simTimeSec));
-      rabbitOdometer += crrcsimRabbitSpeed * evalDtSec;
-    }
-
-    // search for path segment by distance (odometer-based)
-    while (pathIndex < static_cast<int>(path.size()) - 2 && path.at(pathIndex).distanceFromStart < rabbitOdometer)
-    {
-      pathIndex++;
+    // 030 M11.preA — Rabbit odometer + path index advancement is pathgen-
+    // specific. In tracker mode the source-cursor inside trackerHelper_
+    // drives target progression instead.
+    const bool trackerActiveTick = (evalData.mode == "tracker");
+    if (!trackerActiveTick) {
+      // Pathgen mode (existing): advance rabbit odometer + walk path.
+      if (evalDtSec > 0.0f && evalDtSec < 1.0f) {  // Guard against huge jumps
+        double simTimeSec = simTimeMsec / 1000.0;
+        crrcsimRabbitSpeed = static_cast<gp_scalar>(
+            getSpeedAtTime(rabbitSpeedProfile, simTimeSec));
+        rabbitOdometer += crrcsimRabbitSpeed * evalDtSec;
+      }
+      while (pathIndex < static_cast<int>(path.size()) - 2 &&
+             path.at(pathIndex).distanceFromStart < rabbitOdometer) {
+        pathIndex++;
+      }
     }
 
     // Update sim state in AircraftState in-place to preserve temporal history
@@ -773,29 +809,43 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 
     CrashReason crashReason = CrashReason::None;
 
-    // out of bounds? Use raw FDM position (not virtual from aircraftState)
-    gp_scalar distanceFromOrigin = std::sqrt(p[0] * p[0] + p[1] * p[1]);
-    if (p[2] < SIM_MAX_ELEVATION || // too high
-        p[2] > SIM_MIN_ELEVATION || // too low
-        distanceFromOrigin > SIM_PATH_RADIUS_LIMIT)
-    { // too far
-      crashReason = CrashReason::Eval;
+    // 030 M11.preA — Pathgen uses legacy SIM_PATH_RADIUS_LIMIT bounds +
+    // RabbitComplete (chase reached path end). Tracker uses FlightArena
+    // bounds via helper.tick() (already includes arena-egress + hull-strike
+    // checks), and source-exhaustion via helper.sourceExhausted().
+    if (!trackerActiveTick) {
+      // out of bounds? Use raw FDM position (not virtual from aircraftState)
+      gp_scalar distanceFromOrigin = std::sqrt(p[0] * p[0] + p[1] * p[1]);
+      if (p[2] < SIM_MAX_ELEVATION || // too high
+          p[2] > SIM_MIN_ELEVATION || // too low
+          distanceFromOrigin > SIM_PATH_RADIUS_LIMIT) {  // too far
+        crashReason = CrashReason::Eval;
+      }
     }
 
-    // sim crashed?
+    // sim crashed? — applies in BOTH modes (FDM-physics-NaN propagation, etc.)
     if (Global::Simulation->getState() == STATE_CRASHED)
     {
       crashReason = CrashReason::Sim;
     }
 
+    // Time limit applies in both modes.
     if (simTimeMsec > SIM_TOTAL_TIME_MSEC)
     {
       crashReason = CrashReason::TimeLimit;
     }
 
-    if (pathIndex >= path.size() - 3)
-    {
-      crashReason = CrashReason::RabbitComplete;
+    if (!trackerActiveTick) {
+      // Pathgen RabbitComplete (chase walked path to end).
+      if (pathIndex >= path.size() - 3) {
+        crashReason = CrashReason::RabbitComplete;
+      }
+    } else {
+      // Tracker source-exhaustion = "out of source samples" — semantically
+      // equivalent to RabbitComplete (scenario ran to end without crash).
+      if (trackerHelper_.sourceExhausted()) {
+        crashReason = CrashReason::RabbitComplete;
+      }
     }
 
     // crashed or out of time or off the end of the list
@@ -816,6 +866,22 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       std::vector<AircraftState> aircraftStatesCopy = aircraftStates;
       evalResults.aircraftStateList.push_back(aircraftStatesCopy);
       aircraftStates.clear();
+
+      // 030 M11.preA — Per-scenario tracker buffers into v=2 dmp fields.
+      // Pathgen mode pushes empty vectors (tracker buffers stay clear),
+      // matching minisim's behavior where pathgen dmps load with empty
+      // cameraViewList/targetTrajectoryList per the M8a schema contract.
+      evalResults.cameraViewList.push_back(trackerCameraViewSteps_);
+      evalResults.targetTrajectoryList.push_back(trackerTargetSampleSteps_);
+      trackerCameraViewSteps_.clear();
+      trackerTargetSampleSteps_.clear();
+      // Per-scenario telemetry counters (M7d.b). hullStrikeCount = hull
+      // p_crash fires this scenario; arenaEgressCount = 1 if scenario
+      // terminated via Eval (arena egress) else 0.
+      evalResults.hullStrikeCount.push_back(
+          (evalData.mode == "tracker") ? trackerHelper_.hullFiredCount() : 0);
+      evalResults.arenaEgressCount.push_back(
+          (crashReason == CrashReason::Eval) ? 1 : 0);
       // Only send physics trace data for elite reeval (expensive, only needed for divergence analysis)
       if (evalData.isEliteReeval) {
         if (!debugSamplesCurrentPath.empty()) {
@@ -859,35 +925,58 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       return;
     }
 
-    // Capture temporal history before NN evaluation (direction cosines, 023)
-    {
-      VectorPathProvider pathProvider(path, aircraftState.getThisPathIndex());
-      gp_vec3 targetPos = getInterpolatedTargetPosition(
-          pathProvider, rabbitOdometer, 0.0f);
-      gp_vec3 craftToTarget = targetPos - aircraftState.getPosition();
-      gp_vec3 target_local = aircraftState.getOrientation().inverse() * craftToTarget;
-      float distance = static_cast<float>(target_local.norm());
+    // 030 M11.preA — Mode-aware NN evaluation block.
+    //   Tracker mode: helper.tick() projects beacons + shifts history,
+    //     gathers TrackerInputs (45 floats including arena-distance), runs
+    //     evaluateTracker, returns per-tick crash signal (HullStrike or
+    //     arena egress).
+    //   Pathgen mode (existing): direction-cosine target-history capture,
+    //     nnController_->evaluate against rabbit-odometer-driven path.
+    if (evalData.mode == "tracker") {
+      if (nnController_) {
+        CrashReason trackerCrash =
+            trackerHelper_.tick(aircraftState, *nnController_, evalData);
+        if (trackerCrash != CrashReason::None && crashReason == CrashReason::None) {
+          crashReason = trackerCrash;
+        }
+      }
+      // Per-tick M2 dmp recording — push helper's lastCameraView /
+      // lastTargetSample into per-path buffers in lockstep with the
+      // aircraftStates push below. Pushed into evalResults at path-end.
+      trackerCameraViewSteps_.push_back(trackerHelper_.lastCameraView());
+      trackerTargetSampleSteps_.push_back(trackerHelper_.lastTargetSample());
+    } else {
+      // Pathgen mode (unchanged): capture temporal history (direction
+      // cosines, 023) before NN evaluation.
+      {
+        VectorPathProvider pathProvider(path, aircraftState.getThisPathIndex());
+        gp_vec3 targetPos = getInterpolatedTargetPosition(
+            pathProvider, rabbitOdometer, 0.0f);
+        gp_vec3 craftToTarget = targetPos - aircraftState.getPosition();
+        gp_vec3 target_local = aircraftState.getOrientation().inverse() * craftToTarget;
+        float distance = static_cast<float>(target_local.norm());
 
-      // Path tangent for singularity fallback
-      gp_vec3 posAhead = getInterpolatedTargetPosition(pathProvider, rabbitOdometer, 0.5f);
-      gp_vec3 tangent = posAhead - targetPos;
-      double tn = tangent.norm();
-      gp_vec3 tangent_body = (tn > 1e-6)
-          ? aircraftState.getOrientation().inverse() * (tangent / tn)
-          : gp_vec3::UnitX();
+        // Path tangent for singularity fallback
+        gp_vec3 posAhead = getInterpolatedTargetPosition(pathProvider, rabbitOdometer, 0.5f);
+        gp_vec3 tangent = posAhead - targetPos;
+        double tn = tangent.norm();
+        gp_vec3 tangent_body = (tn > 1e-6)
+            ? aircraftState.getOrientation().inverse() * (tangent / tn)
+            : gp_vec3::UnitX();
 
-      gp_vec3 dir = computeTargetDir(target_local, distance, tangent_body);
-      aircraftState.setRabbitPosition(targetPos);
-      aircraftState.recordErrorHistory(dir, distance, simTimeMsec);
-    }
+        gp_vec3 dir = computeTargetDir(target_local, distance, tangent_body);
+        aircraftState.setRabbitPosition(targetPos);
+        aircraftState.recordErrorHistory(dir, distance, simTimeMsec);
+      }
 
-    // Evaluate NN controller. Use the per-span member `nnController_` so
-    // recurrent hidden state (spec 027) persists across ticks. Fired on
-    // NN-eval cadence only — the `shouldEval` gate above enforces this,
-    // matching clarify Q4's hidden-state-advances-on-NN-tick contract.
-    if (nnController_) {
-      VectorPathProvider pathProvider(path, aircraftState.getThisPathIndex());
-      nnController_->evaluate(aircraftState, pathProvider);
+      // Evaluate pathgen NN controller. Use the per-span member
+      // `nnController_` so recurrent hidden state (spec 027) persists
+      // across ticks. Fired on NN-eval cadence only — the `shouldEval`
+      // gate above enforces this.
+      if (nnController_) {
+        VectorPathProvider pathProvider(path, aircraftState.getThisPathIndex());
+        nnController_->evaluate(aircraftState, pathProvider);
+      }
     }
 
     // Save post-eval state for results
