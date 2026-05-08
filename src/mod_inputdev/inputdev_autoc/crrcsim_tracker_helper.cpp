@@ -39,7 +39,7 @@ void CrrcsimTrackerHelper::initScenario(const SourceScenarioTrajectory& source,
 
     // CrashHull config from EvalData (autoc-side reads autoc-tracker.ini).
     crash_hull_ = CrashHull{};
-    crash_hull_.radius = evalData.crashHullRadius;
+    crash_hull_.sphere_radius_m = evalData.crashHullRadius;
 
     // PRNG seed = scenarioSequence with anti-zero guard. Park-Miller LCG
     // requires non-zero in [1, 2^31-2]. Identical guard logic as minisim's
