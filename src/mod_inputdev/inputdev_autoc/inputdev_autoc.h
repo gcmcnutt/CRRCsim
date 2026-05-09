@@ -124,6 +124,13 @@ private:
   gp_scalar crrcsimRabbitSpeed = 0.0f;   // Set from speed profile at path start — 0 = uninitialized
   std::vector<RabbitSpeedPoint> rabbitSpeedProfile;  // Time-varying profile (generated per path)
   RabbitSpeedConfig rabbitSpeedConfig = RabbitSpeedConfig::defaultConfig();
+  // 030 V1 priming (2026-05-08) — once-per-worker payload received right
+  // after socket_ connects; carries scenario-static configs (mode, source
+  // library, camera, beacons, airframe, flight arena, pre-roll, crash hull
+  // radius, trail distance). Per-eval EvalData no longer carries them, so
+  // tracker training scales without OOM at pop=5000. See specs/BACKLOG.md
+  // "Worker-side scenario priming" entry.
+  WorkerInit init_;
   EvalData evalData;
   EvalResults evalResults;
   std::vector<AircraftState> aircraftStates;

@@ -35,7 +35,9 @@ public:
     // Called at scenario boundary (analogous to TrackerStepper::initScenario):
     // - Cursor = 0
     // - PRNG seeded from scenarioMetadata.scenarioSequence (with anti-zero guard)
-    // - Crash hull initialized from EvalData
+    // - Crash hull initialized from WorkerInit (030 V1 priming —
+    //   crashHullRadius lives on the once-per-worker WorkerInit, not in
+    //   per-eval EvalData).
     // - History window pre-filled with source[0] projection replicated 6× so
     //   the NN sees a coherent stationary-source history at first tick
     //
@@ -44,7 +46,7 @@ public:
     // initial chase pose from the FDM post-reset state).
     void initScenario(const SourceScenarioTrajectory& source,
                       const ScenarioMetadata& meta,
-                      const EvalData& evalData,
+                      const WorkerInit& init,
                       AircraftState& chaseState,
                       NNControllerBackend& nn);
 
@@ -55,6 +57,11 @@ public:
     //   - CrashReason::None otherwise (caller adds time-limit / source-end
     //     checks separately, matching minisim TrackerStepper convention)
     //
+    // 030 V1 priming — `init` carries scenario-static configs (camera,
+    // beacons, airframe proxy, flight arena, trail distance). `pCrashThisGen`
+    // ramps per-gen so it stays separate (pulled from the per-eval EvalData
+    // by the caller).
+    //
     // Side effects:
     //   - cursor_ advances
     //   - history_ shifts left + slot 5 = new beacon projection
@@ -62,7 +69,8 @@ public:
     //   - chaseState.pitchCommand/rollCommand/throttleCommand updated by NN
     CrashReason tick(AircraftState& chaseState,
                      NNControllerBackend& nn,
-                     const EvalData& evalData);
+                     const WorkerInit& init,
+                     gp_scalar pCrashThisGen);
 
     // For M2 dmp recording — caller pushes these into
     // evalResults.cameraViewList[scenario] / targetTrajectoryList[scenario]
@@ -78,7 +86,7 @@ private:
     // last_target_sample_ for M2 dmp output.
     void projectAndShiftHistory(const SourceTickSample& target,
                                 const AircraftState& chaseState,
-                                const EvalData& evalData);
+                                const WorkerInit& init);
 
     size_t cursor_ = 0;
     TrackerHistoryWindow history_{};

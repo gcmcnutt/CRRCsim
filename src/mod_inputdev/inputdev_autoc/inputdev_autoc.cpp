@@ -29,6 +29,7 @@
 #include "../../mod_misc/crrc_rand.h"
 #include "../../mod_windfield/windfield.h"
 #include "inputdev_autoc.h"
+#include "autoc/eval/scenario_meta_apply.h"  // 030 V1.5 — applyVariationScale
 #include "autoc/eval/variation_generator.h"
 #include <algorithm>
 #include <chrono>
@@ -61,26 +62,26 @@ unsigned long parseIntervalFromEnv(const char* name, unsigned long fallback) {
   return val;
 }
 
-void ensureScenarioMetadata(EvalData& evalData) {
-  if (evalData.scenarioList.size() == evalData.pathList.size()) {
-    return;
-  }
-  evalData.scenarioList.assign(evalData.pathList.size(), evalData.scenario);
-  for (size_t idx = 0; idx < evalData.scenarioList.size(); ++idx) {
-    if (evalData.scenarioList[idx].pathVariantIndex < 0) {
-      evalData.scenarioList[idx].pathVariantIndex = static_cast<int>(idx);
-    }
-  }
-}
-
-ScenarioMetadata scenarioForPathIndex(const EvalData& evalData, size_t idx) {
-  if (idx < evalData.scenarioList.size()) {
-    return evalData.scenarioList.at(idx);
-  }
-  ScenarioMetadata meta = evalData.scenario;
-  if (meta.pathVariantIndex < 0) {
+// 030 V1.5 (2026-05-08) — build the per-eval ScenarioMetadata for
+// scenario index idx by copying the cached base meta from
+// init.scenarioMetaList[idx], overriding the per-eval fields
+// (scenarioSequence, enableDeterministicLogging) from EvalData, then
+// applying per-eval variation_scale. Mirrors minisim's makePerEvalMeta;
+// byte-equivalent to the legacy autoc-side populateVariationOffsets path
+// so the determinism contract is preserved.
+ScenarioMetadata makePerEvalMeta(const WorkerInit& init,
+                                 const EvalData& evalData,
+                                 size_t idx) {
+  ScenarioMetadata meta;
+  if (idx < init.scenarioMetaList.size()) {
+    meta = init.scenarioMetaList[idx];
+  } else {
     meta.pathVariantIndex = static_cast<int>(idx);
   }
+  meta.scenarioSequence = evalData.scenarioSequence;
+  meta.bakeoffSequence = 0;
+  meta.enableDeterministicLogging = evalData.isEliteReeval;
+  autoc::eval::applyVariationScale(meta, evalData.variationScale);
   return meta;
 }
 
@@ -334,6 +335,16 @@ int T_TX_InterfaceAUTOC::init(SimpleXMLTransfer *config)
 
   socket_ = new TcpSocket();
   socket_->connect("127.0.0.1", cfg->callback_port);
+
+  // 030 V1 priming (2026-05-08) — phone home is the TCP connect above;
+  // autoc's ThreadPool sends the once-per-worker WorkerInit immediately
+  // after its accept(). Cache locally for all subsequent eval ticks.
+  // Loud-fail if priming RPC fails — no fallback. Mirrors minisim's
+  // SimProcess ctor priming receive (tools/minisim.cc).
+  init_ = receiveRPC<WorkerInit>(*socket_);
+  std::cerr << "[AUTOC] crrcsim worker primed mode=" << modeToString(init_.mode)
+            << " sourceList=" << init_.sourceList.size() << " scenarios"
+            << std::endl;
   return (0);
 }
 
@@ -417,11 +428,12 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       if (evalData.gpHash == 0) {
         evalData.gpHash = localGpHash;
       }
-      ensureScenarioMetadata(evalData);
 
-      // Set flag for RNG tracing when entering deterministic test
-      gInDeterministicTest = (!evalData.scenarioList.empty() &&
-                              evalData.scenarioList.front().enableDeterministicLogging);
+      // 030 V1.5 — scenario library is worker-resident in init_; per-eval
+      // EvalData no longer carries pathList / scenarioList. Use cached
+      // pathList from priming and reconstruct per-eval metas via
+      // makePerEvalMeta(init_, evalData, idx).
+      gInDeterministicTest = evalData.isEliteReeval;
 
       evalDataEmpty = false;
       priorPathSelector = -1;
@@ -432,20 +444,17 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 
       // Paths stay at canonical origin (Z=0). Aircraft position stored as virtual
       // (raw - pathOriginOffset). Origin offset captured at FDM reset per path.
-      evalResults.pathList = evalData.pathList;
+      evalResults.pathList = init_.pathList;  // 030 V1.5 — copy from cached library
       path = evalResults.pathList.at(pathSelector);
       evalResults.gp = evalData.gp;
       evalResults.gpHash = evalData.gpHash;
       if (evalResults.gpHash == 0 && !evalResults.gp.empty()) {
         evalResults.gpHash = hashByteVector(evalResults.gp);
       }
-      if (!evalData.scenarioList.empty()) {
-        evalResults.scenario = evalData.scenarioList.front();
-      } else {
-        evalResults.scenario = evalData.scenario;
-      }
+      // First per-eval meta (scenario 0) for the EvalResults summary slot.
+      evalResults.scenario = makePerEvalMeta(init_, evalData, 0);
       evalResults.scenarioList.clear();
-      evalResults.scenarioList.reserve(evalData.scenarioList.size());
+      evalResults.scenarioList.reserve(init_.pathList.size());
       evalResults.debugSamples.clear();
       evalResults.physicsTrace.clear();
       evalResults.workerId = workerIndex;
@@ -453,8 +462,8 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       evalResults.workerEvalCounter = evalCounter;
 
 #ifdef DETAILED_LOGGING
-      if (!evalData.scenarioList.empty()) {
-        const auto& firstScenario = evalData.scenarioList.front();
+      {
+        const auto& firstScenario = evalResults.scenario;
         std::cerr << "AUTOC deterministic wind seed=" << firstScenario.windSeed
                   << " pathVariant=" << firstScenario.pathVariantIndex
                   << " windVariant=" << firstScenario.windVariantIndex << std::endl;
@@ -484,7 +493,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     if (priorPathSelector != pathSelector)
     {
       priorPathSelector = pathSelector;
-      ScenarioMetadata activeScenario = scenarioForPathIndex(evalData, static_cast<size_t>(pathSelector));
+      ScenarioMetadata activeScenario = makePerEvalMeta(init_, evalData, static_cast<size_t>(pathSelector));
 
       // VARIATIONS1: Set entry and wind variation offsets from scenario
       // These are read by initialize_flight_model() and windfield during reset
@@ -529,7 +538,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       // rabbit, NN commands fire from tick 0). 2026-05-08 fix: previously
       // generateSpeedProfile ran unconditionally and the result was
       // discarded in tracker mode — wasted CPU + memory. Moved into else.
-      const bool trackerModeActive = (evalData.mode == Mode::TRACKER);
+      const bool trackerModeActive = (init_.mode == Mode::TRACKER);
       if (trackerModeActive) {
         engageDelayTicksRemaining = 0;  // Chase commands fire from tick 0
         engageCoastThrottle = static_cast<gp_scalar>(0.0);
@@ -633,12 +642,18 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       // pose is built from FDM post-reset state). Pre-fills 6-slot beacon
       // history with source[0] projection × 6, seeds crash hull PRNG,
       // resets NN recurrent state. No-op when mode != "tracker".
+      // 030 V1 priming — source library lives on the worker-resident
+      // init_; pathSelector indexes into init_.sourceList with modulo
+      // wraparound (matching minisim's mapping and the prior autoc-side
+      // sourceList[i % gSourceTrajectoryList.size()] behavior in
+      // buildEvalData pre-priming).
       if (trackerModeActive
-          && pathSelector < static_cast<int>(evalData.sourceList.size())
+          && !init_.sourceList.empty()
           && nnController_) {
-        const auto& source = evalData.sourceList.at(pathSelector);
+        const size_t srcIdx = static_cast<size_t>(pathSelector) % init_.sourceList.size();
+        const auto& source = init_.sourceList.at(srcIdx);
         if (!source.samples.empty()) {
-          trackerHelper_.initScenario(source, activeScenario, evalData,
+          trackerHelper_.initScenario(source, activeScenario, init_,
                                       aircraftState, *nnController_);
         }
       }
@@ -772,7 +787,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     // 030 M11.preA — Rabbit odometer + path index advancement is pathgen-
     // specific. In tracker mode the source-cursor inside trackerHelper_
     // drives target progression instead.
-    const bool trackerActiveTick = (evalData.mode == Mode::TRACKER);
+    const bool trackerActiveTick = (init_.mode == Mode::TRACKER);
     if (!trackerActiveTick) {
       // Pathgen mode (existing): advance rabbit odometer + walk path.
       if (evalDtSec > 0.0f && evalDtSec < 1.0f) {  // Guard against huge jumps
@@ -848,9 +863,20 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       }
     }
 
-    // crashed or out of time or off the end of the list
-    if (crashReason != CrashReason::None)
-    {
+    // 030 V1.5 fix (2026-05-08) — bug in M11.preA: tracker arena egress /
+    // hull strike from helper.tick() was set on `crashReason` but the
+    // function had ALREADY passed this early-exit (helper.tick() runs
+    // later in the function), so the egress was silently ignored.
+    // Symptom: chase craft flew well outside the 80 m arena (max
+    // dhome=758 m observed) without recording a crash.
+    //
+    // Refactor: hoist the save+send+return body into a lambda
+    // (`finalizeScenarioOnCrash`) callable from BOTH the external-crash
+    // checkpoint here and a NEW post-NN-tick checkpoint below. Returns
+    // true when crash handled (caller must `return;`); false when the
+    // current tick is non-crash and execution should continue.
+    auto finalizeScenarioOnCrash = [&]() -> bool {
+      if (crashReason == CrashReason::None) return false;
 #ifdef DETAILED_LOGGING
       std::cout << "sim: " << crashReasonToString(crashReason) << " time: " << simTimeMsec << " idx: " << pathIndex << " size: " << path.size() << std::endl;
 #endif
@@ -859,7 +885,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       evalResults.crashReasonList.push_back(crashReason);
 
       // save the results list (with origin offset for renderer raw reconstruction)
-      ScenarioMetadata pathMeta = scenarioForPathIndex(evalData, static_cast<size_t>(pathSelector));
+      ScenarioMetadata pathMeta = makePerEvalMeta(init_, evalData, static_cast<size_t>(pathSelector));
       pathMeta.originOffset = pathOriginOffset;
       evalResults.scenarioList.push_back(pathMeta);
 
@@ -879,7 +905,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       // p_crash fires this scenario; arenaEgressCount = 1 if scenario
       // terminated via Eval (arena egress) else 0.
       evalResults.hullStrikeCount.push_back(
-          (evalData.mode == Mode::TRACKER) ? trackerHelper_.hullFiredCount() : 0);
+          (init_.mode == Mode::TRACKER) ? trackerHelper_.hullFiredCount() : 0);
       evalResults.arenaEgressCount.push_back(
           (crashReason == CrashReason::Eval) ? 1 : 0);
       // Only send physics trace data for elite reeval (expensive, only needed for divergence analysis)
@@ -921,9 +947,28 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
         evalResults.aircraftStateList.clear();
         evalResults.crashReasonList.clear();
         evalResults.scenarioList.clear();
+        // 030 V1.5 fix (2026-05-08) — pre-existing M11.preA leak: tracker
+        // mode + dmp recording vectors were appended each eval but never
+        // cleared post-send. After N evals, this evalResults carried
+        // N-evals-worth of cameraViewList / targetTrajectoryList — at
+        // pop=5000 / 20 workers / 294 scenarios this hit ~140 GB across
+        // worker contexts on autoc before gen 1 completed. minisim
+        // already has these clears; mirror them here.
+        evalResults.cameraViewList.clear();
+        evalResults.targetTrajectoryList.clear();
+        evalResults.arenaEgressCount.clear();
+        evalResults.hullStrikeCount.clear();
+        evalResults.debugSamples.clear();
+        evalResults.physicsTrace.clear();
       }
-      return;
-    }
+      return true;
+    };
+
+    // First crash checkpoint: external conditions set crashReason above
+    // (FDM STATE_CRASHED, TimeLimit, RabbitComplete, pathgen-mode raw OOB).
+    // Tracker arena egress / hull strike fire LATER (in helper.tick());
+    // they are caught at the second checkpoint after the NN tick block.
+    if (finalizeScenarioOnCrash()) return;
 
     // 030 M11.preA — Mode-aware NN evaluation block.
     //   Tracker mode: helper.tick() projects beacons + shifts history,
@@ -932,10 +977,11 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     //     arena egress).
     //   Pathgen mode (existing): direction-cosine target-history capture,
     //     nnController_->evaluate against rabbit-odometer-driven path.
-    if (evalData.mode == Mode::TRACKER) {
+    if (init_.mode == Mode::TRACKER) {
       if (nnController_) {
         CrashReason trackerCrash =
-            trackerHelper_.tick(aircraftState, *nnController_, evalData);
+            trackerHelper_.tick(aircraftState, *nnController_, init_,
+                                evalData.pCrashThisGen);
         if (trackerCrash != CrashReason::None && crashReason == CrashReason::None) {
           crashReason = trackerCrash;
         }
@@ -981,6 +1027,14 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 
     // Save post-eval state for results
     aircraftStates.push_back(aircraftState);
+
+    // 030 V1.5 fix (2026-05-08) — second crash checkpoint. helper.tick()
+    // above may have set crashReason from arena egress (FR-016) or hull
+    // strike (FR-008b); finalize the scenario here so the egress tick is
+    // recorded (aircraftStates.push_back above already captured it,
+    // matching minisim's stepOnce-then-push pattern). Pre-fix: tracker
+    // egress was silently ignored, chase craft flew unbounded.
+    if (finalizeScenarioOnCrash()) return;
     if (debugSamplesCurrentPath.size() < DEBUG_SAMPLE_LIMIT) {
       DebugSample sample;
       sample.pathIndex = pathSelector;
