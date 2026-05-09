@@ -503,9 +503,24 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       Global::entrySpeedFactor = activeScenario.entrySpeedFactor;
       Global::windDirectionOffset = activeScenario.windDirectionOffset;
 
+      // 030 V1.5 (2026-05-09 chase-init-geometry fix) — tracker mode places
+      // chase 1.5 × trail_distance NORTH of source[0]=origin so chase starts
+      // 0.5 × trail_distance BEHIND trail-rabbit on the safe-cone side
+      // (gentle distScaleBehind=7m decay, tick-0 score ≈ 0.955 instead of
+      // the AT-rabbit knife-edge or worse the AHEAD-of-rabbit penalty zone
+      // chase fell into pre-fix because FDM defaulted to origin = on top of
+      // source). Chase is the only thing biased — source/rabbit dmp
+      // coordinates stay raw-as-recorded. Layered on top of the per-scenario
+      // entryNorthOffset variation (zero today since EntryPositionRadiusSigma=0;
+      // when re-enabled, variation perturbs around the trail-base position
+      // exactly per spec).
+      const gp_scalar trackerInitBiasNorth_m = (init_.mode == Mode::TRACKER)
+          ? static_cast<gp_scalar>(1.5) * init_.trailDistance
+          : static_cast<gp_scalar>(0.0);
+
       // Entry position offsets (see specs/005-entry-fitness-ramp)
       // Scenario offsets are NED meters; CRRCSim operates in feet
-      Global::entryNorthOffset = activeScenario.entryNorthOffset / FEET_TO_METERS;
+      Global::entryNorthOffset = (activeScenario.entryNorthOffset + trackerInitBiasNorth_m) / FEET_TO_METERS;
       Global::entryEastOffset = activeScenario.entryEastOffset / FEET_TO_METERS;
       Global::entryAltOffset = activeScenario.entryAltOffset / FEET_TO_METERS;
 
