@@ -42,11 +42,15 @@ void CrrcsimTrackerHelper::initScenario(const SourceScenarioTrajectory& source,
     crash_hull_ = CrashHull{};
     crash_hull_.sphere_radius_m = init.crashHullRadius;
 
-    // PRNG seed = scenarioSequence with anti-zero guard. Park-Miller LCG
-    // requires non-zero in [1, 2^31-2]. Identical guard logic as minisim's
-    // TrackerStepper ctor — same scenario gives same PRNG sequence across
-    // crrcsim/minisim (determinism contract).
-    const uint32_t seed = static_cast<uint32_t>(meta.scenarioSequence);
+    // PRNG seed = windSeed with anti-zero guard. Park-Miller LCG requires
+    // non-zero in [1, 2^31-2]. windSeed (NOT scenarioSequence) for
+    // determinism: scenarioSequence is a monotonic counter that differs
+    // between training-eval (seq=N) and elite-reeval (seq=N+~5000+) of the
+    // same scenario, which produced different LCG sequences → different
+    // didCrashFire Bernoulli draws → ELITE_DIVERGED warnings (2026-05-09).
+    // windSeed is per-scenario joint-PRNG-derived, stable across train/
+    // elite for the same scenario index. Same scenario → same hull-PRNG.
+    const uint32_t seed = static_cast<uint32_t>(meta.windSeed);
     prng_state_ = ((seed == 0 ? 0xC0FFEEu : seed % 0x7FFFFFFFu)) | 1u;
 
     // Reset NN recurrent state at scenario start (no-op for feedforward).
@@ -163,16 +167,19 @@ CrashReason CrrcsimTrackerHelper::tick(AircraftState& chaseState,
         }
     }
 
-    // Step 5: crash hull strike (didCrashFire short-circuits when chase
-    // is outside hull — no PRNG draw consumed, scenario stream stays
-    // deterministic across hull-miss ticks). Arena egress wins on tie.
-    if (crash == CrashReason::None) {
-        if (didCrashFire(crash_hull_, chaseState.getPosition(), target.position,
-                         pCrashThisGen, prng_state_)) {
-            crash = CrashReason::HullStrike;
-            ++hull_fired_count_;
-        }
-    }
+    // 030 V1.5 (2026-05-09) — Crash-hull DISABLED in code while we sort
+    // determinism back out. Skipping the didCrashFire call entirely so it
+    // can't consume from the per-scenario PRNG stream regardless of
+    // pCrashThisGen / hull radius config. Mirrors the same disable in
+    // src/eval/tracker_stepper.cc — re-enable both at once when ready.
+    //
+    // if (crash == CrashReason::None) {
+    //     if (didCrashFire(crash_hull_, chaseState.getPosition(), target.position,
+    //                      pCrashThisGen, prng_state_)) {
+    //         crash = CrashReason::HullStrike;
+    //         ++hull_fired_count_;
+    //     }
+    // }
 
     ++cursor_;
     return crash;
