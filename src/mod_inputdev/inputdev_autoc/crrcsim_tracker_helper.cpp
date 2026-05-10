@@ -167,19 +167,17 @@ CrashReason CrrcsimTrackerHelper::tick(AircraftState& chaseState,
         }
     }
 
-    // 030 V1.5 (2026-05-09) — Crash-hull DISABLED in code while we sort
-    // determinism back out. Skipping the didCrashFire call entirely so it
-    // can't consume from the per-scenario PRNG stream regardless of
-    // pCrashThisGen / hull radius config. Mirrors the same disable in
-    // src/eval/tracker_stepper.cc — re-enable both at once when ready.
-    //
-    // if (crash == CrashReason::None) {
-    //     if (didCrashFire(crash_hull_, chaseState.getPosition(), target.position,
-    //                      pCrashThisGen, prng_state_)) {
-    //         crash = CrashReason::HullStrike;
-    //         ++hull_fired_count_;
-    //     }
-    // }
+    // 030 M11.preA.3 (2026-05-10) — Crash-hull RE-ENABLED with fixed
+    // Bernoulli probability per NN tick (10Hz). Seed = windSeed (P1 fix,
+    // stable train↔elite). Mirrors the parallel re-enable in
+    // src/eval/tracker_stepper.cc — keep both bodies in lockstep.
+    if (crash == CrashReason::None) {
+        if (didCrashFire(crash_hull_, chaseState.getPosition(), target.position,
+                         pCrashThisGen, prng_state_)) {
+            crash = CrashReason::HullStrike;
+            ++hull_fired_count_;
+        }
+    }
 
     ++cursor_;
     return crash;
