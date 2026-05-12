@@ -100,17 +100,8 @@ AircraftState aircraftState;
 // Used to convert raw FDM position to virtual coordinates for AircraftState.
 gp_vec3 pathOriginOffset = gp_vec3::Zero();
 
-std::string crashReasonToString(CrashReason type) {
-  switch (type) {
-  case CrashReason::None: return "None";
-  case CrashReason::Boot: return "Boot";
-  case CrashReason::Sim: return "Sim";
-  case CrashReason::Eval: return "Eval";
-  case CrashReason::TimeLimit: return "TimeLimit";
-  case CrashReason::RabbitComplete: return "RabbitComplete";
-  default: return "*?*";
-  }
-}
+// crashReasonToString is now inline in include/autoc/rpc/crash_reason.h
+// (2026-05-11 — was duplicated across minisim.cc + this file).
 
 // Physics trace buffer for collecting detailed FDM state
 // Cleared at start of each evaluation, sent back with EvalResults only for elite reeval
