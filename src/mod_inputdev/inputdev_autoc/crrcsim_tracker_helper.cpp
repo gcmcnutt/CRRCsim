@@ -15,6 +15,7 @@
 #include <algorithm>
 
 #include "autoc/eval/arena.h"
+#include "autoc/eval/derived_features.h"  // 032 phase 1 — compute_pair_span
 #include "autoc/eval/trail_rabbit.h"
 
 using autoc::eval::CrashHull;
@@ -80,6 +81,7 @@ void CrrcsimTrackerHelper::projectAndShiftHistory(const SourceTickSample& target
         history_.right_x[i] = history_.right_x[i + 1];    // raw-ok: NN-byte-format primitive
         history_.right_y[i] = history_.right_y[i + 1];    // raw-ok: NN-byte-format primitive
         history_.right_cep[i] = history_.right_cep[i + 1];// raw-ok: NN-byte-format primitive
+        history_.span[i] = history_.span[i + 1];          // raw-ok: NN-byte-format primitive — 032 phase 1
     }
 
     // 030 V1 priming — cameras + beacons + airframe come from WorkerInit
@@ -112,6 +114,26 @@ void CrrcsimTrackerHelper::projectAndShiftHistory(const SourceTickSample& target
     history_.right_x[5] = right.screen_x;     // raw-ok: NN-byte-format primitive
     history_.right_y[5] = right.screen_y;     // raw-ok: NN-byte-format primitive
     history_.right_cep[5] = right.cep;        // raw-ok: NN-byte-format primitive
+
+    // 032 PHASE 1 — Cache beacon-pair span at the current tick. CEP-gated:
+    // if EITHER beacon's CEP exceeds the configured threshold, substitute
+    // neutral 0.0. Mirrors src/eval/tracker_stepper.cc::projectAndShiftHistory
+    // exactly. cep_gate_threshold comes from init.cepGateThreshold (no
+    // ConfigManager on the crrcsim worker — value threaded via WorkerInit).
+    const float cep_gate_threshold = static_cast<float>(init.cepGateThreshold);
+    const bool cep_gated =
+        left.cep >= cep_gate_threshold ||
+        right.cep >= cep_gate_threshold;
+    if (cep_gated) {
+        history_.span[5] = 0.0f;
+    } else {
+        history_.span[5] = static_cast<float>(  // raw-ok: NN-byte-format slot write
+            autoc::eval::compute_pair_span(
+                static_cast<gp_scalar>(left.screen_x),
+                static_cast<gp_scalar>(left.screen_y),
+                static_cast<gp_scalar>(right.screen_x),
+                static_cast<gp_scalar>(right.screen_y)));
+    }
 
     // M2 dmp recording — mirror minisim's M8b populate.
     last_camera_view_.camera_pose_world_pos =
