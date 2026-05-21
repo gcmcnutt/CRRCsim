@@ -36,6 +36,8 @@
 #include "autoc/eval/variation_generator.h"
 #include "autoc/util/socket_wrapper.h"
 
+#include "crrcsim_tracker_helper.h"   // 030 M11.preA
+
 #include <stdio.h>
 #include <iostream>
 #include <cmath>
@@ -122,6 +124,13 @@ private:
   gp_scalar crrcsimRabbitSpeed = 0.0f;   // Set from speed profile at path start — 0 = uninitialized
   std::vector<RabbitSpeedPoint> rabbitSpeedProfile;  // Time-varying profile (generated per path)
   RabbitSpeedConfig rabbitSpeedConfig = RabbitSpeedConfig::defaultConfig();
+  // 030 V1 priming (2026-05-08) — once-per-worker payload received right
+  // after socket_ connects; carries scenario-static configs (mode, source
+  // library, camera, beacons, airframe, flight arena, pre-roll, crash hull
+  // radius, trail distance). Per-eval EvalData no longer carries them, so
+  // tracker training scales without OOM at pop=5000. See specs/BACKLOG.md
+  // "Worker-side scenario priming" entry.
+  WorkerInit init_;
   EvalData evalData;
   EvalResults evalResults;
   std::vector<AircraftState> aircraftStates;
@@ -146,6 +155,19 @@ private:
   NNGenome nnGenome;
   std::unique_ptr<NNControllerBackend> nnController_;
   std::vector<Path> path;
+
+  // 030 M11.preA — Tracker-mode helper (active when evalData.mode == "tracker").
+  // Encapsulates source-cursor + beacon history + crash hull + per-tick
+  // beacon projection / NN forward. Pathgen mode never touches this.
+  CrrcsimTrackerHelper trackerHelper_;
+
+  // 030 M11.preA — Per-path tracker-mode buffers, populated each NN tick
+  // from helper's lastCameraView/lastTargetSample. Pushed into
+  // evalResults.cameraViewList/targetTrajectoryList at path-end (mirrors
+  // minisim's M8b dmp output convention; keeps M2 dmp format identical
+  // across minisim/crrcsim per operator routing 2026-05-08).
+  std::vector<CameraViewSample> trackerCameraViewSteps_;
+  std::vector<CopiedTargetSample> trackerTargetSampleSteps_;
 };
 
 #endif
