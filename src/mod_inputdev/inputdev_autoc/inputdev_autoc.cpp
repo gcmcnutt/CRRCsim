@@ -29,8 +29,10 @@
 #include "../../mod_misc/crrc_rand.h"
 #include "../../mod_windfield/windfield.h"
 #include "inputdev_autoc.h"
+#include "autoc/eval/derived_features.h"     // 033 — compute_smoothness_factor + SmoothnessMotionMode
 #include "autoc/eval/scenario_meta_apply.h"  // 030 V1.5 — applyVariationScale
 #include "autoc/eval/variation_generator.h"
+#include "autoc/util/scenario_prng.h"        // 033 — deriveClassSubSeeds
 #include <algorithm>
 #include <chrono>
 #include <stdio.h>
@@ -455,7 +457,8 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 #ifdef DETAILED_LOGGING
       {
         const auto& firstScenario = evalResults.scenario;
-        std::cerr << "AUTOC deterministic wind seed=" << firstScenario.windSeed
+        std::cerr << "AUTOC deterministic scenarioSeed=0x" << std::hex
+                  << firstScenario.scenarioSeed << std::dec
                   << " pathVariant=" << firstScenario.pathVariantIndex
                   << " windVariant=" << firstScenario.windVariantIndex << std::endl;
       }
@@ -527,8 +530,16 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
                 << "m alt=" << Global::entryAltOffset << "m" << std::endl;
 #endif
 
-      // Reset simulation with wind seed
-      Global::Simulation->reset(activeScenario.windSeed);
+      // 033 cleanup — derive wind-class seed for CRRC_Random from
+      // meta.scenarioSeed. ClassPRNG(windSubSeed).next() is the
+      // operational wire-format value per contracts/scenario_prng_chain.md.
+      // Identical chain to autoc-side prefetch (same windPRNG init) →
+      // deterministic across processes for the same scenarioSeed.
+      const auto subseeds =
+          autoc::util::deriveClassSubSeeds(activeScenario.scenarioSeed);
+      autoc::util::ClassPRNG windPRNG(subseeds.wind);
+      const uint32_t windSimSeed = windPRNG.next();
+      Global::Simulation->reset(windSimSeed);
       simCrashed = false;
       lastUpdateTimeMsec = 0;
       pathIndex = 0;
@@ -553,10 +564,12 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
         crrcsimRabbitSpeed = 0.0f;
       } else {
         // Pathgen mode (existing): generate per-scenario rabbit-speed profile
-        // from autoc-side seed; engage delay + cruise throttle for INAV
-        // handoff fidelity.
+        // from the RABBIT-class sub-PRNG (033 cleanup — was activeScenario.
+        // rabbitSpeedSeed pre-cleanup; field removed). Same scenarioSeed →
+        // same rabbit-class seed → same speed profile across runs.
+        // `subseeds` was derived above for the wind path; reuse it here.
         {
-          unsigned int seed = activeScenario.rabbitSpeedSeed;
+          unsigned int seed = subseeds.rabbit;
           double totalDurationSec = SIM_TOTAL_TIME_MSEC / 1000.0;
           rabbitSpeedProfile = generateSpeedProfile(seed, rabbitSpeedConfig, totalDurationSec);
           crrcsimRabbitSpeed = static_cast<gp_scalar>(
@@ -567,6 +580,15 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
         engageCoastThrottle = static_cast<gp_scalar>(
             CLAMP_DEF(2.0 * (activeScenario.entrySpeedFactor - 1.0), -1.0, 1.0));
       }
+      // 033 §2.B — reset pathgen-mode smoothness prev-output state at
+      // path boundary. First-tick factor = 1.0 (no false-positive penalty
+      // on scenario entry). Tracker mode owns its own reset inside
+      // CrrcsimTrackerHelper::initScenario.
+      prev_out_valid_ = false;
+      prev_out_pt_ = static_cast<gp_scalar>(0.0);
+      prev_out_rl_ = static_cast<gp_scalar>(0.0);
+      prev_out_th_ = static_cast<gp_scalar>(0.0);
+
       // Zero recurrent NN state at span start (spec 027 Q4: h_t resets
       // on new scenario; no-op for feedforward genomes).
       if (nnController_) nnController_->reset();
@@ -900,12 +922,20 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       evalResults.aircraftStateList.push_back(aircraftStatesCopy);
       aircraftStates.clear();
 
-      // 030 M11.preA — Per-scenario tracker buffers into v=2 dmp fields.
-      // Pathgen mode pushes empty vectors (tracker buffers stay clear),
-      // matching minisim's behavior where pathgen dmps load with empty
-      // cameraViewList/targetTrajectoryList per the M8a schema contract.
-      evalResults.cameraViewList.push_back(trackerCameraViewSteps_);
-      evalResults.targetTrajectoryList.push_back(trackerTargetSampleSteps_);
+      // 033 troubleshooting 2026-05-22 — bug fix mirror of the same fix in
+      // tools/minisim.cc: cameraViewList + targetTrajectoryList are
+      // TRACKER-MODE-ONLY per the EvalResults contract (protocol.h:359
+      // "Empty in pathgen-mode dmps"). Prior unconditional push_back of
+      // (empty in pathgen) inner vectors produced an outer-vector-non-
+      // empty dmp that the renderer (renderer.cc:400-402 dispatches on
+      // outer-vector emptiness) mis-classified as tracker mode → rabbit
+      // path render skipped. Pathgen workers leave the trackerCameraViewSteps_
+      // / trackerTargetSampleSteps_ buffers empty all along; gating the
+      // push restores the documented contract.
+      if (init_.mode == Mode::TRACKER) {
+        evalResults.cameraViewList.push_back(trackerCameraViewSteps_);
+        evalResults.targetTrajectoryList.push_back(trackerTargetSampleSteps_);
+      }
       trackerCameraViewSteps_.clear();
       trackerTargetSampleSteps_.clear();
       // Per-scenario telemetry counters (M7d.b). hullStrikeCount = hull
@@ -1029,6 +1059,37 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       if (nnController_) {
         VectorPathProvider pathProvider(path, aircraftState.getThisPathIndex());
         nnController_->evaluate(aircraftState, pathProvider);
+      }
+
+      // 033 §2.B — per-tick smoothness factor (pathgen worker mirror).
+      // Compute from NN-output Δs vs prev tick; store on aircraftState
+      // for autoc-side fitness consumption (single source of truth).
+      // Mirrors PathgenStepper::stepOnce in autoc/src/eval/pathgen_stepper.cc.
+      {
+        const gp_scalar curr_pt = aircraftState.getPitchCommand();
+        const gp_scalar curr_rl = aircraftState.getRollCommand();
+        const gp_scalar curr_th = aircraftState.getThrottleCommand();
+        gp_scalar dpt = static_cast<gp_scalar>(0.0);
+        gp_scalar drl = static_cast<gp_scalar>(0.0);
+        gp_scalar dth = static_cast<gp_scalar>(0.0);
+        if (prev_out_valid_) {
+          dpt = curr_pt - prev_out_pt_;
+          drl = curr_rl - prev_out_rl_;
+          dth = curr_th - prev_out_th_;
+        }
+        autoc::eval::SmoothnessMotionMode mode;
+        switch (init_.smoothnessMotionMode) {
+          case 1: mode = autoc::eval::SmoothnessMotionMode::Sum; break;
+          case 2: mode = autoc::eval::SmoothnessMotionMode::Max; break;
+          default: mode = autoc::eval::SmoothnessMotionMode::Pythagorean; break;
+        }
+        const gp_scalar factor = autoc::eval::compute_smoothness_factor(
+            dpt, drl, dth, init_.smoothnessPenaltyFloor, mode);
+        aircraftState.setSmoothnessFactor(factor);
+        prev_out_pt_ = curr_pt;
+        prev_out_rl_ = curr_rl;
+        prev_out_th_ = curr_th;
+        prev_out_valid_ = true;
       }
     }
 

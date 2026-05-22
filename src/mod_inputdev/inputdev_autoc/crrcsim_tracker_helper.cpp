@@ -17,6 +17,7 @@
 #include "autoc/eval/arena.h"
 #include "autoc/eval/derived_features.h"  // 032 phase 1 — compute_pair_span
 #include "autoc/eval/trail_rabbit.h"
+#include "autoc/util/scenario_prng.h"     // 033 — deriveClassSubSeeds
 
 using autoc::eval::CrashHull;
 using autoc::eval::ArenaEgressKind;
@@ -43,16 +44,26 @@ void CrrcsimTrackerHelper::initScenario(const SourceScenarioTrajectory& source,
     crash_hull_ = CrashHull{};
     crash_hull_.sphere_radius_m = init.crashHullRadius;
 
-    // PRNG seed = windSeed with anti-zero guard. Park-Miller LCG requires
-    // non-zero in [1, 2^31-2]. windSeed (NOT scenarioSequence) for
-    // determinism: scenarioSequence is a monotonic counter that differs
-    // between training-eval (seq=N) and elite-reeval (seq=N+~5000+) of the
-    // same scenario, which produced different LCG sequences → different
-    // didCrashFire Bernoulli draws → ELITE_DIVERGED warnings (2026-05-09).
-    // windSeed is per-scenario joint-PRNG-derived, stable across train/
-    // elite for the same scenario index. Same scenario → same hull-PRNG.
-    const uint32_t seed = static_cast<uint32_t>(meta.windSeed);
+    // 033 cleanup — crash-hull PRNG seed now derives from the RABBIT class
+    // sub-PRNG (per contracts/scenario_prng_chain.md — M2 crash-hull is
+    // a rabbit-class consumer). Pre-033 used meta.windSeed; that field
+    // has been removed. deriveClassSubSeeds(scenarioSeed) is the canonical
+    // route — autoc-side minisim TrackerStepper uses the same derivation
+    // path (deterministic across processes for the same scenarioSeed).
+    // anti-zero guard preserved (Park-Miller LCG breaks at state=0).
+    const auto subseeds = autoc::util::deriveClassSubSeeds(meta.scenarioSeed);
+    const uint32_t seed = subseeds.rabbit;
     prng_state_ = ((seed == 0 ? 0xC0FFEEu : seed % 0x7FFFFFFFu)) | 1u;
+
+    // 033 §2.B — capture smoothness config from WorkerInit; reset per-tick
+    // state. First-tick factor = 1.0 (no false-positive penalty on scenario
+    // entry). Mirror of TrackerStepper::initScenario smoothness reset.
+    smoothness_floor_ = init.smoothnessPenaltyFloor;
+    smoothness_mode_ = init.smoothnessMotionMode;
+    prev_out_valid_ = false;
+    prev_out_pt_ = static_cast<gp_scalar>(0.0);
+    prev_out_rl_ = static_cast<gp_scalar>(0.0);
+    prev_out_th_ = static_cast<gp_scalar>(0.0);
 
     // Reset NN recurrent state at scenario start (no-op for feedforward).
     nn.reset();
@@ -180,6 +191,39 @@ CrashReason CrrcsimTrackerHelper::tick(AircraftState& chaseState,
     // (which inputdev_autoc.cpp's pending-command stage picks up post-tick).
     nn.evaluateTracker(chaseState, inputs);
 
+    // 033 §2.B — per-tick smoothness factor from NN-output Δs vs previous
+    // tick; store on chaseState for autoc-side fitness consumption (single
+    // source of truth: fitness_decomposition.cc reads getSmoothnessFactor()).
+    // Mirrors the autoc-side TrackerStepper::stepOnce smoothness compute.
+    // First tick (prev_out_valid_ = false) → Δs all zero → factor = 1.0.
+    {
+        const gp_scalar curr_pt = chaseState.getPitchCommand();
+        const gp_scalar curr_rl = chaseState.getRollCommand();
+        const gp_scalar curr_th = chaseState.getThrottleCommand();
+        gp_scalar dpt = static_cast<gp_scalar>(0.0);
+        gp_scalar drl = static_cast<gp_scalar>(0.0);
+        gp_scalar dth = static_cast<gp_scalar>(0.0);
+        if (prev_out_valid_) {
+            dpt = curr_pt - prev_out_pt_;
+            drl = curr_rl - prev_out_rl_;
+            dth = curr_th - prev_out_th_;
+        }
+        // Decode wire-stable uint8 enum → autoc::eval::SmoothnessMotionMode.
+        autoc::eval::SmoothnessMotionMode mode;
+        switch (smoothness_mode_) {
+            case 1: mode = autoc::eval::SmoothnessMotionMode::Sum; break;
+            case 2: mode = autoc::eval::SmoothnessMotionMode::Max; break;
+            default: mode = autoc::eval::SmoothnessMotionMode::Pythagorean; break;
+        }
+        const gp_scalar factor = autoc::eval::compute_smoothness_factor(
+            dpt, drl, dth, smoothness_floor_, mode);
+        chaseState.setSmoothnessFactor(factor);
+        prev_out_pt_ = curr_pt;
+        prev_out_rl_ = curr_rl;
+        prev_out_th_ = curr_th;
+        prev_out_valid_ = true;
+    }
+
     // Step 4: arena out-of-bounds via FR-016 FlightArena (same source-of-truth
     // as gather_tracker_inputs slot 44).
     {
@@ -190,8 +234,9 @@ CrashReason CrrcsimTrackerHelper::tick(AircraftState& chaseState,
     }
 
     // 030 M11.preA.3 (2026-05-10) — Crash-hull RE-ENABLED with fixed
-    // Bernoulli probability per NN tick (10Hz). Seed = windSeed (P1 fix,
-    // stable train↔elite). Mirrors the parallel re-enable in
+    // Bernoulli probability per NN tick (10Hz). 033 cleanup: seed now
+    // derives from rabbit-class sub-PRNG via deriveClassSubSeeds (was
+    // meta.windSeed pre-cleanup). Mirrors the parallel re-enable in
     // src/eval/tracker_stepper.cc — keep both bodies in lockstep.
     if (crash == CrashReason::None) {
         if (didCrashFire(crash_hull_, chaseState.getPosition(), target.position,
