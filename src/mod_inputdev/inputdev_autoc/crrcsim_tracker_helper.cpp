@@ -185,7 +185,8 @@ CrashReason CrrcsimTrackerHelper::tick(AircraftState& chaseState,
 
     // Step 2: gather tracker NN inputs.
     TrackerInputs inputs = {};
-    gather_tracker_inputs(chaseState, history_, init.flightArena, inputs);
+    gather_tracker_inputs(chaseState, history_, init.flightArena,
+                          static_cast<float>(init.cepGateThreshold), inputs);
 
     // Step 3: NN forward pass → updates chaseState.pitch/roll/throttle commands
     // (which inputdev_autoc.cpp's pending-command stage picks up post-tick).
