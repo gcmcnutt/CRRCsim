@@ -29,7 +29,6 @@
 #include "../../mod_misc/crrc_rand.h"
 #include "../../mod_windfield/windfield.h"
 #include "inputdev_autoc.h"
-#include "autoc/eval/derived_features.h"     // 033 — compute_smoothness_factor + SmoothnessMotionMode
 #include "autoc/eval/scenario_meta_apply.h"  // 030 V1.5 — applyVariationScale
 #include "autoc/eval/variation_generator.h"
 #include "autoc/util/scenario_prng.h"        // 033 — deriveClassSubSeeds
@@ -580,15 +579,6 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
         engageCoastThrottle = static_cast<gp_scalar>(
             CLAMP_DEF(2.0 * (activeScenario.entrySpeedFactor - 1.0), -1.0, 1.0));
       }
-      // 033 §2.B — reset pathgen-mode smoothness prev-output state at
-      // path boundary. First-tick factor = 1.0 (no false-positive penalty
-      // on scenario entry). Tracker mode owns its own reset inside
-      // CrrcsimTrackerHelper::initScenario.
-      prev_out_valid_ = false;
-      prev_out_pt_ = static_cast<gp_scalar>(0.0);
-      prev_out_rl_ = static_cast<gp_scalar>(0.0);
-      prev_out_th_ = static_cast<gp_scalar>(0.0);
-
       // Zero recurrent NN state at span start (spec 027 Q4: h_t resets
       // on new scenario; no-op for feedforward genomes).
       if (nnController_) nnController_->reset();
@@ -1059,37 +1049,6 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       if (nnController_) {
         VectorPathProvider pathProvider(path, aircraftState.getThisPathIndex());
         nnController_->evaluate(aircraftState, pathProvider);
-      }
-
-      // 033 §2.B — per-tick smoothness factor (pathgen worker mirror).
-      // Compute from NN-output Δs vs prev tick; store on aircraftState
-      // for autoc-side fitness consumption (single source of truth).
-      // Mirrors PathgenStepper::stepOnce in autoc/src/eval/pathgen_stepper.cc.
-      {
-        const gp_scalar curr_pt = aircraftState.getPitchCommand();
-        const gp_scalar curr_rl = aircraftState.getRollCommand();
-        const gp_scalar curr_th = aircraftState.getThrottleCommand();
-        gp_scalar dpt = static_cast<gp_scalar>(0.0);
-        gp_scalar drl = static_cast<gp_scalar>(0.0);
-        gp_scalar dth = static_cast<gp_scalar>(0.0);
-        if (prev_out_valid_) {
-          dpt = curr_pt - prev_out_pt_;
-          drl = curr_rl - prev_out_rl_;
-          dth = curr_th - prev_out_th_;
-        }
-        autoc::eval::SmoothnessMotionMode mode;
-        switch (init_.smoothnessMotionMode) {
-          case 1: mode = autoc::eval::SmoothnessMotionMode::Sum; break;
-          case 2: mode = autoc::eval::SmoothnessMotionMode::Max; break;
-          default: mode = autoc::eval::SmoothnessMotionMode::Pythagorean; break;
-        }
-        const gp_scalar factor = autoc::eval::compute_smoothness_factor(
-            dpt, drl, dth, init_.smoothnessPenaltyFloor, mode);
-        aircraftState.setSmoothnessFactor(factor);
-        prev_out_pt_ = curr_pt;
-        prev_out_rl_ = curr_rl;
-        prev_out_th_ = curr_th;
-        prev_out_valid_ = true;
       }
     }
 

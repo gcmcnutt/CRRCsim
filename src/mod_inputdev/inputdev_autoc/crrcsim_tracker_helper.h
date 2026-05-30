@@ -101,16 +101,4 @@ private:
     CopiedTargetSample last_target_sample_{};
     // Reference to source samples — set in initScenario. NOT owned.
     const SourceScenarioTrajectory* source_ = nullptr;
-
-    // 033 §2.B — per-tick smoothness state (worker-side mirror of
-    // TrackerStepper::stepOnce smoothness compute). prev_out_valid_
-    // false at scenario start; first-tick factor = 1.0 per contract.
-    // smoothness_floor_ + smoothness_mode_ captured from WorkerInit at
-    // initScenario; stable per worker run.
-    gp_scalar smoothness_floor_ = static_cast<gp_scalar>(1.0);
-    uint8_t smoothness_mode_ = 0;  // 0=Pyth, 1=Sum, 2=Max (matches WorkerInit wire enum)
-    gp_scalar prev_out_pt_ = static_cast<gp_scalar>(0.0);
-    gp_scalar prev_out_rl_ = static_cast<gp_scalar>(0.0);
-    gp_scalar prev_out_th_ = static_cast<gp_scalar>(0.0);
-    bool prev_out_valid_ = false;
 };

@@ -135,14 +135,6 @@ private:
   EvalResults evalResults;
   std::vector<AircraftState> aircraftStates;
 
-  // 033 §2.B — per-tick smoothness state for PATHGEN mode (tracker mode
-  // owns its own prev_out tracking inside CrrcsimTrackerHelper). Reset
-  // at path boundary (where priorPathSelector != pathSelector). First-
-  // tick factor = 1.0 (prev_out_valid_ = false). Mirrors PathgenStepper.
-  gp_scalar prev_out_pt_ = static_cast<gp_scalar>(0.0);
-  gp_scalar prev_out_rl_ = static_cast<gp_scalar>(0.0);
-  gp_scalar prev_out_th_ = static_cast<gp_scalar>(0.0);
-  bool prev_out_valid_ = false;
   std::vector<DebugSample> debugSamplesCurrentPath;
   double quatDotPast[4] = {0,0,0,0};
   int workerIndex = -1;

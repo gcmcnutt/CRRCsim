@@ -55,16 +55,6 @@ void CrrcsimTrackerHelper::initScenario(const SourceScenarioTrajectory& source,
     const uint32_t seed = subseeds.rabbit;
     prng_state_ = ((seed == 0 ? 0xC0FFEEu : seed % 0x7FFFFFFFu)) | 1u;
 
-    // 033 §2.B — capture smoothness config from WorkerInit; reset per-tick
-    // state. First-tick factor = 1.0 (no false-positive penalty on scenario
-    // entry). Mirror of TrackerStepper::initScenario smoothness reset.
-    smoothness_floor_ = init.smoothnessPenaltyFloor;
-    smoothness_mode_ = init.smoothnessMotionMode;
-    prev_out_valid_ = false;
-    prev_out_pt_ = static_cast<gp_scalar>(0.0);
-    prev_out_rl_ = static_cast<gp_scalar>(0.0);
-    prev_out_th_ = static_cast<gp_scalar>(0.0);
-
     // Reset NN recurrent state at scenario start (no-op for feedforward).
     nn.reset();
 
@@ -191,39 +181,6 @@ CrashReason CrrcsimTrackerHelper::tick(AircraftState& chaseState,
     // Step 3: NN forward pass → updates chaseState.pitch/roll/throttle commands
     // (which inputdev_autoc.cpp's pending-command stage picks up post-tick).
     nn.evaluateTracker(chaseState, inputs);
-
-    // 033 §2.B — per-tick smoothness factor from NN-output Δs vs previous
-    // tick; store on chaseState for autoc-side fitness consumption (single
-    // source of truth: fitness_decomposition.cc reads getSmoothnessFactor()).
-    // Mirrors the autoc-side TrackerStepper::stepOnce smoothness compute.
-    // First tick (prev_out_valid_ = false) → Δs all zero → factor = 1.0.
-    {
-        const gp_scalar curr_pt = chaseState.getPitchCommand();
-        const gp_scalar curr_rl = chaseState.getRollCommand();
-        const gp_scalar curr_th = chaseState.getThrottleCommand();
-        gp_scalar dpt = static_cast<gp_scalar>(0.0);
-        gp_scalar drl = static_cast<gp_scalar>(0.0);
-        gp_scalar dth = static_cast<gp_scalar>(0.0);
-        if (prev_out_valid_) {
-            dpt = curr_pt - prev_out_pt_;
-            drl = curr_rl - prev_out_rl_;
-            dth = curr_th - prev_out_th_;
-        }
-        // Decode wire-stable uint8 enum → autoc::eval::SmoothnessMotionMode.
-        autoc::eval::SmoothnessMotionMode mode;
-        switch (smoothness_mode_) {
-            case 1: mode = autoc::eval::SmoothnessMotionMode::Sum; break;
-            case 2: mode = autoc::eval::SmoothnessMotionMode::Max; break;
-            default: mode = autoc::eval::SmoothnessMotionMode::Pythagorean; break;
-        }
-        const gp_scalar factor = autoc::eval::compute_smoothness_factor(
-            dpt, drl, dth, smoothness_floor_, mode);
-        chaseState.setSmoothnessFactor(factor);
-        prev_out_pt_ = curr_pt;
-        prev_out_rl_ = curr_rl;
-        prev_out_th_ = curr_th;
-        prev_out_valid_ = true;
-    }
 
     // Step 4: arena out-of-bounds via FR-016 FlightArena (same source-of-truth
     // as gather_tracker_inputs slot 44).
