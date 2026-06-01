@@ -93,6 +93,18 @@ class Global
     static double entryNorthOffset;      ///< meters, NED North position offset
     static double entryEastOffset;       ///< meters, NED East position offset
     static double entryAltOffset;        ///< meters, NED Down altitude offset
+
+    // 034 US4 — craft variation parameters from ScenarioMetadata.craft*
+    // (AFTER worker-side applyVariationScale ramping). Set by inputdev_autoc
+    // at the per-scenario reset hook, consumed in fdm_larcsim init/engine.
+    // CG/trim/drag/pitch-eff/roll-eff are additive deltas (0.0 = nominal);
+    // craftThrustScale is a multiplier (1.0 = nominal).
+    static double craftCGDelta;          ///< meters, CG arm offset
+    static double craftDragDelta;        ///< fraction, CD_prof multiplier delta
+    static double craftTrimDelta;        ///< radians, Cm_0 trim offset
+    static double craftThrustScale;      ///< multiplier on engine maxThrust
+    static double craftPitchEffDelta;    ///< fraction, pitch-authority multiplier delta
+    static double craftRollEffDelta;     ///< fraction, roll-authority multiplier delta
 };
 
 

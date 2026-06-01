@@ -518,6 +518,20 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       Global::entryEastOffset = activeScenario.entryEastOffset / FEET_TO_METERS;
       Global::entryAltOffset = activeScenario.entryAltOffset / FEET_TO_METERS;
 
+      // 034 US4 — craft variation parameters from ScenarioMetadata. These
+      // arrive in this metadata block AFTER autoc-side applyVariationScale
+      // (worker calls applyVariationScale before this method runs), so the
+      // values are already ramp-scaled per-eval. FDM init reads them once
+      // at airplane reset (initAirplaneState) and engine maxThrust scaling.
+      // Cast through double for the gp_scalar→double FDM boundary (Global
+      // members are double for CRRCSim native math).
+      Global::craftCGDelta       = static_cast<double>(activeScenario.craftCGDelta);
+      Global::craftDragDelta     = static_cast<double>(activeScenario.craftDragDelta);
+      Global::craftTrimDelta     = static_cast<double>(activeScenario.craftTrimDelta);
+      Global::craftThrustScale   = static_cast<double>(activeScenario.craftThrustScale);
+      Global::craftPitchEffDelta = static_cast<double>(activeScenario.craftPitchEffDelta);
+      Global::craftRollEffDelta  = static_cast<double>(activeScenario.craftRollEffDelta);
+
 #ifdef DETAILED_LOGGING
       std::cerr << "VARIATIONS1: heading=" << (Global::entryHeadingOffset * 180.0/M_PI)
                 << "° roll=" << (Global::entryRollOffset * 180.0/M_PI)
