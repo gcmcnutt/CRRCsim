@@ -99,7 +99,7 @@ class Global
     // at the per-scenario reset hook, consumed in fdm_larcsim init/engine.
     // CG/trim/drag/pitch-eff/roll-eff are additive deltas (0.0 = nominal);
     // craftThrustScale is a multiplier (1.0 = nominal).
-    static double craftCGDelta;          ///< meters, CG arm offset
+    static double craftCGDelta;          ///< dimensionless CG arm offset (CRRCSim XML units, e.g. hb1_streamer nominal ≈ 0.28)
     static double craftDragDelta;        ///< fraction, CD_prof multiplier delta
     static double craftTrimDelta;        ///< radians, Cm_0 trim offset
     static double craftThrustScale;      ///< multiplier on engine maxThrust

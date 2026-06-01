@@ -523,8 +523,9 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       // (worker calls applyVariationScale before this method runs), so the
       // values are already ramp-scaled per-eval. FDM init reads them once
       // at airplane reset (initAirplaneState) and engine maxThrust scaling.
-      // Cast through double for the gp_scalar→double FDM boundary (Global
-      // members are double for CRRCSim native math).
+      // raw-ok: gp_scalar→double cast at the autoc→crrcsim type-domain
+      // boundary (Global::* members are double for CRRCSim FDM native math
+      // per Constitution VI whitelist).
       Global::craftCGDelta       = static_cast<double>(activeScenario.craftCGDelta);
       Global::craftDragDelta     = static_cast<double>(activeScenario.craftDragDelta);
       Global::craftTrimDelta     = static_cast<double>(activeScenario.craftTrimDelta);
