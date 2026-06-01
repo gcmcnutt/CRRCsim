@@ -549,10 +549,22 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       // operational wire-format value per contracts/scenario_prng_chain.md.
       // Identical chain to autoc-side prefetch (same windPRNG init) →
       // deterministic across processes for the same scenarioSeed.
+      //
+      // 034 Phase 7 — when EnableWindVariations=0, the per-scenario
+      // randomization here was breaking the craft-isolation experiment:
+      // all scenarios saw different gust/thermal sequences even though
+      // the autoc-side meta.windDirectionOffset was zeroed. Now we draw
+      // the per-scenario seed regardless (draw-and-discard: preserves
+      // cross-class determinism if the flag is toggled) but feed the sim
+      // a fixed kDisabledWindSeed when the master enable is off — so
+      // every scenario flies through identical wind/gusts.
+      static constexpr uint32_t kDisabledWindSeed = 0xC0FFEEu;
       const auto subseeds =
           autoc::util::deriveClassSubSeeds(activeScenario.scenarioSeed);
       autoc::util::ClassPRNG windPRNG(subseeds.wind);
-      const uint32_t windSimSeed = windPRNG.next();
+      const uint32_t drawnWindSeed = windPRNG.next();
+      const uint32_t windSimSeed = init_.enableWindVariations
+          ? drawnWindSeed : kDisabledWindSeed;
       Global::Simulation->reset(windSimSeed);
       simCrashed = false;
       lastUpdateTimeMsec = 0;
