@@ -625,7 +625,8 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       std::cerr << "AUTOC deterministic path start pathSelector=" << pathSelector
                 << " pathVariant=" << activeScenario.pathVariantIndex
                 << " windVariant=" << activeScenario.windVariantIndex
-                << " windSeed=" << activeScenario.windSeed << std::endl;
+                << " scenarioSeed=0x" << std::hex << activeScenario.scenarioSeed
+                << std::dec << std::endl;  // 033: windSeed removed → scenarioSeed
 #endif
 
       // Record initial aircraft state at time 0 to match path start
