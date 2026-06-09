@@ -28,6 +28,7 @@
 #include "fdm_larcsim.h"
 
 #include <math.h>
+#include "../../global.h"   // 034 US4 — Global::craft* per-scenario carriers
 #include <iostream>
 
 #include "../../mod_misc/ls_constants.h"
@@ -94,9 +95,22 @@ void CRRC_AirplaneSim_Larcsim::initAirplaneState(double dRelVel,
                                                  double Z,
                                                  double R_X,
                                                  double R_Y,
-                                                 double R_Z) 
+                                                 double R_Z)
 {
   float flVelocity = dRelVel * getTrimmedFlightVelocity();
+
+  // 034 US4 — apply per-scenario craft variations from Global::craft*
+  // carriers (set by inputdev_autoc per-scenario reset, already ramp-scaled
+  // by the autoc-side applyVariationScale pipeline). Additive deltas on
+  // CG/trim/drag/pitch-eff/roll-eff; multiplicative on thrust (handled in
+  // engine()). All-zero deltas (default / σ=0) collapse to nominal_X
+  // exactly, so a zero-σ run is bit-identical to a pre-034 LOAD-only run.
+  CG_arm  = nominal_CG_arm  + static_cast<SCALAR>(Global::craftCGDelta);
+  CD_prof = nominal_CD_prof * (static_cast<SCALAR>(1.0) + static_cast<SCALAR>(Global::craftDragDelta));
+  Cm_0    = nominal_Cm_0    + static_cast<SCALAR>(Global::craftTrimDelta);
+  Cm_de   = nominal_Cm_de   * (static_cast<SCALAR>(1.0) + static_cast<SCALAR>(Global::craftPitchEffDelta));
+  CL_de   = nominal_CL_de   * (static_cast<SCALAR>(1.0) + static_cast<SCALAR>(Global::craftPitchEffDelta));
+  Cl_da   = nominal_Cl_da   * (static_cast<SCALAR>(1.0) + static_cast<SCALAR>(Global::craftRollEffDelta));
 
   Phi       = dPhi;         // bank/roll angle  [rad]
   Theta     = dTheta;       // pitch attitude angle [rad]
@@ -346,7 +360,21 @@ void CRRC_AirplaneSim_Larcsim::LoadFromXML(SimpleXMLTransfer* xml, int nVerbosit
   Cn_r  = i->getDouble("Cn_r");
   Cn_dr = i->getDouble("Cn_dr");
   Cn_da = i->getDouble("Cn_da");
-    
+
+  // 034 US4 — cache the nominal aero/CG values so per-scenario craft
+  // variation deltas (applied in initAirplaneState from Global::craft*)
+  // can perturb consistently from a fixed reference. Setting them here
+  // means a worker that ever runs WITHOUT craft variations (all Global
+  // craft fields at default) sees identical aero behavior to a pre-034
+  // build — initAirplaneState's `nominal_X + 0.0` / `nominal_X * 1.0`
+  // simplify to `X = nominal_X`.
+  nominal_Cm_0    = Cm_0;
+  nominal_Cm_de   = Cm_de;
+  nominal_CL_de   = CL_de;
+  nominal_CD_prof = CD_prof;
+  nominal_CG_arm  = CG_arm;
+  nominal_Cl_da   = Cl_da;
+
   flap_drag      = aero->getDouble("flap.drag", 0);
   flap_lift      = aero->getDouble("flap.lift", 0);
   flap_moment    = aero->getDouble("flap.moment", 0);
@@ -492,6 +520,14 @@ void CRRC_AirplaneSim_Larcsim::engine( SCALAR dt, TSimInputs* inputs, CRRCMath::
   
   inputs->pitch = 1;
   power->step(dt, inputs, v_V_wind_body*FT_TO_M, &v_F, &v_M);
+
+  // 034 US4 — scale propeller thrust by per-scenario craft factor (default
+  // 1.0 ⇒ no-op). Counter-torque scales together with thrust since it
+  // physically tracks shaft power, which tracks force at constant prop
+  // geometry. Carrier (Global::craftThrustScale) is set per-scenario by
+  // inputdev_autoc after autoc-side applyVariationScale ramping.
+  v_F *= Global::craftThrustScale;
+  v_M *= Global::craftThrustScale;
 
   // Convert SI to that other buggy system.
   v_F *= N_TO_LBF;

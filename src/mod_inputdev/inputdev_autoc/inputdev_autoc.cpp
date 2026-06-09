@@ -31,6 +31,7 @@
 #include "inputdev_autoc.h"
 #include "autoc/eval/scenario_meta_apply.h"  // 030 V1.5 — applyVariationScale
 #include "autoc/eval/variation_generator.h"
+#include "autoc/util/scenario_prng.h"        // 033 — deriveClassSubSeeds
 #include <algorithm>
 #include <chrono>
 #include <stdio.h>
@@ -455,7 +456,8 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 #ifdef DETAILED_LOGGING
       {
         const auto& firstScenario = evalResults.scenario;
-        std::cerr << "AUTOC deterministic wind seed=" << firstScenario.windSeed
+        std::cerr << "AUTOC deterministic scenarioSeed=0x" << std::hex
+                  << firstScenario.scenarioSeed << std::dec
                   << " pathVariant=" << firstScenario.pathVariantIndex
                   << " windVariant=" << firstScenario.windVariantIndex << std::endl;
       }
@@ -516,6 +518,21 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       Global::entryEastOffset = activeScenario.entryEastOffset / FEET_TO_METERS;
       Global::entryAltOffset = activeScenario.entryAltOffset / FEET_TO_METERS;
 
+      // 034 US4 — craft variation parameters from ScenarioMetadata. These
+      // arrive in this metadata block AFTER autoc-side applyVariationScale
+      // (worker calls applyVariationScale before this method runs), so the
+      // values are already ramp-scaled per-eval. FDM init reads them once
+      // at airplane reset (initAirplaneState) and engine maxThrust scaling.
+      // raw-ok: gp_scalar→double cast at the autoc→crrcsim type-domain
+      // boundary (Global::* members are double for CRRCSim FDM native math
+      // per Constitution VI whitelist).
+      Global::craftCGDelta       = static_cast<double>(activeScenario.craftCGDelta);
+      Global::craftDragDelta     = static_cast<double>(activeScenario.craftDragDelta);
+      Global::craftTrimDelta     = static_cast<double>(activeScenario.craftTrimDelta);
+      Global::craftThrustScale   = static_cast<double>(activeScenario.craftThrustScale);
+      Global::craftPitchEffDelta = static_cast<double>(activeScenario.craftPitchEffDelta);
+      Global::craftRollEffDelta  = static_cast<double>(activeScenario.craftRollEffDelta);
+
 #ifdef DETAILED_LOGGING
       std::cerr << "VARIATIONS1: heading=" << (Global::entryHeadingOffset * 180.0/M_PI)
                 << "° roll=" << (Global::entryRollOffset * 180.0/M_PI)
@@ -527,8 +544,28 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
                 << "m alt=" << Global::entryAltOffset << "m" << std::endl;
 #endif
 
-      // Reset simulation with wind seed
-      Global::Simulation->reset(activeScenario.windSeed);
+      // 033 cleanup — derive wind-class seed for CRRC_Random from
+      // meta.scenarioSeed. ClassPRNG(windSubSeed).next() is the
+      // operational wire-format value per contracts/scenario_prng_chain.md.
+      // Identical chain to autoc-side prefetch (same windPRNG init) →
+      // deterministic across processes for the same scenarioSeed.
+      //
+      // 034 Phase 7 — when EnableWindVariations=0, the per-scenario
+      // randomization here was breaking the craft-isolation experiment:
+      // all scenarios saw different gust/thermal sequences even though
+      // the autoc-side meta.windDirectionOffset was zeroed. Now we draw
+      // the per-scenario seed regardless (draw-and-discard: preserves
+      // cross-class determinism if the flag is toggled) but feed the sim
+      // a fixed kDisabledWindSeed when the master enable is off — so
+      // every scenario flies through identical wind/gusts.
+      static constexpr uint32_t kDisabledWindSeed = 0xC0FFEEu;
+      const auto subseeds =
+          autoc::util::deriveClassSubSeeds(activeScenario.scenarioSeed);
+      autoc::util::ClassPRNG windPRNG(subseeds.wind);
+      const uint32_t drawnWindSeed = windPRNG.next();
+      const uint32_t windSimSeed = init_.enableWindVariations
+          ? drawnWindSeed : kDisabledWindSeed;
+      Global::Simulation->reset(windSimSeed);
       simCrashed = false;
       lastUpdateTimeMsec = 0;
       pathIndex = 0;
@@ -553,10 +590,12 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
         crrcsimRabbitSpeed = 0.0f;
       } else {
         // Pathgen mode (existing): generate per-scenario rabbit-speed profile
-        // from autoc-side seed; engage delay + cruise throttle for INAV
-        // handoff fidelity.
+        // from the RABBIT-class sub-PRNG (033 cleanup — was activeScenario.
+        // rabbitSpeedSeed pre-cleanup; field removed). Same scenarioSeed →
+        // same rabbit-class seed → same speed profile across runs.
+        // `subseeds` was derived above for the wind path; reuse it here.
         {
-          unsigned int seed = activeScenario.rabbitSpeedSeed;
+          unsigned int seed = subseeds.rabbit;
           double totalDurationSec = SIM_TOTAL_TIME_MSEC / 1000.0;
           rabbitSpeedProfile = generateSpeedProfile(seed, rabbitSpeedConfig, totalDurationSec);
           crrcsimRabbitSpeed = static_cast<gp_scalar>(
@@ -586,7 +625,8 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       std::cerr << "AUTOC deterministic path start pathSelector=" << pathSelector
                 << " pathVariant=" << activeScenario.pathVariantIndex
                 << " windVariant=" << activeScenario.windVariantIndex
-                << " windSeed=" << activeScenario.windSeed << std::endl;
+                << " scenarioSeed=0x" << std::hex << activeScenario.scenarioSeed
+                << std::dec << std::endl;  // 033: windSeed removed → scenarioSeed
 #endif
 
       // Record initial aircraft state at time 0 to match path start
@@ -900,12 +940,20 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       evalResults.aircraftStateList.push_back(aircraftStatesCopy);
       aircraftStates.clear();
 
-      // 030 M11.preA — Per-scenario tracker buffers into v=2 dmp fields.
-      // Pathgen mode pushes empty vectors (tracker buffers stay clear),
-      // matching minisim's behavior where pathgen dmps load with empty
-      // cameraViewList/targetTrajectoryList per the M8a schema contract.
-      evalResults.cameraViewList.push_back(trackerCameraViewSteps_);
-      evalResults.targetTrajectoryList.push_back(trackerTargetSampleSteps_);
+      // 033 troubleshooting 2026-05-22 — bug fix mirror of the same fix in
+      // tools/minisim.cc: cameraViewList + targetTrajectoryList are
+      // TRACKER-MODE-ONLY per the EvalResults contract (protocol.h:359
+      // "Empty in pathgen-mode dmps"). Prior unconditional push_back of
+      // (empty in pathgen) inner vectors produced an outer-vector-non-
+      // empty dmp that the renderer (renderer.cc:400-402 dispatches on
+      // outer-vector emptiness) mis-classified as tracker mode → rabbit
+      // path render skipped. Pathgen workers leave the trackerCameraViewSteps_
+      // / trackerTargetSampleSteps_ buffers empty all along; gating the
+      // push restores the documented contract.
+      if (init_.mode == Mode::TRACKER) {
+        evalResults.cameraViewList.push_back(trackerCameraViewSteps_);
+        evalResults.targetTrajectoryList.push_back(trackerTargetSampleSteps_);
+      }
       trackerCameraViewSteps_.clear();
       trackerTargetSampleSteps_.clear();
       // Per-scenario telemetry counters (M7d.b). hullStrikeCount = hull

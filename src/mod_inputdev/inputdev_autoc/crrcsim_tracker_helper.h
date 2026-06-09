@@ -15,10 +15,10 @@
 //   gather_tracker_inputs, computeTrailRabbit (via the tick body),
 //   CrashHull, FlightArena
 // - Determinism: zero wall-clock / thread-id state. PRNG seeded from
-//   scenarioMetadata.windSeed (joint-PRNG-derived, stable across
-//   training-eval and elite-reeval of the same scenario index — was
-//   scenarioSequence pre-2026-05-09 but that drifted seed values
-//   between train/elite calls, producing ELITE_DIVERGED warnings).
+//   the rabbit class sub-PRNG derived from scenarioMetadata.scenarioSeed
+//   via autoc::util::deriveClassSubSeeds (033 cleanup; pre-cleanup used
+//   meta.windSeed which has been removed). Stable across training-eval
+//   and elite-reeval of the same scenario index.
 
 #pragma once
 
@@ -37,8 +37,8 @@ class CrrcsimTrackerHelper {
 public:
     // Called at scenario boundary (analogous to TrackerStepper::initScenario):
     // - Cursor = 0
-    // - PRNG seeded from scenarioMetadata.windSeed (with anti-zero guard;
-    //   was scenarioSequence pre-2026-05-09 — see TU comment above)
+    // - PRNG seeded from rabbit-class sub-seed derived from
+    //   scenarioMetadata.scenarioSeed (033; see TU comment above)
     // - Crash hull initialized from WorkerInit (030 V1 priming —
     //   crashHullRadius lives on the once-per-worker WorkerInit, not in
     //   per-eval EvalData).

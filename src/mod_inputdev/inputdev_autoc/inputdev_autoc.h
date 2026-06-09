@@ -134,6 +134,7 @@ private:
   EvalData evalData;
   EvalResults evalResults;
   std::vector<AircraftState> aircraftStates;
+
   std::vector<DebugSample> debugSamplesCurrentPath;
   double quatDotPast[4] = {0,0,0,0};
   int workerIndex = -1;

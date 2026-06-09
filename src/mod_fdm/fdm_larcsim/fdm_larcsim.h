@@ -193,6 +193,19 @@ class CRRC_AirplaneSim_Larcsim : public EOM01
    SCALAR CG_arm;
    SCALAR CL_drop;
    SCALAR CD_stall;
+
+   // 034 US4 — nominal cache for craft-variation perturbation. Set ONCE at
+   // LOAD time from XML; reused every initAirplaneState to compute per-
+   // scenario perturbed values from Global::craft* (which arrived already
+   // ramp-scaled via the autoc->worker pipeline). Adding the cache instead
+   // of overwriting in-place preserves the LOAD-from-XML semantics so a
+   // re-init without craft variations falls back exactly to the nominal.
+   SCALAR nominal_Cm_0;
+   SCALAR nominal_Cm_de;
+   SCALAR nominal_CL_de;
+   SCALAR nominal_CD_prof;
+   SCALAR nominal_CG_arm;
+   SCALAR nominal_Cl_da;
    
    SCALAR span_eff;  // span efficiency: Effective span  0.95 for most planes, 0.85 flying wing
    SCALAR CL_CD0;    // CL at minimum profile CD: 0.30 for 7037, 0.15 MH32, 0.0 RG15, AGxx, power

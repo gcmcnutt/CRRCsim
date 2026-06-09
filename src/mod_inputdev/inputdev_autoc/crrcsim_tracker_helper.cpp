@@ -17,6 +17,7 @@
 #include "autoc/eval/arena.h"
 #include "autoc/eval/derived_features.h"  // 032 phase 1 — compute_pair_span
 #include "autoc/eval/trail_rabbit.h"
+#include "autoc/util/scenario_prng.h"     // 033 — deriveClassSubSeeds
 
 using autoc::eval::CrashHull;
 using autoc::eval::ArenaEgressKind;
@@ -43,15 +44,15 @@ void CrrcsimTrackerHelper::initScenario(const SourceScenarioTrajectory& source,
     crash_hull_ = CrashHull{};
     crash_hull_.sphere_radius_m = init.crashHullRadius;
 
-    // PRNG seed = windSeed with anti-zero guard. Park-Miller LCG requires
-    // non-zero in [1, 2^31-2]. windSeed (NOT scenarioSequence) for
-    // determinism: scenarioSequence is a monotonic counter that differs
-    // between training-eval (seq=N) and elite-reeval (seq=N+~5000+) of the
-    // same scenario, which produced different LCG sequences → different
-    // didCrashFire Bernoulli draws → ELITE_DIVERGED warnings (2026-05-09).
-    // windSeed is per-scenario joint-PRNG-derived, stable across train/
-    // elite for the same scenario index. Same scenario → same hull-PRNG.
-    const uint32_t seed = static_cast<uint32_t>(meta.windSeed);
+    // 033 cleanup — crash-hull PRNG seed now derives from the RABBIT class
+    // sub-PRNG (per contracts/scenario_prng_chain.md — M2 crash-hull is
+    // a rabbit-class consumer). Pre-033 used meta.windSeed; that field
+    // has been removed. deriveClassSubSeeds(scenarioSeed) is the canonical
+    // route — autoc-side minisim TrackerStepper uses the same derivation
+    // path (deterministic across processes for the same scenarioSeed).
+    // anti-zero guard preserved (Park-Miller LCG breaks at state=0).
+    const auto subseeds = autoc::util::deriveClassSubSeeds(meta.scenarioSeed);
+    const uint32_t seed = subseeds.rabbit;
     prng_state_ = ((seed == 0 ? 0xC0FFEEu : seed % 0x7FFFFFFFu)) | 1u;
 
     // Reset NN recurrent state at scenario start (no-op for feedforward).
@@ -174,7 +175,8 @@ CrashReason CrrcsimTrackerHelper::tick(AircraftState& chaseState,
 
     // Step 2: gather tracker NN inputs.
     TrackerInputs inputs = {};
-    gather_tracker_inputs(chaseState, history_, init.flightArena, inputs);
+    gather_tracker_inputs(chaseState, history_, init.flightArena,
+                          static_cast<float>(init.cepGateThreshold), inputs);
 
     // Step 3: NN forward pass → updates chaseState.pitch/roll/throttle commands
     // (which inputdev_autoc.cpp's pending-command stage picks up post-tick).
@@ -190,8 +192,9 @@ CrashReason CrrcsimTrackerHelper::tick(AircraftState& chaseState,
     }
 
     // 030 M11.preA.3 (2026-05-10) — Crash-hull RE-ENABLED with fixed
-    // Bernoulli probability per NN tick (10Hz). Seed = windSeed (P1 fix,
-    // stable train↔elite). Mirrors the parallel re-enable in
+    // Bernoulli probability per NN tick (10Hz). 033 cleanup: seed now
+    // derives from rabbit-class sub-PRNG via deriveClassSubSeeds (was
+    // meta.windSeed pre-cleanup). Mirrors the parallel re-enable in
     // src/eval/tracker_stepper.cc — keep both bodies in lockstep.
     if (crash == CrashReason::None) {
         if (didCrashFire(crash_hull_, chaseState.getPosition(), target.position,

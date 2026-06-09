@@ -65,3 +65,12 @@ double            Global::windDirectionOffset = 0.0;
 double            Global::entryNorthOffset = 0.0;
 double            Global::entryEastOffset = 0.0;
 double            Global::entryAltOffset = 0.0;
+
+// 034 US4 — craft variation carriers (defaults = no variation; additive
+// deltas at 0.0 and the thrust multiplier at 1.0 leave the FDM nominal).
+double            Global::craftCGDelta = 0.0;
+double            Global::craftDragDelta = 0.0;
+double            Global::craftTrimDelta = 0.0;
+double            Global::craftThrustScale = 1.0;
+double            Global::craftPitchEffDelta = 0.0;
+double            Global::craftRollEffDelta = 0.0;
