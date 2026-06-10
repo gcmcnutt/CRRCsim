@@ -625,8 +625,9 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
           crrcsimRabbitSpeed = static_cast<gp_scalar>(
               getSpeedAtTime(rabbitSpeedProfile, 0.0));
         }
-        engageDelayTicksRemaining = static_cast<int>(
-            (engageDelayMsec + gEvalUpdateIntervalMsec - 1) / gEvalUpdateIntervalMsec);
+        // 037 T020 -- shared rate-independent ceil helper (aircraft_state.h);
+        // same arithmetic as the former inline expression (bitwise no-op).
+        engageDelayTicksRemaining = engageDelayTicks(engageDelayMsec, gEvalUpdateIntervalMsec);
         engageCoastThrottle = static_cast<gp_scalar>(
             CLAMP_DEF(2.0 * (activeScenario.entrySpeedFactor - 1.0), -1.0, 1.0));
       }

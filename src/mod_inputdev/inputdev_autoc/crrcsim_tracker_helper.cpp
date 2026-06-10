@@ -13,6 +13,9 @@
 #include "crrcsim_tracker_helper.h"
 
 #include <algorithm>
+#include <cmath>
+#include <stdexcept>
+#include <string>
 
 #include "autoc/eval/arena.h"
 #include "autoc/eval/derived_features.h"  // 032 phase 1 — compute_pair_span
@@ -58,12 +61,31 @@ void CrrcsimTrackerHelper::initScenario(const SourceScenarioTrajectory& source,
     // Reset NN recurrent state at scenario start (no-op for feedforward).
     nn.reset();
 
-    // Pre-fill history with source[0] projection replicated 6×, so the NN
+    // 037 T022 — fail loud on a source library whose tick spacing does not
+    // match the compiled cadence (the caller advances one SIM_TIME_STEP_MSEC
+    // of chase physics per source tick; a 100 ms-recorded library at a 50 ms
+    // cadence would silently play the target at 2× speed). Mirrors
+    // src/eval/tracker_stepper.cc::initScenario.
+    if (source_->samples.size() >= 2) {
+        const double gapMsec =
+            source_->samples[1].simTimeMsec - source_->samples[0].simTimeMsec;
+        if (std::lround(gapMsec) != SIM_TIME_STEP_MSEC) {
+            throw std::runtime_error(
+                "CrrcsimTrackerHelper: source trajectory tick spacing " +
+                std::to_string(gapMsec) + " ms != compiled SIM_TIME_STEP_MSEC " +
+                std::to_string(SIM_TIME_STEP_MSEC) +
+                " ms — rebake the M2 source library at the current cadence.");
+        }
+    }
+
+    // Pre-fill history with source[0] projection replicated across the WHOLE
+    // observation ring (037: depth grew with the R5 lag window), so the NN
     // sees a coherent stationary-source history at first tick. Mirrors the
-    // M9.preB minisim TrackerStepper init for the pre_roll == 0 case.
+    // minisim TrackerStepper init for the pre_roll == 0 case.
+    obs_ring_.reset();
     if (!source_->samples.empty()) {
         const SourceTickSample& first = source_->samples.front();
-        for (int i = 0; i < 6; ++i) {
+        for (int i = 0; i < TrackerObservationRing::kDepth; ++i) {
             projectAndShiftHistory(first, chaseState, init);
         }
     }
@@ -74,16 +96,9 @@ void CrrcsimTrackerHelper::initScenario(const SourceScenarioTrajectory& source,
 void CrrcsimTrackerHelper::projectAndShiftHistory(const SourceTickSample& target,
                                                   const AircraftState& chaseState,
                                                   const WorkerInit& init) {
-    // Shift slots [1..5] → [0..4]; new "now" lands at index 5.
-    for (int i = 0; i < 5; ++i) {
-        history_.left_x[i] = history_.left_x[i + 1];      // raw-ok: NN-byte-format primitive
-        history_.left_y[i] = history_.left_y[i + 1];      // raw-ok: NN-byte-format primitive
-        history_.left_cep[i] = history_.left_cep[i + 1];  // raw-ok: NN-byte-format primitive
-        history_.right_x[i] = history_.right_x[i + 1];    // raw-ok: NN-byte-format primitive
-        history_.right_y[i] = history_.right_y[i + 1];    // raw-ok: NN-byte-format primitive
-        history_.right_cep[i] = history_.right_cep[i + 1];// raw-ok: NN-byte-format primitive
-        history_.span[i] = history_.span[i + 1];          // raw-ok: NN-byte-format primitive — 032 phase 1
-    }
+    // 037 T022 — observations land in the deep ring; the 6-slot gather view
+    // (history_) is materialized at the R5 lag offsets at the end of this
+    // function. (Pre-037: 6-slot shift-left register.)
 
     // 030 V1 priming — cameras + beacons + airframe come from WorkerInit
     // (sent once per worker; autoc-side parses autoc-tracker.ini at startup).
@@ -109,12 +124,13 @@ void CrrcsimTrackerHelper::projectAndShiftHistory(const SourceTickSample& target
     proj.beacon = init.beaconRightConfig;
     BeaconObservation right = projectBeacon(proj);
 
-    history_.left_x[5] = left.screen_x;       // raw-ok: NN-byte-format primitive
-    history_.left_y[5] = left.screen_y;       // raw-ok: NN-byte-format primitive
-    history_.left_cep[5] = left.cep;          // raw-ok: NN-byte-format primitive
-    history_.right_x[5] = right.screen_x;     // raw-ok: NN-byte-format primitive
-    history_.right_y[5] = right.screen_y;     // raw-ok: NN-byte-format primitive
-    history_.right_cep[5] = right.cep;        // raw-ok: NN-byte-format primitive
+    TrackerObservationRing::Record rec;
+    rec.left_x = left.screen_x;       // raw-ok: NN-byte-format primitive
+    rec.left_y = left.screen_y;       // raw-ok: NN-byte-format primitive
+    rec.left_cep = left.cep;          // raw-ok: NN-byte-format primitive
+    rec.right_x = right.screen_x;     // raw-ok: NN-byte-format primitive
+    rec.right_y = right.screen_y;     // raw-ok: NN-byte-format primitive
+    rec.right_cep = right.cep;        // raw-ok: NN-byte-format primitive
 
     // 032 PHASE 1 — Cache beacon-pair span at the current tick. CEP-gated:
     // if EITHER beacon's CEP exceeds the configured threshold, substitute
@@ -126,15 +142,17 @@ void CrrcsimTrackerHelper::projectAndShiftHistory(const SourceTickSample& target
         left.cep >= cep_gate_threshold ||
         right.cep >= cep_gate_threshold;
     if (cep_gated) {
-        history_.span[5] = 0.0f;
+        rec.span = 0.0f;
     } else {
-        history_.span[5] = static_cast<float>(  // raw-ok: NN-byte-format slot write
+        rec.span = static_cast<float>(  // raw-ok: NN-byte-format slot write
             autoc::eval::compute_pair_span(
                 static_cast<gp_scalar>(left.screen_x),
                 static_cast<gp_scalar>(left.screen_y),
                 static_cast<gp_scalar>(right.screen_x),
                 static_cast<gp_scalar>(right.screen_y)));
     }
+    obs_ring_.push(rec);
+    obs_ring_.materialize(history_);
 
     // M2 dmp recording — mirror minisim's M8b populate.
     last_camera_view_.camera_pose_world_pos =
