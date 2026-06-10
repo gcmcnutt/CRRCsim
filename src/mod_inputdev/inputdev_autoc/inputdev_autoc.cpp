@@ -378,6 +378,24 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
   diagIndex = (diagIndex + 1) % DIAG_BUFFER_SIZE;
   if (diagCount < DIAG_BUFFER_SIZE) diagCount++;
 
+  // Apply pending commands when latency expires (no slew rate limiting —
+  // matches hardware path where Xiao writes NN outputs directly to
+  // MSP_SET_RAW_RC). 037 T017 FIX: this apply MUST run BEFORE the eval
+  // staging below. It used to sit at the end of this function, which worked
+  // at framesPerEval=2 (the eval frame staged, the in-between frame
+  // applied) but silently broke at framesPerEval=1 (20 Hz): every frame
+  // re-staged gPendingCommand — pushing readyTimeMsec forward — before the
+  // apply check could fire, so NN commands NEVER reached the surfaces and
+  // every genome flew the same ballistic coast (caught by the t4 basic-m1
+  // smoke run: 3000 identical fitnesses). Applying at frame top is
+  // behavior-identical at 10 Hz (the apply still lands on the t+50 frame).
+  if (gPendingCommand.valid && simTimeMsec >= gPendingCommand.readyTimeMsec) {
+    pitchCommand    = gPendingCommand.pitch;
+    rollCommand     = gPendingCommand.roll;
+    throttleCommand = gPendingCommand.throttle;
+    gPendingCommand.valid = false;
+  }
+
   // Frame-counter cadence (both headless and video):
   //  - Outer frame is a fixed cycleLength_ms (CTime). framesPerEval was
   //    validated at init to divide gEvalUpdateIntervalMsec exactly, so every
@@ -1310,14 +1328,8 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 #endif
   }
 
-  // Apply pending commands when latency expires (no slew rate limiting — matches
-  // hardware path where Xiao writes NN outputs directly to MSP_SET_RAW_RC).
-  if (gPendingCommand.valid && simTimeMsec >= gPendingCommand.readyTimeMsec) {
-    pitchCommand    = gPendingCommand.pitch;
-    rollCommand     = gPendingCommand.roll;
-    throttleCommand = gPendingCommand.throttle;
-    gPendingCommand.valid = false;
-  }
+  // (037: pending-command apply moved to the TOP of this function — see the
+  // framesPerEval=1 staging-overwrite fix comment there.)
 
   // NN outputs are direct surface commands (unity pass-through). 026's
   // external ACRO PID experiment went NO-GO — see
