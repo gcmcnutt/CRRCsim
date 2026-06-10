@@ -255,30 +255,32 @@ void CRRC_AirplaneSim_Larcsim::update(TSimInputs* inputs,
       const SCALAR slewCap = kFullThrowSurface
           * static_cast<SCALAR>(Global::servoSlew) * static_cast<SCALAR>(dt);
       const SCALAR servoTau = static_cast<SCALAR>(Global::servoTau);
-      // First-order lag blend; min(1,...) keeps it stable if dt >= tau.
+      // 037 fix: EXACT dt-invariant first-order lag blend (1 - exp(-dt/tau)),
+      // with the slew cap applied to the lag STEP rather than compounded with
+      // it. The prior code slew-clamped the error THEN multiplied by the blend,
+      // so slew and lag MULTIPLIED -- making the effective servo rate ~4x too
+      // slow. Now tau alone sets the response for small inputs; the slew cap
+      // only clips large/fast commands. Both terms are dt-scaled (FDM substep
+      // dt), so the servo is cadence-invariant (identical at any control rate).
       const SCALAR lagBlend = (servoTau > static_cast<SCALAR>(0.0))
-          ? std::min(static_cast<SCALAR>(1.0),
-                     static_cast<SCALAR>(dt) / servoTau)
+          ? (static_cast<SCALAR>(1.0)
+             - exp(-static_cast<SCALAR>(dt) / servoTau))
           : static_cast<SCALAR>(1.0);
 
-      // Aileron channel.
+      // Aileron channel: lag toward target, then slew-cap the step.
       {
-        SCALAR target = myInputs.aileron;
-        SCALAR delta = target - servoStateAileron;
-        if (delta >  slewCap) delta =  slewCap;
-        if (delta < -slewCap) delta = -slewCap;
-        SCALAR slewed = servoStateAileron + delta;
-        servoStateAileron += (slewed - servoStateAileron) * lagBlend;
+        SCALAR step = (myInputs.aileron - servoStateAileron) * lagBlend;
+        if (step >  slewCap) step =  slewCap;
+        if (step < -slewCap) step = -slewCap;
+        servoStateAileron += step;
         myInputs.aileron = servoStateAileron;
       }
-      // Elevator channel.
+      // Elevator channel: lag toward target, then slew-cap the step.
       {
-        SCALAR target = myInputs.elevator;
-        SCALAR delta = target - servoStateElevator;
-        if (delta >  slewCap) delta =  slewCap;
-        if (delta < -slewCap) delta = -slewCap;
-        SCALAR slewed = servoStateElevator + delta;
-        servoStateElevator += (slewed - servoStateElevator) * lagBlend;
+        SCALAR step = (myInputs.elevator - servoStateElevator) * lagBlend;
+        if (step >  slewCap) step =  slewCap;
+        if (step < -slewCap) step = -slewCap;
+        servoStateElevator += step;
         myInputs.elevator = servoStateElevator;
       }
     }
