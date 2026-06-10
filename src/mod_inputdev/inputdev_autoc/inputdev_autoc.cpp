@@ -89,7 +89,9 @@ ScenarioMetadata makePerEvalMeta(const WorkerInit& init,
 } // namespace
 
 // Global intervals used by AUTOC input (declared in header)
-unsigned long gEvalUpdateIntervalMsec = EVAL_UPDATE_INTERVAL_MSEC_DEFAULT;   // sensor/NN cadence
+// 037 T001 -- 0 = unset; the real cadence is assigned in init() from the primed
+// WorkerInit.controlIntervalMsec (single source of truth). No silent default.
+unsigned long gEvalUpdateIntervalMsec = 0;   // sensor/NN cadence (set from WorkerInit)
 unsigned long gComputeLatencyMsec = COMPUTE_LATENCY_MSEC_DEFAULT;           // simulated NN compute latency (sensor→output)
 
 static bool gInDeterministicTest = false;
@@ -277,8 +279,11 @@ int T_TX_InterfaceAUTOC::init(SimpleXMLTransfer *config)
 #if DEBUG_TX_INTERFACE > 0
   printf("int T_TX_InterfaceAUTOC::init(SimpleXMLTransfer* config)\n");
 #endif
-  // Allow runtime override of NN eval cadence and compute latency (sim time).
-  gEvalUpdateIntervalMsec = parseIntervalFromEnv("AUTOC_EVAL_INTERVAL_MSEC", EVAL_UPDATE_INTERVAL_MSEC_DEFAULT);
+  // 037 T001 -- the NN/sensor cadence (gEvalUpdateIntervalMsec) is NO LONGER
+  // read from the AUTOC_EVAL_INTERVAL_MSEC env var. It is now the single
+  // source of truth ControlIntervalMsec, set by the autoc parent (which alone
+  // has a ConfigManager) and delivered via the WorkerInit priming RPC below.
+  // Compute latency keeps its env override until 037 T024 retargets it.
   gComputeLatencyMsec = parseIntervalFromEnv("AUTOC_COMPUTE_LATENCY_MSEC", COMPUTE_LATENCY_MSEC_DEFAULT);
 
   // Engage delay: coast time before NN outputs reach surfaces (models INAV handoff)
@@ -290,10 +295,37 @@ int T_TX_InterfaceAUTOC::init(SimpleXMLTransfer *config)
     std::cerr << "[AUTOC] EngageDelayMsec=" << engageDelayMsec << std::endl;
   }
 
+  T_TX_Interface::init(config);
+
+  socket_ = new TcpSocket();
+  socket_->connect("127.0.0.1", cfg->callback_port);
+
+  // 030 V1 priming (2026-05-08) — phone home is the TCP connect above;
+  // autoc's ThreadPool sends the once-per-worker WorkerInit immediately
+  // after its accept(). Cache locally for all subsequent eval ticks.
+  // Loud-fail if priming RPC fails — no fallback. Mirrors minisim's
+  // SimProcess ctor priming receive (tools/minisim.cc).
+  init_ = receiveRPC<WorkerInit>(*socket_);
+  std::cerr << "[AUTOC] crrcsim worker primed mode=" << modeToString(init_.mode)
+            << " sourceList=" << init_.sourceList.size() << " scenarios"
+            << std::endl;
+
+  // 037 T001 -- take the control cadence from the primed WorkerInit. The autoc
+  // parent already validated it (> 0 and == SIM_TIME_STEP_MSEC at .ini load).
+  // Fail loud on the 0 sentinel: a worker must never silently default a rate.
+  if (init_.controlIntervalMsec == 0) {
+    std::cerr << "[AUTOC] FATAL: WorkerInit.controlIntervalMsec == 0 -- parent "
+              << "did not set the cadence (ControlIntervalMsec). No silent "
+              << "fallback." << std::endl;
+    std::exit(1);
+  }
+  gEvalUpdateIntervalMsec = init_.controlIntervalMsec;
+
   // Compute frame-counter cadence triple and enforce integrality at startup.
   // Constraint: outer cycleLength_ms must divide gEvalUpdateIntervalMsec
   // exactly. CTime already rounds cycleLength to a multiple of
-  // (Global::dt * 1000). See spec 024 WI4.
+  // (Global::dt * 1000). See spec 024 WI4. (Runs after priming now that the
+  // cadence arrives via WorkerInit rather than the environment.)
   {
     isHeadless = (config->getInt("video.enabled", 1) == 0);
     SimpleXMLTransfer* video = config->getChild("video", true);
@@ -322,21 +354,6 @@ int T_TX_InterfaceAUTOC::init(SimpleXMLTransfer *config)
               << " headless=" << (isHeadless ? "true" : "false")
               << std::endl;
   }
-
-  T_TX_Interface::init(config);
-
-  socket_ = new TcpSocket();
-  socket_->connect("127.0.0.1", cfg->callback_port);
-
-  // 030 V1 priming (2026-05-08) — phone home is the TCP connect above;
-  // autoc's ThreadPool sends the once-per-worker WorkerInit immediately
-  // after its accept(). Cache locally for all subsequent eval ticks.
-  // Loud-fail if priming RPC fails — no fallback. Mirrors minisim's
-  // SimProcess ctor priming receive (tools/minisim.cc).
-  init_ = receiveRPC<WorkerInit>(*socket_);
-  std::cerr << "[AUTOC] crrcsim worker primed mode=" << modeToString(init_.mode)
-            << " sourceList=" << init_.sourceList.size() << " scenarios"
-            << std::endl;
   return (0);
 }
 
@@ -532,6 +549,13 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       Global::craftThrustScale   = static_cast<double>(activeScenario.craftThrustScale);
       Global::craftPitchEffDelta = static_cast<double>(activeScenario.craftPitchEffDelta);
       Global::craftRollEffDelta  = static_cast<double>(activeScenario.craftRollEffDelta);
+      // 037 actuator dynamics (operator decision: in-FDM, substep dt).
+      // Absolute physical actuator-filter params (already ramp-scaled toward
+      // their nominal centers per-eval by applyVariationScale). Consumed in
+      // the fdm_larcsim per-substep update (servo lag+slew, thrust lag).
+      Global::servoTau           = static_cast<double>(activeScenario.craftServoTau);
+      Global::servoSlew          = static_cast<double>(activeScenario.craftServoSlew);
+      Global::thrustTau          = static_cast<double>(activeScenario.craftThrustTau);
 
 #ifdef DETAILED_LOGGING
       std::cerr << "VARIATIONS1: heading=" << (Global::entryHeadingOffset * 180.0/M_PI)
@@ -1230,6 +1254,13 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       sample.pitchCommand = aircraftState.getPitchCommand();
       sample.rollCommand = aircraftState.getRollCommand();
       sample.throttleCommand = aircraftState.getThrottleCommand();
+      // 037 actuator dynamics: the *Sim columns below record the PRE-FDM
+      // surface COMMAND (the controller output mapped into surface units), NOT
+      // the lagged/slew-limited surface the aircraft actually flew. The servo
+      // lag+slew and thrust lag live inside the FDM (fdm_larcsim.cpp, per
+      // substep) and operate on a copy (myInputs); the actuated surface is a
+      // physics detail and is intentionally NOT surfaced here. Recording stays
+      // command-honest (NN output), unchanged from pre-037.
       sample.elevatorSim = static_cast<gp_scalar>(-pitchCommand / 2.0);
       sample.aileronSim = static_cast<gp_scalar>(rollCommand / 2.0);
       sample.throttleSim = static_cast<gp_scalar>(throttleCommand / 2.0 + 0.5);

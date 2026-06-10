@@ -28,6 +28,7 @@
 #include "fdm_larcsim.h"
 
 #include <math.h>
+#include <algorithm>        // 037 std::min for the in-FDM actuator lag blend
 #include "../../global.h"   // 034 US4 — Global::craft* per-scenario carriers
 #include <iostream>
 
@@ -111,6 +112,16 @@ void CRRC_AirplaneSim_Larcsim::initAirplaneState(double dRelVel,
   Cm_de   = nominal_Cm_de   * (static_cast<SCALAR>(1.0) + static_cast<SCALAR>(Global::craftPitchEffDelta));
   CL_de   = nominal_CL_de   * (static_cast<SCALAR>(1.0) + static_cast<SCALAR>(Global::craftPitchEffDelta));
   Cl_da   = nominal_Cl_da   * (static_cast<SCALAR>(1.0) + static_cast<SCALAR>(Global::craftRollEffDelta));
+
+  // 037 actuator dynamics (operator decision: in-FDM, substep dt). Reset the
+  // persistent actuator-filter state at scenario reset so a fresh scenario
+  // starts from neutral surfaces and full commanded thrust, not the previous
+  // flight's lagged state. Servo surfaces start neutral (0.0); the thrust
+  // lag state starts at 1.0 (full applied scale) so the very first lag step
+  // is a no-op until power->step produces a commanded thrust.
+  servoStateAileron  = static_cast<SCALAR>(0.0);
+  servoStateElevator = static_cast<SCALAR>(0.0);
+  thrustStateScale   = static_cast<SCALAR>(1.0);
 
   Phi       = dPhi;         // bank/roll angle  [rad]
   Theta     = dTheta;       // pitch attitude angle [rad]
@@ -223,6 +234,54 @@ void CRRC_AirplaneSim_Larcsim::update(TSimInputs* inputs,
     ls_aux(v_V_local_airmass, v_V_gust_body);
 
     env->ControllerCallback(dt, this, inputs, &myInputs);
+
+    // 037 actuator dynamics (operator decision: in-FDM, substep dt). Apply a
+    // per-channel servo model (slew-rate limit + first-order lag) to the
+    // aileron/elevator surface commands BEFORE they feed the aero force/moment
+    // calc and the engine call. This is a FDM physics filter on the command
+    // surface -- NOT a command-path filter in the controller. dt here is the
+    // LaRCSim per-substep integration step (the same dt passed to ls_step and
+    // engine), not the outer frame interval. Pure deterministic arithmetic on
+    // dt -- no PRNG. With the nominal centers (servoTau 0.020 s, servoSlew 6.0
+    // full-throw/s) this is a small but non-zero lag, so a no-variation run
+    // differs from pre-037 ONLY by this intended nominal lag model.
+    //
+    // Surface convention: TSimInputs aileron/elevator are in [-0.5, 0.5]
+    // (full throw magnitude = 0.5). servoSlew is in full-throw/s where
+    // full-throw = 1.0 (the [-1,1] crrcsim convention), so the per-substep
+    // surface-unit slew cap is 0.5 * servoSlew * dt.
+    {
+      const SCALAR kFullThrowSurface = static_cast<SCALAR>(0.5);
+      const SCALAR slewCap = kFullThrowSurface
+          * static_cast<SCALAR>(Global::servoSlew) * static_cast<SCALAR>(dt);
+      const SCALAR servoTau = static_cast<SCALAR>(Global::servoTau);
+      // First-order lag blend; min(1,...) keeps it stable if dt >= tau.
+      const SCALAR lagBlend = (servoTau > static_cast<SCALAR>(0.0))
+          ? std::min(static_cast<SCALAR>(1.0),
+                     static_cast<SCALAR>(dt) / servoTau)
+          : static_cast<SCALAR>(1.0);
+
+      // Aileron channel.
+      {
+        SCALAR target = myInputs.aileron;
+        SCALAR delta = target - servoStateAileron;
+        if (delta >  slewCap) delta =  slewCap;
+        if (delta < -slewCap) delta = -slewCap;
+        SCALAR slewed = servoStateAileron + delta;
+        servoStateAileron += (slewed - servoStateAileron) * lagBlend;
+        myInputs.aileron = servoStateAileron;
+      }
+      // Elevator channel.
+      {
+        SCALAR target = myInputs.elevator;
+        SCALAR delta = target - servoStateElevator;
+        if (delta >  slewCap) delta =  slewCap;
+        if (delta < -slewCap) delta = -slewCap;
+        SCALAR slewed = servoStateElevator + delta;
+        servoStateElevator += (slewed - servoStateElevator) * lagBlend;
+        myInputs.elevator = servoStateElevator;
+      }
+    }
 
     aero(&myInputs, m_V_local_airmass_grad, v_R_omega_gust_body, v_F_aero, v_M_aero);
 
@@ -375,6 +434,14 @@ void CRRC_AirplaneSim_Larcsim::LoadFromXML(SimpleXMLTransfer* xml, int nVerbosit
   nominal_CG_arm  = CG_arm;
   nominal_Cl_da   = Cl_da;
 
+  // 037 actuator dynamics (operator decision: in-FDM, substep dt). Initialize
+  // the persistent actuator-filter state at LOAD so any pre-scenario trim call
+  // (trimAirplaneState -> engine(0,...)) sees defined state; it is RE-reset to
+  // these same values at every initAirplaneState (scenario reset).
+  servoStateAileron  = static_cast<SCALAR>(0.0);
+  servoStateElevator = static_cast<SCALAR>(0.0);
+  thrustStateScale   = static_cast<SCALAR>(1.0);
+
   flap_drag      = aero->getDouble("flap.drag", 0);
   flap_lift      = aero->getDouble("flap.lift", 0);
   flap_moment    = aero->getDouble("flap.moment", 0);
@@ -521,13 +588,32 @@ void CRRC_AirplaneSim_Larcsim::engine( SCALAR dt, TSimInputs* inputs, CRRCMath::
   inputs->pitch = 1;
   power->step(dt, inputs, v_V_wind_body*FT_TO_M, &v_F, &v_M);
 
-  // 034 US4 — scale propeller thrust by per-scenario craft factor (default
-  // 1.0 ⇒ no-op). Counter-torque scales together with thrust since it
+  // 037 actuator dynamics (operator decision: in-FDM, substep dt). First-order
+  // lag on the APPLIED thrust scale toward the commanded craftThrustScale.
+  // Models motor/ESC spool-up: the commanded thrust scale (craftThrustScale)
+  // is the steady-state target; thrustStateScale relaxes toward it at
+  // dt/thrustTau each substep. dt is the LaRCSim per-substep step (passed in
+  // by update()). Pure deterministic arithmetic on dt; with the nominal
+  // thrustTau (0.150 s) this is a non-zero lag, the intended physics change.
+  // State persists across substeps; reset to 1.0 at initAirplaneState.
+  {
+    const SCALAR commandedScale = static_cast<SCALAR>(Global::craftThrustScale);
+    const SCALAR thrustTau = static_cast<SCALAR>(Global::thrustTau);
+    const SCALAR lagBlend = (thrustTau > static_cast<SCALAR>(0.0))
+        ? std::min(static_cast<SCALAR>(1.0), dt / thrustTau)
+        : static_cast<SCALAR>(1.0);
+    thrustStateScale += (commandedScale - thrustStateScale) * lagBlend;
+  }
+
+  // 034 US4 -- scale propeller thrust by per-scenario craft factor (default
+  // 1.0 = no-op), now routed through the 037 lagged thrust state so the
+  // applied scale spools toward the commanded craftThrustScale instead of
+  // stepping instantly. Counter-torque scales together with thrust since it
   // physically tracks shaft power, which tracks force at constant prop
   // geometry. Carrier (Global::craftThrustScale) is set per-scenario by
   // inputdev_autoc after autoc-side applyVariationScale ramping.
-  v_F *= Global::craftThrustScale;
-  v_M *= Global::craftThrustScale;
+  v_F *= thrustStateScale;
+  v_M *= thrustStateScale;
 
   // Convert SI to that other buggy system.
   v_F *= N_TO_LBF;

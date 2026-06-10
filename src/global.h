@@ -105,6 +105,16 @@ class Global
     static double craftThrustScale;      ///< multiplier on engine maxThrust
     static double craftPitchEffDelta;    ///< fraction, pitch-authority multiplier delta
     static double craftRollEffDelta;     ///< fraction, roll-authority multiplier delta
+
+    // 037 actuator dynamics (operator decision: in-FDM, substep dt).
+    // Absolute physical parameters for the in-FDM actuator filter (servo
+    // lag+slew on aileron/elevator, first-order thrust lag). Set per-scenario
+    // by inputdev_autoc AFTER worker-side applyVariationScale ramping;
+    // consumed each FDM substep in fdm_larcsim. Defaults = nominal centers so
+    // a no-craft run still runs the nominal lag model.
+    static double servoTau;              ///< s, servo first-order lag time constant (center 0.020)
+    static double servoSlew;             ///< /s, servo slew-rate limit, full-throw/s (center 6.0)
+    static double thrustTau;             ///< s, thrust first-order lag time constant (center 0.150)
 };
 
 

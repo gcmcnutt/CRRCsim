@@ -74,3 +74,10 @@ double            Global::craftTrimDelta = 0.0;
 double            Global::craftThrustScale = 1.0;
 double            Global::craftPitchEffDelta = 0.0;
 double            Global::craftRollEffDelta = 0.0;
+
+// 037 actuator dynamics (operator decision: in-FDM, substep dt). Defaults =
+// nominal centers (see craft_variation.h kCraft*Center): a no-craft run runs
+// the nominal lag model rather than a bypassed pass-through.
+double            Global::servoTau = 0.020;   // s
+double            Global::servoSlew = 6.0;    // /s (full-throw/s)
+double            Global::thrustTau = 0.150;  // s

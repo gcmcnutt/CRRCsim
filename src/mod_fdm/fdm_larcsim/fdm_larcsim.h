@@ -206,7 +206,19 @@ class CRRC_AirplaneSim_Larcsim : public EOM01
    SCALAR nominal_CD_prof;
    SCALAR nominal_CG_arm;
    SCALAR nominal_Cl_da;
-   
+
+   // 037 actuator dynamics (operator decision: in-FDM, substep dt).
+   // Persistent per-substep actuator-filter state. The servo channels run a
+   // slew-rate limiter followed by a first-order lag toward the slewed target;
+   // the thrust channel runs a first-order lag on the applied thrust scale.
+   // State carries across substeps within a scenario and is RESET to the
+   // commanded/identity value at initAirplaneState (scenario reset) so a fresh
+   // scenario does not inherit the previous flight's lagged surfaces.
+   // Surface state is in TSimInputs surface units ([-0.5, 0.5] full throw).
+   SCALAR servoStateAileron;   ///< lagged aileron surface (TSimInputs units)
+   SCALAR servoStateElevator;  ///< lagged elevator surface (TSimInputs units)
+   SCALAR thrustStateScale;    ///< lagged thrust scale (1.0 = full commanded)
+
    SCALAR span_eff;  // span efficiency: Effective span  0.95 for most planes, 0.85 flying wing
    SCALAR CL_CD0;    // CL at minimum profile CD: 0.30 for 7037, 0.15 MH32, 0.0 RG15, AGxx, power
    SCALAR CD_CLsq;   // d(CD)/d(CL^2),  curvature of parabolic profile polar: 0.01 composites, 0.015 saggy ships, 0.02 beat up ship
