@@ -250,6 +250,16 @@ void CRRC_AirplaneSim_Larcsim::update(TSimInputs* inputs,
     // (full throw magnitude = 0.5). servoSlew is in full-throw/s where
     // full-throw = 1.0 (the [-1,1] crrcsim convention), so the per-substep
     // surface-unit slew cap is 0.5 * servoSlew * dt.
+    //
+    // 037 t7 A/B (operator 2026-06-10): servo lag+slew TEMPORARILY DISABLED
+    // (#if 0) to isolate the cadence variable — restores the 035-era
+    // idealized instant servo on BOTH aileron (roll) and elevator (pitch),
+    // keeping the rest of the 20 Hz bundle. The t6 20 Hz+servo arm showed
+    // limited tracking (pctInStreak 1.6% at gen 267, basin risk); this arm
+    // answers "what does 20 Hz do WITHOUT the servo damping". The
+    // per-scenario servoTau/servoSlew draws still happen (PRNG order
+    // preserved); they are simply unused here. RE-ENABLE with #if 1.
+#if 0
     {
       const SCALAR kFullThrowSurface = static_cast<SCALAR>(0.5);
       const SCALAR slewCap = kFullThrowSurface
@@ -284,6 +294,7 @@ void CRRC_AirplaneSim_Larcsim::update(TSimInputs* inputs,
         myInputs.elevator = servoStateElevator;
       }
     }
+#endif  // 037 t7 servo A/B disable
 
     aero(&myInputs, m_V_local_airmass_grad, v_R_omega_gust_body, v_F_aero, v_M_aero);
 
