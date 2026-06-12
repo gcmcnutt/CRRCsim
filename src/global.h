@@ -112,9 +112,17 @@ class Global
     // by inputdev_autoc AFTER worker-side applyVariationScale ramping;
     // consumed each FDM substep in fdm_larcsim. Defaults = nominal centers so
     // a no-craft run still runs the nominal lag model.
-    static double servoTau;              ///< s, servo first-order lag time constant (center 0.020)
-    static double servoSlew;             ///< /s, servo slew-rate limit, full-throw/s (center 6.0)
+    static double servoTau;              ///< s, servo first-order lag time constant — v2: UNUSED by the FDM (kept for wire/draw stability)
+    static double servoSlew;             ///< /s, servo slew-rate limit, full-throw/s (v2 center ≈12.1 from the 0.07s/60° DSM-44 transit)
     static double thrustTau;             ///< s, thrust first-order lag time constant (center 0.150)
+
+    // 037 servo v2 (operator 2026-06-11, post-t6/t7 A/B): datasheet-shaped
+    // servo = 50 Hz PWM command LATCH (per-scenario phase = the 0-20 ms
+    // dead-time) + pure slew toward the latched target. Gated by
+    // servoModelEnabled (WorkerInit.servoModelEnabled <- ServoModelEnabled
+    // ini knob) so A/B run pairs differ by ini only.
+    static bool servoModelEnabled;       ///< master switch for the in-FDM servo block
+    static double servoPwmPhase;         ///< s, per-scenario PWM latch phase, [0, 0.020)
 };
 
 

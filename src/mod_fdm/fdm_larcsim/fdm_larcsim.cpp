@@ -116,12 +116,22 @@ void CRRC_AirplaneSim_Larcsim::initAirplaneState(double dRelVel,
   // 037 actuator dynamics (operator decision: in-FDM, substep dt). Reset the
   // persistent actuator-filter state at scenario reset so a fresh scenario
   // starts from neutral surfaces and full commanded thrust, not the previous
-  // flight's lagged state. Servo surfaces start neutral (0.0); the thrust
+  // flight's state. Servo surfaces + latches start neutral (0.0); the thrust
   // lag state starts at 1.0 (full applied scale) so the very first lag step
   // is a no-op until power->step produces a commanded thrust.
-  servoStateAileron  = static_cast<SCALAR>(0.0);
-  servoStateElevator = static_cast<SCALAR>(0.0);
-  thrustStateScale   = static_cast<SCALAR>(1.0);
+  //
+  // 037 servo v2: the PWM timer starts at (frame - phase) so the FIRST latch
+  // lands exactly `phase` seconds into the scenario (phase = per-scenario
+  // craft draw, uniform [0, 20) ms — the engage episode's alignment within
+  // the 50 Hz command frame), then every 20 ms after. Deterministic: phase
+  // is scenario-static, dt arithmetic only.
+  servoStateAileron    = static_cast<SCALAR>(0.0);
+  servoStateElevator   = static_cast<SCALAR>(0.0);
+  servoLatchedAileron  = static_cast<SCALAR>(0.0);
+  servoLatchedElevator = static_cast<SCALAR>(0.0);
+  servoPwmTimerSec     = static_cast<SCALAR>(0.020)
+      - static_cast<SCALAR>(Global::servoPwmPhase);
+  thrustStateScale     = static_cast<SCALAR>(1.0);
 
   Phi       = dPhi;         // bank/roll angle  [rad]
   Theta     = dTheta;       // pitch attitude angle [rad]
@@ -235,66 +245,70 @@ void CRRC_AirplaneSim_Larcsim::update(TSimInputs* inputs,
 
     env->ControllerCallback(dt, this, inputs, &myInputs);
 
-    // 037 actuator dynamics (operator decision: in-FDM, substep dt). Apply a
-    // per-channel servo model (slew-rate limit + first-order lag) to the
-    // aileron/elevator surface commands BEFORE they feed the aero force/moment
-    // calc and the engine call. This is a FDM physics filter on the command
-    // surface -- NOT a command-path filter in the controller. dt here is the
-    // LaRCSim per-substep integration step (the same dt passed to ls_step and
-    // engine), not the outer frame interval. Pure deterministic arithmetic on
-    // dt -- no PRNG. With the nominal centers (servoTau 0.020 s, servoSlew 6.0
-    // full-throw/s) this is a small but non-zero lag, so a no-variation run
-    // differs from pre-037 ONLY by this intended nominal lag model.
+    // 037 servo model v2 (operator 2026-06-11, post-t6/t7 A/B — see
+    // specs/037-20hz-control-loop/outcome.md + the DSM-44 datasheet check in
+    // finding.md). The v1 lag-dominant filter (tau 20 ms + slew 3–9/s, shaded
+    // slow vs the datasheet) capped tracking entirely; v1 history is in git
+    // (removed here, was the #if 0 block from the t7 A/B). v2 is
+    // datasheet-shaped, two components:
+    //
+    //   1. PWM command LATCH: the servo samples its command pulse once per
+    //      50 Hz frame (20 ms). The latch fires when the per-substep timer
+    //      crosses the frame boundary; the per-scenario phase
+    //      (Global::servoPwmPhase, uniform [0,20) ms, craft-class draw) is
+    //      the engage episode's arbitrary alignment within the frame — the
+    //      operator's "0–20 ms PWM lag jitter". Between latches the target
+    //      is FROZEN (true dead-time: delays, does not smooth).
+    //   2. Pure SLEW toward the latched target, from the measured transit
+    //      (~55 ms per 60° on a ~90° span ⇒ center ≈12.1 full-throw/s,
+    //      per-scenario draw clamped 8–16). No first-order lag in v2 —
+    //      a digital micro's small-signal settle is sub-frame; the latch
+    //      supplies the delay, the slew supplies the transit.
+    //
+    // Gated on Global::servoModelEnabled (ServoModelEnabled ini knob via
+    // WorkerInit) so A/B pairs (t8 off / t9 on) differ by ini only.
+    // Deterministic: pure dt arithmetic + per-scenario state reset in
+    // initAirplaneState; no PRNG here.
     //
     // Surface convention: TSimInputs aileron/elevator are in [-0.5, 0.5]
     // (full throw magnitude = 0.5). servoSlew is in full-throw/s where
     // full-throw = 1.0 (the [-1,1] crrcsim convention), so the per-substep
     // surface-unit slew cap is 0.5 * servoSlew * dt.
-    //
-    // 037 t7 A/B (operator 2026-06-10): servo lag+slew TEMPORARILY DISABLED
-    // (#if 0) to isolate the cadence variable — restores the 035-era
-    // idealized instant servo on BOTH aileron (roll) and elevator (pitch),
-    // keeping the rest of the 20 Hz bundle. The t6 20 Hz+servo arm showed
-    // limited tracking (pctInStreak 1.6% at gen 267, basin risk); this arm
-    // answers "what does 20 Hz do WITHOUT the servo damping". The
-    // per-scenario servoTau/servoSlew draws still happen (PRNG order
-    // preserved); they are simply unused here. RE-ENABLE with #if 1.
-#if 0
+    if (Global::servoModelEnabled)
     {
       const SCALAR kFullThrowSurface = static_cast<SCALAR>(0.5);
+      const SCALAR kPwmFrameSec = static_cast<SCALAR>(0.020);  // 50 Hz command frame
       const SCALAR slewCap = kFullThrowSurface
           * static_cast<SCALAR>(Global::servoSlew) * static_cast<SCALAR>(dt);
-      const SCALAR servoTau = static_cast<SCALAR>(Global::servoTau);
-      // 037 fix: EXACT dt-invariant first-order lag blend (1 - exp(-dt/tau)),
-      // with the slew cap applied to the lag STEP rather than compounded with
-      // it. The prior code slew-clamped the error THEN multiplied by the blend,
-      // so slew and lag MULTIPLIED -- making the effective servo rate ~4x too
-      // slow. Now tau alone sets the response for small inputs; the slew cap
-      // only clips large/fast commands. Both terms are dt-scaled (FDM substep
-      // dt), so the servo is cadence-invariant (identical at any control rate).
-      const SCALAR lagBlend = (servoTau > static_cast<SCALAR>(0.0))
-          ? (static_cast<SCALAR>(1.0)
-             - exp(-static_cast<SCALAR>(dt) / servoTau))
-          : static_cast<SCALAR>(1.0);
 
-      // Aileron channel: lag toward target, then slew-cap the step.
+      // PWM latch: timer was initialized to (frame - phase) at scenario
+      // reset, so the FIRST latch lands `phase` seconds in; thereafter every
+      // 20 ms. Until the first latch the servo holds neutral (the reset
+      // state) — commands are coast-zero during the engage window anyway.
+      servoPwmTimerSec += static_cast<SCALAR>(dt);
+      while (servoPwmTimerSec >= kPwmFrameSec) {
+        servoLatchedAileron  = myInputs.aileron;
+        servoLatchedElevator = myInputs.elevator;
+        servoPwmTimerSec -= kPwmFrameSec;
+      }
+
+      // Aileron channel: slew toward the LATCHED target.
       {
-        SCALAR step = (myInputs.aileron - servoStateAileron) * lagBlend;
+        SCALAR step = servoLatchedAileron - servoStateAileron;
         if (step >  slewCap) step =  slewCap;
         if (step < -slewCap) step = -slewCap;
         servoStateAileron += step;
         myInputs.aileron = servoStateAileron;
       }
-      // Elevator channel: lag toward target, then slew-cap the step.
+      // Elevator channel: slew toward the LATCHED target.
       {
-        SCALAR step = (myInputs.elevator - servoStateElevator) * lagBlend;
+        SCALAR step = servoLatchedElevator - servoStateElevator;
         if (step >  slewCap) step =  slewCap;
         if (step < -slewCap) step = -slewCap;
         servoStateElevator += step;
         myInputs.elevator = servoStateElevator;
       }
     }
-#endif  // 037 t7 servo A/B disable
 
     aero(&myInputs, m_V_local_airmass_grad, v_R_omega_gust_body, v_F_aero, v_M_aero);
 

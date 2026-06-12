@@ -321,6 +321,12 @@ int T_TX_InterfaceAUTOC::init(SimpleXMLTransfer *config)
   }
   gEvalUpdateIntervalMsec = init_.controlIntervalMsec;
 
+  // 037 servo v2 -- take the in-FDM servo-model switch from the primed
+  // WorkerInit (ServoModelEnabled ini knob on the parent).
+  Global::servoModelEnabled = init_.servoModelEnabled;
+  std::cerr << "[AUTOC] servoModelEnabled="
+            << (Global::servoModelEnabled ? "true" : "false") << std::endl;
+
   // Compute frame-counter cadence triple and enforce integrality at startup.
   // Constraint: outer cycleLength_ms must divide gEvalUpdateIntervalMsec
   // exactly. CTime already rounds cycleLength to a multiple of
@@ -574,6 +580,10 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       Global::servoTau           = static_cast<double>(activeScenario.craftServoTau);
       Global::servoSlew          = static_cast<double>(activeScenario.craftServoSlew);
       Global::thrustTau          = static_cast<double>(activeScenario.craftThrustTau);
+      // 037 servo v2 -- per-scenario PWM latch phase (the 0-20 ms command
+      // dead-time); consumed by the fdm_larcsim latch when
+      // Global::servoModelEnabled.
+      Global::servoPwmPhase      = static_cast<double>(activeScenario.craftServoPwmPhase);
 
 #ifdef DETAILED_LOGGING
       std::cerr << "VARIATIONS1: heading=" << (Global::entryHeadingOffset * 180.0/M_PI)
