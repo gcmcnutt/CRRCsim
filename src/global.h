@@ -107,12 +107,12 @@ class Global
     static double craftRollEffDelta;     ///< fraction, roll-authority multiplier delta
 
     // 037 actuator dynamics (operator decision: in-FDM, substep dt).
-    // Absolute physical parameters for the in-FDM actuator filter (servo
-    // lag+slew on aileron/elevator, first-order thrust lag). Set per-scenario
-    // by inputdev_autoc AFTER worker-side applyVariationScale ramping;
-    // consumed each FDM substep in fdm_larcsim. Defaults = nominal centers so
-    // a no-craft run still runs the nominal lag model.
-    static double servoTau;              ///< s, servo first-order lag time constant — v2: UNUSED by the FDM (kept for wire/draw stability)
+    // Absolute physical parameters for the in-FDM actuator filter (servo slew
+    // on aileron/elevator, first-order thrust lag). Set per-scenario by
+    // inputdev_autoc AFTER worker-side applyVariationScale ramping; consumed
+    // each FDM substep in fdm_larcsim. Defaults = nominal centers so a
+    // no-craft run still runs the nominal model. (servo first-order tau
+    // removed 2026-06-12 — v2 PWM-latch+slew has no lag term.)
     static double servoSlew;             ///< /s, servo slew-rate limit in autoc [-1,1] command units (full span = 2.0 units; v2 center ≈24.2 from the DSM-44 transit — see autoc craft_variation.h)
     static double thrustTau;             ///< s, thrust first-order lag time constant (center 0.150)
 

@@ -576,8 +576,8 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       // 037 actuator dynamics (operator decision: in-FDM, substep dt).
       // Absolute physical actuator-filter params (already ramp-scaled toward
       // their nominal centers per-eval by applyVariationScale). Consumed in
-      // the fdm_larcsim per-substep update (servo lag+slew, thrust lag).
-      Global::servoTau           = static_cast<double>(activeScenario.craftServoTau);
+      // the fdm_larcsim per-substep update (servo slew, thrust lag).
+      // (servo first-order tau removed 2026-06-12 — v2 has no lag term.)
       Global::servoSlew          = static_cast<double>(activeScenario.craftServoSlew);
       Global::thrustTau          = static_cast<double>(activeScenario.craftThrustTau);
       // 037 servo v2 -- per-scenario PWM latch phase (the 0-20 ms command
