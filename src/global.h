@@ -113,7 +113,7 @@ class Global
     // consumed each FDM substep in fdm_larcsim. Defaults = nominal centers so
     // a no-craft run still runs the nominal lag model.
     static double servoTau;              ///< s, servo first-order lag time constant — v2: UNUSED by the FDM (kept for wire/draw stability)
-    static double servoSlew;             ///< /s, servo slew-rate limit, full-throw/s (v2 center ≈12.1 from the 0.07s/60° DSM-44 transit)
+    static double servoSlew;             ///< /s, servo slew-rate limit in autoc [-1,1] command units (full span = 2.0 units; v2 center ≈24.2 from the DSM-44 transit — see autoc craft_variation.h)
     static double thrustTau;             ///< s, thrust first-order lag time constant (center 0.150)
 
     // 037 servo v2 (operator 2026-06-11, post-t6/t7 A/B): datasheet-shaped

@@ -270,15 +270,20 @@ void CRRC_AirplaneSim_Larcsim::update(TSimInputs* inputs,
     // Deterministic: pure dt arithmetic + per-scenario state reset in
     // initAirplaneState; no PRNG here.
     //
-    // Surface convention: TSimInputs aileron/elevator are in [-0.5, 0.5]
-    // (full throw magnitude = 0.5). servoSlew is in full-throw/s where
-    // full-throw = 1.0 (the [-1,1] crrcsim convention), so the per-substep
-    // surface-unit slew cap is 0.5 * servoSlew * dt.
+    // UNITS (operator 2026-06-12, post-t8 audit): Global::servoSlew is in
+    // AUTOC command units/s — the [-1, +1] NN/INAV span, full range = 2.0
+    // units = the full mechanical span (DSM-44 90°). TSimInputs surfaces are
+    // [-0.5, +0.5] = command/2, so the platform translation to a per-substep
+    // surface-unit slew cap is 0.5 * servoSlew * dt. (The 2×-slow t6/t8 bug
+    // was NOT this factor — it was the autoc-side center being derived in
+    // spans/s, half the autoc-unit number; fixed in craft_variation.h,
+    // center ≈24.2 units/s = 82.5 ms full-span transit. See finding.md
+    // §t8-final.)
     if (Global::servoModelEnabled)
     {
-      const SCALAR kFullThrowSurface = static_cast<SCALAR>(0.5);
+      const SCALAR kCommandToSurface = static_cast<SCALAR>(0.5);  // autoc [-1,1] -> surface [-0.5,0.5]
       const SCALAR kPwmFrameSec = static_cast<SCALAR>(0.020);  // 50 Hz command frame
-      const SCALAR slewCap = kFullThrowSurface
+      const SCALAR slewCap = kCommandToSurface
           * static_cast<SCALAR>(Global::servoSlew) * static_cast<SCALAR>(dt);
 
       // PWM latch: timer was initialized to (frame - phase) at scenario
