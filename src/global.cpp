@@ -74,3 +74,11 @@ double            Global::craftTrimDelta = 0.0;
 double            Global::craftThrustScale = 1.0;
 double            Global::craftPitchEffDelta = 0.0;
 double            Global::craftRollEffDelta = 0.0;
+
+// 037 actuator dynamics (operator decision: in-FDM, substep dt). Defaults =
+// nominal centers (see craft_variation.h kCraft*Center): a no-craft run runs
+// the nominal lag model rather than a bypassed pass-through.
+double            Global::servoSlew = 24.0;   // /s (autoc [-1,1] command units, v2 center ~24.2)
+double            Global::thrustTau = 0.150;  // s
+bool              Global::servoModelEnabled = false;  // 037 servo v2 switch (WorkerInit)
+double            Global::servoPwmPhase = 0.0;        // s, per-scenario PWM latch phase

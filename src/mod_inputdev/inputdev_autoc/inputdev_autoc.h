@@ -50,7 +50,9 @@ using namespace std;
 // #define DETAILED_LOGGING 1
 
 #define FEET_TO_METERS 0.3048
-#define EVAL_UPDATE_INTERVAL_MSEC_DEFAULT 100   // Sensor+NN cadence (~10Hz)
+// 037 T001 -- no EVAL_UPDATE_INTERVAL_MSEC_DEFAULT: the NN/sensor cadence has no
+// default. It is the single-source ControlIntervalMsec, validated by the autoc
+// parent and delivered via WorkerInit priming (see inputdev_autoc.cpp init()).
 #define COMPUTE_LATENCY_MSEC_DEFAULT 30         // Bench-measured: consolidated MSP fetch(12)+eval(5)+send(12)=29ms
 #define ENGAGE_DELAY_MSEC_DEFAULT 750           // Measured INAV MANUAL→autoc handoff delay (2026-04-07 flight)
 

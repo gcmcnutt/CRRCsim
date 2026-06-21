@@ -28,6 +28,7 @@
 #include "fdm_larcsim.h"
 
 #include <math.h>
+#include <algorithm>        // 037 std::min for the in-FDM actuator lag blend
 #include "../../global.h"   // 034 US4 — Global::craft* per-scenario carriers
 #include <iostream>
 
@@ -111,6 +112,26 @@ void CRRC_AirplaneSim_Larcsim::initAirplaneState(double dRelVel,
   Cm_de   = nominal_Cm_de   * (static_cast<SCALAR>(1.0) + static_cast<SCALAR>(Global::craftPitchEffDelta));
   CL_de   = nominal_CL_de   * (static_cast<SCALAR>(1.0) + static_cast<SCALAR>(Global::craftPitchEffDelta));
   Cl_da   = nominal_Cl_da   * (static_cast<SCALAR>(1.0) + static_cast<SCALAR>(Global::craftRollEffDelta));
+
+  // 037 actuator dynamics (operator decision: in-FDM, substep dt). Reset the
+  // persistent actuator-filter state at scenario reset so a fresh scenario
+  // starts from neutral surfaces and full commanded thrust, not the previous
+  // flight's state. Servo surfaces + latches start neutral (0.0); the thrust
+  // lag state starts at 1.0 (full applied scale) so the very first lag step
+  // is a no-op until power->step produces a commanded thrust.
+  //
+  // 037 servo v2: the PWM timer starts at (frame - phase) so the FIRST latch
+  // lands exactly `phase` seconds into the scenario (phase = per-scenario
+  // craft draw, uniform [0, 20) ms — the engage episode's alignment within
+  // the 50 Hz command frame), then every 20 ms after. Deterministic: phase
+  // is scenario-static, dt arithmetic only.
+  servoStateAileron    = static_cast<SCALAR>(0.0);
+  servoStateElevator   = static_cast<SCALAR>(0.0);
+  servoLatchedAileron  = static_cast<SCALAR>(0.0);
+  servoLatchedElevator = static_cast<SCALAR>(0.0);
+  servoPwmTimerSec     = static_cast<SCALAR>(0.020)
+      - static_cast<SCALAR>(Global::servoPwmPhase);
+  thrustStateScale     = static_cast<SCALAR>(1.0);
 
   Phi       = dPhi;         // bank/roll angle  [rad]
   Theta     = dTheta;       // pitch attitude angle [rad]
@@ -223,6 +244,76 @@ void CRRC_AirplaneSim_Larcsim::update(TSimInputs* inputs,
     ls_aux(v_V_local_airmass, v_V_gust_body);
 
     env->ControllerCallback(dt, this, inputs, &myInputs);
+
+    // 037 servo model v2 (operator 2026-06-11, post-t6/t7 A/B — see
+    // specs/037-20hz-control-loop/outcome.md + the DSM-44 datasheet check in
+    // finding.md). The v1 lag-dominant filter (tau 20 ms + slew 3–9/s, shaded
+    // slow vs the datasheet) capped tracking entirely; v1 history is in git
+    // (removed here, was the #if 0 block from the t7 A/B). v2 is
+    // datasheet-shaped, two components:
+    //
+    //   1. PWM command LATCH: the servo samples its command pulse once per
+    //      50 Hz frame (20 ms). The latch fires when the per-substep timer
+    //      crosses the frame boundary; the per-scenario phase
+    //      (Global::servoPwmPhase, uniform [0,20) ms, craft-class draw) is
+    //      the engage episode's arbitrary alignment within the frame — the
+    //      operator's "0–20 ms PWM lag jitter". Between latches the target
+    //      is FROZEN (true dead-time: delays, does not smooth).
+    //   2. Pure SLEW toward the latched target, from the measured transit
+    //      (~55 ms per 60° on a ~90° span ⇒ center ≈12.1 full-throw/s,
+    //      per-scenario draw clamped 8–16). No first-order lag in v2 —
+    //      a digital micro's small-signal settle is sub-frame; the latch
+    //      supplies the delay, the slew supplies the transit.
+    //
+    // Gated on Global::servoModelEnabled (ServoModelEnabled ini knob via
+    // WorkerInit) so A/B pairs (t8 off / t9 on) differ by ini only.
+    // Deterministic: pure dt arithmetic + per-scenario state reset in
+    // initAirplaneState; no PRNG here.
+    //
+    // UNITS (operator 2026-06-12, post-t8 audit): Global::servoSlew is in
+    // AUTOC command units/s — the [-1, +1] NN/INAV span, full range = 2.0
+    // units = the full mechanical span (DSM-44 90°). TSimInputs surfaces are
+    // [-0.5, +0.5] = command/2, so the platform translation to a per-substep
+    // surface-unit slew cap is 0.5 * servoSlew * dt. (The 2×-slow t6/t8 bug
+    // was NOT this factor — it was the autoc-side center being derived in
+    // spans/s, half the autoc-unit number; fixed in craft_variation.h,
+    // center ≈24.2 units/s = 82.5 ms full-span transit. See finding.md
+    // §t8-final.)
+    if (Global::servoModelEnabled)
+    {
+      const SCALAR kCommandToSurface = static_cast<SCALAR>(0.5);  // autoc [-1,1] -> surface [-0.5,0.5]
+      const SCALAR kPwmFrameSec = static_cast<SCALAR>(0.020);  // 50 Hz command frame
+      const SCALAR slewCap = kCommandToSurface
+          * static_cast<SCALAR>(Global::servoSlew) * static_cast<SCALAR>(dt);
+
+      // PWM latch: timer was initialized to (frame - phase) at scenario
+      // reset, so the FIRST latch lands `phase` seconds in; thereafter every
+      // 20 ms. Until the first latch the servo holds neutral (the reset
+      // state) — commands are coast-zero during the engage window anyway.
+      servoPwmTimerSec += static_cast<SCALAR>(dt);
+      while (servoPwmTimerSec >= kPwmFrameSec) {
+        servoLatchedAileron  = myInputs.aileron;
+        servoLatchedElevator = myInputs.elevator;
+        servoPwmTimerSec -= kPwmFrameSec;
+      }
+
+      // Aileron channel: slew toward the LATCHED target.
+      {
+        SCALAR step = servoLatchedAileron - servoStateAileron;
+        if (step >  slewCap) step =  slewCap;
+        if (step < -slewCap) step = -slewCap;
+        servoStateAileron += step;
+        myInputs.aileron = servoStateAileron;
+      }
+      // Elevator channel: slew toward the LATCHED target.
+      {
+        SCALAR step = servoLatchedElevator - servoStateElevator;
+        if (step >  slewCap) step =  slewCap;
+        if (step < -slewCap) step = -slewCap;
+        servoStateElevator += step;
+        myInputs.elevator = servoStateElevator;
+      }
+    }
 
     aero(&myInputs, m_V_local_airmass_grad, v_R_omega_gust_body, v_F_aero, v_M_aero);
 
@@ -375,6 +466,14 @@ void CRRC_AirplaneSim_Larcsim::LoadFromXML(SimpleXMLTransfer* xml, int nVerbosit
   nominal_CG_arm  = CG_arm;
   nominal_Cl_da   = Cl_da;
 
+  // 037 actuator dynamics (operator decision: in-FDM, substep dt). Initialize
+  // the persistent actuator-filter state at LOAD so any pre-scenario trim call
+  // (trimAirplaneState -> engine(0,...)) sees defined state; it is RE-reset to
+  // these same values at every initAirplaneState (scenario reset).
+  servoStateAileron  = static_cast<SCALAR>(0.0);
+  servoStateElevator = static_cast<SCALAR>(0.0);
+  thrustStateScale   = static_cast<SCALAR>(1.0);
+
   flap_drag      = aero->getDouble("flap.drag", 0);
   flap_lift      = aero->getDouble("flap.lift", 0);
   flap_moment    = aero->getDouble("flap.moment", 0);
@@ -521,13 +620,32 @@ void CRRC_AirplaneSim_Larcsim::engine( SCALAR dt, TSimInputs* inputs, CRRCMath::
   inputs->pitch = 1;
   power->step(dt, inputs, v_V_wind_body*FT_TO_M, &v_F, &v_M);
 
-  // 034 US4 — scale propeller thrust by per-scenario craft factor (default
-  // 1.0 ⇒ no-op). Counter-torque scales together with thrust since it
+  // 037 actuator dynamics (operator decision: in-FDM, substep dt). First-order
+  // lag on the APPLIED thrust scale toward the commanded craftThrustScale.
+  // Models motor/ESC spool-up: the commanded thrust scale (craftThrustScale)
+  // is the steady-state target; thrustStateScale relaxes toward it at
+  // dt/thrustTau each substep. dt is the LaRCSim per-substep step (passed in
+  // by update()). Pure deterministic arithmetic on dt; with the nominal
+  // thrustTau (0.150 s) this is a non-zero lag, the intended physics change.
+  // State persists across substeps; reset to 1.0 at initAirplaneState.
+  {
+    const SCALAR commandedScale = static_cast<SCALAR>(Global::craftThrustScale);
+    const SCALAR thrustTau = static_cast<SCALAR>(Global::thrustTau);
+    const SCALAR lagBlend = (thrustTau > static_cast<SCALAR>(0.0))
+        ? std::min(static_cast<SCALAR>(1.0), dt / thrustTau)
+        : static_cast<SCALAR>(1.0);
+    thrustStateScale += (commandedScale - thrustStateScale) * lagBlend;
+  }
+
+  // 034 US4 -- scale propeller thrust by per-scenario craft factor (default
+  // 1.0 = no-op), now routed through the 037 lagged thrust state so the
+  // applied scale spools toward the commanded craftThrustScale instead of
+  // stepping instantly. Counter-torque scales together with thrust since it
   // physically tracks shaft power, which tracks force at constant prop
   // geometry. Carrier (Global::craftThrustScale) is set per-scenario by
   // inputdev_autoc after autoc-side applyVariationScale ramping.
-  v_F *= Global::craftThrustScale;
-  v_M *= Global::craftThrustScale;
+  v_F *= thrustStateScale;
+  v_M *= thrustStateScale;
 
   // Convert SI to that other buggy system.
   v_F *= N_TO_LBF;

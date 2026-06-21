@@ -105,6 +105,24 @@ class Global
     static double craftThrustScale;      ///< multiplier on engine maxThrust
     static double craftPitchEffDelta;    ///< fraction, pitch-authority multiplier delta
     static double craftRollEffDelta;     ///< fraction, roll-authority multiplier delta
+
+    // 037 actuator dynamics (operator decision: in-FDM, substep dt).
+    // Absolute physical parameters for the in-FDM actuator filter (servo slew
+    // on aileron/elevator, first-order thrust lag). Set per-scenario by
+    // inputdev_autoc AFTER worker-side applyVariationScale ramping; consumed
+    // each FDM substep in fdm_larcsim. Defaults = nominal centers so a
+    // no-craft run still runs the nominal model. (servo first-order tau
+    // removed 2026-06-12 — v2 PWM-latch+slew has no lag term.)
+    static double servoSlew;             ///< /s, servo slew-rate limit in autoc [-1,1] command units (full span = 2.0 units; v2 center ≈24.2 from the DSM-44 transit — see autoc craft_variation.h)
+    static double thrustTau;             ///< s, thrust first-order lag time constant (center 0.150)
+
+    // 037 servo v2 (operator 2026-06-11, post-t6/t7 A/B): datasheet-shaped
+    // servo = 50 Hz PWM command LATCH (per-scenario phase = the 0-20 ms
+    // dead-time) + pure slew toward the latched target. Gated by
+    // servoModelEnabled (WorkerInit.servoModelEnabled <- ServoModelEnabled
+    // ini knob) so A/B run pairs differ by ini only.
+    static bool servoModelEnabled;       ///< master switch for the in-FDM servo block
+    static double servoPwmPhase;         ///< s, per-scenario PWM latch phase, [0, 0.020)
 };
 
 

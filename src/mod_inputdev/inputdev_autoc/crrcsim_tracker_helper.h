@@ -93,6 +93,10 @@ private:
                                 const WorkerInit& init);
 
     size_t cursor_ = 0;
+    // 037 T022 — deep per-tick observation ring; history_ stays the 6-slot
+    // gather VIEW materialized from the ring at the R5 ms-based lag offsets
+    // (mirrors src/eval/tracker_stepper.cc — keep both bodies in lockstep).
+    TrackerObservationRing obs_ring_{};
     TrackerHistoryWindow history_{};
     autoc::eval::CrashHull crash_hull_{};
     uint32_t prng_state_ = 0;
