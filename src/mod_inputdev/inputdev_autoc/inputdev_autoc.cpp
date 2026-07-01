@@ -910,6 +910,23 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     aircraftState.setPosition(p - pathOriginOffset);  // store virtual position
     // NN controller reads previous commands as feedback inputs — preserve them.
     aircraftState.setSimTimeMsec(simTimeMsec);
+    // 038 P0-D-3: record the steady wind (local airmass, NED, m/s) the FDM
+    // applied this tick, so realized gusty wind is auditable in the dmp
+    // (previously never set → zeros). getLastLocalAirmass() is NED ft/s;
+    // convert to m/s exactly like velocity_vector above. eom01 is non-null here
+    // (checked at the quaternion access above).
+    {
+      CRRCMath::Vector3 windLocalFtps = eom01->getLastLocalAirmass();  // NED, ft/s
+      gp_vec3 windNed{
+          static_cast<gp_scalar>(windLocalFtps(0) * FEET_TO_METERS),  // North
+          static_cast<gp_scalar>(windLocalFtps(1) * FEET_TO_METERS),  // East
+          static_cast<gp_scalar>(windLocalFtps(2) * FEET_TO_METERS)   // Down
+      };
+      if (isnan(windNed[0]) || isnan(windNed[1]) || isnan(windNed[2])) {
+        windNed = gp_vec3::Zero();
+      }
+      aircraftState.setWindVelocity(windNed);
+    }
     aircraftState.setRabbitOdometer(rabbitOdometer);
     aircraftState.setRabbitSpeed(crrcsimRabbitSpeed);
 
