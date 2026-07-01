@@ -61,6 +61,11 @@ void CrrcsimTrackerHelper::initScenario(const SourceScenarioTrajectory& source,
     // Reset NN recurrent state at scenario start (no-op for feedforward).
     nn.reset();
 
+    // 038 P0-D FR-P0H (A) — reset situational-awareness state per scenario
+    // (FR-030 determinism). Advanced only on real ticks in tick(), NOT during
+    // the history pre-fill below. Mirrors src/eval/tracker_stepper.cc.
+    sa_state_.reset();
+
     // 037 T022 — fail loud on a source library whose tick spacing does not
     // match the compiled cadence (the caller advances one SIM_TIME_STEP_MSEC
     // of chase physics per source tick; a 100 ms-recorded library at a 50 ms
@@ -197,10 +202,17 @@ CrashReason CrrcsimTrackerHelper::tick(AircraftState& chaseState,
     // + last_target_sample_ for M2 dmp recording).
     projectAndShiftHistory(target, chaseState, init);
 
+    // Step 1b (038 P0-D FR-P0H): advance situational-awareness state from the
+    // freshly-projected "now" beacon observation. Visibility uses the sentinel
+    // threshold. Single-sourced update rule mirrored in TrackerStepper::stepOnce.
+    sa_state_.update(history_.left_x[5], history_.left_y[5], history_.left_cep[5],
+                     history_.right_x[5], history_.right_y[5], history_.right_cep[5],
+                     autoc::eval::kCepSentinelThreshold);
+
     // Step 2: gather tracker NN inputs.
     TrackerInputs inputs = {};
     gather_tracker_inputs(chaseState, history_, init.flightArena,
-                          static_cast<float>(init.cepGateThreshold), inputs);
+                          static_cast<float>(init.cepGateThreshold), sa_state_, inputs);
 
     // Step 3: NN forward pass → updates chaseState.pitch/roll/throttle commands
     // (which inputdev_autoc.cpp's pending-command stage picks up post-tick).

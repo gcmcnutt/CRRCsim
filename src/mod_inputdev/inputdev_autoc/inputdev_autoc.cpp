@@ -516,7 +516,10 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       // Build/rebuild the NN controller for the new genome. Recurrent
       // hidden state (spec 027) lives inside the backend and is reset
       // per-span below.
-      nnController_ = std::make_unique<NNControllerBackend>(nnGenome);
+      // 038 P0-D FR-P0H (B): the backend carries the config FlightArena so the
+      // pathgen (M1) evaluate() path can populate the arena-awareness inputs.
+      // init_.flightArena is primed once per worker from the parent's ini.
+      nnController_ = std::make_unique<NNControllerBackend>(nnGenome, init_.flightArena);
 
       // Cache quat dot past reset
       quatDotPast[0] = quatDotPast[1] = quatDotPast[2] = quatDotPast[3] = 0.0;
