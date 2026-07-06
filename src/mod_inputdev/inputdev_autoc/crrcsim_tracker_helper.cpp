@@ -205,8 +205,7 @@ CrashReason CrrcsimTrackerHelper::tick(AircraftState& chaseState,
     // Step 1b (038 P0-D FR-P0H): advance situational-awareness state from the
     // freshly-projected "now" beacon observation. Visibility uses the sentinel
     // threshold. Single-sourced update rule mirrored in TrackerStepper::stepOnce.
-    sa_state_.update(history_.left_x[5], history_.left_y[5], history_.left_cep[5],
-                     history_.right_x[5], history_.right_y[5], history_.right_cep[5],
+    sa_state_.update(history_.left_cep[5], history_.right_cep[5],
                      autoc::eval::kCepSentinelThreshold);
 
     // Step 2: gather tracker NN inputs.
