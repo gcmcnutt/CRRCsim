@@ -98,6 +98,9 @@ private:
     // (mirrors src/eval/tracker_stepper.cc — keep both bodies in lockstep).
     TrackerObservationRing obs_ring_{};
     TrackerHistoryWindow history_{};
+    // 038 P0-D FR-P0H (A) — situational-awareness state; reset in initScenario,
+    // advanced each tick(). Shared update rule with minisim TrackerStepper.
+    SituationalAwarenessState sa_state_{};
     autoc::eval::CrashHull crash_hull_{};
     uint32_t prng_state_ = 0;
     int hull_fired_count_ = 0;

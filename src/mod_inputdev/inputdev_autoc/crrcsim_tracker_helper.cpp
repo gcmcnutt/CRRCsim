@@ -61,27 +61,29 @@ void CrrcsimTrackerHelper::initScenario(const SourceScenarioTrajectory& source,
     // Reset NN recurrent state at scenario start (no-op for feedforward).
     nn.reset();
 
+    // 038 P0-D FR-P0H (A) — reset situational-awareness state per scenario
+    // (FR-030 determinism). Advanced only on real ticks in tick(), NOT during
+    // the history pre-fill below. Mirrors src/eval/tracker_stepper.cc.
+    sa_state_.reset();
+
     // 037 T022 — fail loud on a source library whose tick spacing does not
     // match the compiled cadence (the caller advances one SIM_TIME_STEP_MSEC
     // of chase physics per source tick; a 100 ms-recorded library at a 50 ms
     // cadence would silently play the target at 2× speed). Mirrors
     // src/eval/tracker_stepper.cc::initScenario.
-    // 2026-06-15: check the AVERAGE gap, not the first gap. simTimeMsec is the
-    // 200 Hz/5 ms step clock TRUNCATED to integer ms, so a clean 20 Hz/50 ms
-    // source records gaps of 49/50/51 (re-syncing to exact 50-multiples) with
-    // the FIRST gap deterministically 49 — a single-gap test spuriously rejects
-    // every valid source. (last-first)/(N-1) recovers the true cadence exactly
-    // (50.0) and still catches a real mismatch (a 100 ms 10 Hz source → 100).
-    // Proper fix = round/step-count the simTimeMsec stamp (BACKLOG).
+    // 038 P0-D-1: STRICT single-gap check restored. simTimeMsec is now
+    // round()-stamped (SimStateHandler::getSimulationTimeSinceReset) → exact
+    // 50 ms gaps, so the first gap is a faithful cadence probe again. (The
+    // 2026-06-15 average-gap workaround tolerated the old truncation jitter of
+    // 49/50/51 ms; that jitter is fixed at the stamp now.)
     if (source_->samples.size() >= 2) {
         const auto& s = source_->samples;
-        const double avgGapMsec =
-            (s.back().simTimeMsec - s.front().simTimeMsec) /
-            static_cast<double>(s.size() - 1);
-        if (std::lround(avgGapMsec) != SIM_TIME_STEP_MSEC) {
+        const long firstGapMsec =
+            std::lround(s[1].simTimeMsec - s[0].simTimeMsec);
+        if (firstGapMsec != SIM_TIME_STEP_MSEC) {
             throw std::runtime_error(
-                "CrrcsimTrackerHelper: source trajectory avg tick spacing " +
-                std::to_string(avgGapMsec) + " ms != compiled SIM_TIME_STEP_MSEC " +
+                "CrrcsimTrackerHelper: source trajectory tick spacing " +
+                std::to_string(firstGapMsec) + " ms != compiled SIM_TIME_STEP_MSEC " +
                 std::to_string(SIM_TIME_STEP_MSEC) +
                 " ms — rebake the M2 source library at the current cadence.");
         }
@@ -200,10 +202,16 @@ CrashReason CrrcsimTrackerHelper::tick(AircraftState& chaseState,
     // + last_target_sample_ for M2 dmp recording).
     projectAndShiftHistory(target, chaseState, init);
 
+    // Step 1b (038 P0-D FR-P0H): advance situational-awareness state from the
+    // freshly-projected "now" beacon observation. Visibility uses the sentinel
+    // threshold. Single-sourced update rule mirrored in TrackerStepper::stepOnce.
+    sa_state_.update(history_.left_cep[5], history_.right_cep[5],
+                     autoc::eval::kCepSentinelThreshold);
+
     // Step 2: gather tracker NN inputs.
     TrackerInputs inputs = {};
     gather_tracker_inputs(chaseState, history_, init.flightArena,
-                          static_cast<float>(init.cepGateThreshold), inputs);
+                          static_cast<float>(init.cepGateThreshold), sa_state_, inputs);
 
     // Step 3: NN forward pass → updates chaseState.pitch/roll/throttle commands
     // (which inputdev_autoc.cpp's pending-command stage picks up post-tick).

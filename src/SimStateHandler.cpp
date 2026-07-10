@@ -31,6 +31,7 @@
  *
  *  \author J. Reucker
  */
+#include <cmath>       // 038 P0-D-1: std::llround for the exact simTimeMsec stamp
 #include "i18n.h"
 #include "global.h"
 #include "aircraft.h"
@@ -389,5 +390,14 @@ unsigned long int SimStateHandler::getGameTimeSinceReset()
  */
 unsigned long int SimStateHandler::getSimulationTimeSinceReset()
 {
-  return (unsigned long int)(sim_steps*Global::dt*1000);
+  // 038 P0-D-1: round, don't truncate. In real arithmetic sim_steps*dt*1000 is
+  // an exact multiple of the control cadence (10 physics steps × 5 ms = 50 ms),
+  // but the binary double for Global::dt (0.005) carries tiny error, so the old
+  // (unsigned long) truncation produced 49/50/51 ms jitter around the exact
+  // 50-multiples (documented in crrcsim_tracker_helper.cpp / tracker_stepper.cc).
+  // Rounding snaps to the exact stamp → a 20 Hz run records exact 50 ms gaps and
+  // the M2 source-spacing check reverts to strict single-gap. Deterministic:
+  // sim_steps is fixed-multiloop in headless mode, so this is a pure re-round of
+  // an already-deterministic counter.
+  return (unsigned long int)std::llround(sim_steps * Global::dt * 1000.0);
 }
