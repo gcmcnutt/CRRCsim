@@ -138,10 +138,13 @@ void CrrcsimTrackerHelper::projectAndShiftHistory(const SourceTickSample& target
         init.cameraConfig.mount_offset_body;
     last_camera_view_.camera_pose_world_orient =
         chaseState.getOrientation() * init.cameraConfig.mount_orientation_body;
+    // 040 T029 — FOV is DERIVED from the sensor grid (FR-003), so the dmp
+    // records the derived value; there is no separately-configured field that
+    // could disagree with the grid it was rendered from.
     last_camera_view_.camera_fov_h_deg =
-        static_cast<float>(init.cameraConfig.fov_h_deg);   // raw-ok: cereal byte-format member
+        static_cast<float>(init.cameraConfig.fovHDeg());   // raw-ok: cereal byte-format member
     last_camera_view_.camera_fov_v_deg =
-        static_cast<float>(init.cameraConfig.fov_v_deg);   // raw-ok: cereal byte-format member
+        static_cast<float>(init.cameraConfig.fovVDeg());   // raw-ok: cereal byte-format member
     last_camera_view_.beacon_left = left;
     last_camera_view_.beacon_right = right;
 
