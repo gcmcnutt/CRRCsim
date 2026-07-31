@@ -95,7 +95,7 @@ void CrrcsimTrackerHelper::initScenario(const SourceScenarioTrajectory& source,
     // observation ring (037: depth grew with the R5 lag window), so the NN
     // sees a coherent stationary-source history at first tick. Mirrors the
     // minisim TrackerStepper init for the pre_roll == 0 case.
-    autoc::eval::resetPerceptionState(obs_ring_, sa_state_);
+    autoc::eval::resetPerceptionState(obs_ring_, sa_state_, perception_carry_);
     if (!source_->samples.empty()) {
         const SourceTickSample& first = source_->samples.front();
         for (int i = 0; i < TrackerObservationRing::kDepth; ++i) {
@@ -123,9 +123,17 @@ void CrrcsimTrackerHelper::projectAndShiftHistory(const SourceTickSample& target
     rule_cfg.beacon_right = init.beaconRightConfig;
     rule_cfg.airframe = init.airframeObstruction;
     rule_cfg.cep_gate_threshold = static_cast<gp_scalar>(init.cepGateThreshold);
+    // 040 US4 — link budget + acquisition machine, both from WorkerInit. The
+    // worker has no ConfigManager, so these arrive over the RPC like every other
+    // scenario-invariant config.
+    rule_cfg.signal = init.signalConfig;
+    rule_cfg.acquisition = init.acquisitionConfig;
+    rule_cfg.control_interval_ms =
+        static_cast<gp_scalar>(init.controlIntervalMsec);
 
     const autoc::eval::PerceptionTickResult tick_result =
-        autoc::eval::projectPerceptionTick(chaseState, target, rule_cfg);
+        autoc::eval::projectPerceptionTick(chaseState, target, rule_cfg,
+                                           perception_carry_);
     const BeaconObservation& left = tick_result.left;
     const BeaconObservation& right = tick_result.right;
 
