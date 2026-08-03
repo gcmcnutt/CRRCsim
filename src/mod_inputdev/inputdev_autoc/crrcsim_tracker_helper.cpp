@@ -163,8 +163,20 @@ void CrrcsimTrackerHelper::projectAndShiftHistory(const SourceTickSample& target
     last_camera_view_.camera_pose_world_pos =
         chaseState.getPosition() + chaseState.getOrientation() *
         init.cameraConfig.mount_offset_body;
+    // 040 US6 FIX (2026-08-02) — record the VARIED orientation from rule_cfg,
+    // not the nominal one from WorkerInit.
+    //
+    // This recorded the nominal pose while the BEARINGS were being projected
+    // through the varied one, so the dmp claimed the camera pointed down the
+    // nominal boresight when it was actually up to 20 deg off. Two visible
+    // consequences: the renderer recovers mountQ = chase^-1 * (chase * nominal)
+    // = IDENTITY, so the POV reticle never moved between scenarios (operator:
+    // "each playback seems to show the same point of view"); and the 3D FOV
+    // pyramid drew the wrong cone. Training was never affected — the pose is
+    // dmp-only and never an NN input — but every downstream analysis of where
+    // the camera was pointing was wrong.
     last_camera_view_.camera_pose_world_orient =
-        chaseState.getOrientation() * init.cameraConfig.mount_orientation_body;
+        chaseState.getOrientation() * rule_cfg.camera.mount_orientation_body;
     // 040 T029 — FOV is DERIVED from the sensor grid (FR-003), so the dmp
     // records the derived value; there is no separately-configured field that
     // could disagree with the grid it was rendered from.
