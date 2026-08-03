@@ -95,6 +95,17 @@ void CrrcsimTrackerHelper::initScenario(const SourceScenarioTrajectory& source,
     // observation ring (037: depth grew with the R5 lag window), so the NN
     // sees a coherent stationary-source history at first tick. Mirrors the
     // minisim TrackerStepper init for the pre_roll == 0 case.
+    // 040 US6 — capture this scenario's camera draw BEFORE the history
+    // pre-fill, so the pre-filled ticks see the same camera the scenario will
+    // actually fly. Filling with the nominal camera and then switching would
+    // hand the NN a discontinuity at tick 1 that no real airframe has.
+    camera_variation_.boresightYawDeg = meta.cameraBoresightYawDeg;
+    camera_variation_.boresightPitchDeg = meta.cameraBoresightPitchDeg;
+    camera_variation_.rollDeg = meta.cameraRollDeg;
+    camera_variation_.mountTranslation = meta.cameraMountTranslation;
+    camera_variation_.wingThicknessDelta = meta.cameraWingThicknessDelta;
+    camera_variation_.ambientScale = meta.cameraAmbientScale;
+
     autoc::eval::resetPerceptionState(obs_ring_, sa_state_, perception_carry_);
     if (!source_->samples.empty()) {
         const SourceTickSample& first = source_->samples.front();
@@ -130,6 +141,9 @@ void CrrcsimTrackerHelper::projectAndShiftHistory(const SourceTickSample& target
     rule_cfg.acquisition = init.acquisitionConfig;
     rule_cfg.control_interval_ms =
         static_cast<gp_scalar>(init.controlIntervalMsec);
+    // Nominal until applyCameraVariation moves it (T074: obstruction only).
+    rule_cfg.obstruction_mount_offset = init.cameraConfig.mount_offset_body;
+    autoc::eval::applyCameraVariation(rule_cfg, camera_variation_);
 
     const autoc::eval::PerceptionTickResult tick_result =
         autoc::eval::projectPerceptionTick(chaseState, target, rule_cfg,

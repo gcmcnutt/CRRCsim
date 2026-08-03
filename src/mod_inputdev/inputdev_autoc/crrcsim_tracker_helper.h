@@ -109,6 +109,11 @@ private:
     // member, and the two MUST reset identically or the test-only reference
     // certifies behaviour production does not have.
     autoc::eval::PerceptionCarryState perception_carry_{};
+
+    // 040 US6 — this scenario's camera draw, captured in initScenario from
+    // ScenarioMetadata and baked into rule_cfg every tick. Default = the
+    // NOMINAL camera, so a variation-off run is bit-identical to pre-US6.
+    autoc::eval::CameraDeltas camera_variation_{};
     autoc::eval::CrashHull crash_hull_{};
     uint32_t prng_state_ = 0;
     int hull_fired_count_ = 0;
