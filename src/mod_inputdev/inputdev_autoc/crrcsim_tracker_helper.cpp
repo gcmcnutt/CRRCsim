@@ -95,16 +95,21 @@ void CrrcsimTrackerHelper::initScenario(const SourceScenarioTrajectory& source,
     // observation ring (037: depth grew with the R5 lag window), so the NN
     // sees a coherent stationary-source history at first tick. Mirrors the
     // minisim TrackerStepper init for the pre_roll == 0 case.
-    // 040 US6 — capture this scenario's camera draw BEFORE the history
-    // pre-fill, so the pre-filled ticks see the same camera the scenario will
-    // actually fly. Filling with the nominal camera and then switching would
-    // hand the NN a discontinuity at tick 1 that no real airframe has.
-    camera_variation_.boresightYawDeg = meta.cameraBoresightYawDeg;
-    camera_variation_.boresightPitchDeg = meta.cameraBoresightPitchDeg;
-    camera_variation_.rollDeg = meta.cameraRollDeg;
-    camera_variation_.mountTranslation = meta.cameraMountTranslation;
-    camera_variation_.wingThicknessDelta = meta.cameraWingThicknessDelta;
-    camera_variation_.ambientScale = meta.cameraAmbientScale;
+    // 040 US6 — capture this scenario's camera draw BEFORE the history pre-fill,
+    // so the pre-filled ticks see the same camera the scenario will actually fly.
+    // Filling with the nominal camera and then switching would hand the NN a
+    // discontinuity at tick 1 that no real airframe has.
+    //
+    // Indexed out of WorkerInit (primed once), NOT read from ScenarioMetadata:
+    // that struct is persisted in every dmp, and putting the draws there orphaned
+    // the pinned M1 source. Out-of-range ⇒ the nominal camera, which is also the
+    // pathgen / camera-variation-off path.
+    {
+        const size_t idx = static_cast<size_t>(source.sourceScenarioIndex);
+        camera_variation_ = (idx < init.cameraVariations.size())
+                                ? init.cameraVariations[idx]
+                                : autoc::eval::CameraDeltas{};
+    }
 
     autoc::eval::resetPerceptionState(obs_ring_, sa_state_, perception_carry_);
     if (!source_->samples.empty()) {
