@@ -18,7 +18,7 @@
 #include <string>
 
 #include "autoc/eval/arena.h"
-#include "autoc/eval/derived_features.h"  // 032 phase 1 — compute_pair_span
+#include "autoc/eval/tracker_tick_rule.h"  // 040 T011 — single-sourced per-tick rule
 #include "autoc/eval/trail_rabbit.h"
 #include "autoc/util/scenario_prng.h"     // 033 — deriveClassSubSeeds
 
@@ -64,7 +64,9 @@ void CrrcsimTrackerHelper::initScenario(const SourceScenarioTrajectory& source,
     // 038 P0-D FR-P0H (A) — reset situational-awareness state per scenario
     // (FR-030 determinism). Advanced only on real ticks in tick(), NOT during
     // the history pre-fill below. Mirrors src/eval/tracker_stepper.cc.
-    sa_state_.reset();
+    // 040 T011 (FR-020a) — reset ALL carried perception state through one
+    // call so a future addition (the acquisition state machine) is picked up
+    // by both execution paths without either being edited.
 
     // 037 T022 — fail loud on a source library whose tick spacing does not
     // match the compiled cadence (the caller advances one SIM_TIME_STEP_MSEC
@@ -93,7 +95,23 @@ void CrrcsimTrackerHelper::initScenario(const SourceScenarioTrajectory& source,
     // observation ring (037: depth grew with the R5 lag window), so the NN
     // sees a coherent stationary-source history at first tick. Mirrors the
     // minisim TrackerStepper init for the pre_roll == 0 case.
-    obs_ring_.reset();
+    // 040 US6 — capture this scenario's camera draw BEFORE the history pre-fill,
+    // so the pre-filled ticks see the same camera the scenario will actually fly.
+    // Filling with the nominal camera and then switching would hand the NN a
+    // discontinuity at tick 1 that no real airframe has.
+    //
+    // Indexed out of WorkerInit (primed once), NOT read from ScenarioMetadata:
+    // that struct is persisted in every dmp, and putting the draws there orphaned
+    // the pinned M1 source. Out-of-range ⇒ the nominal camera, which is also the
+    // pathgen / camera-variation-off path.
+    {
+        const size_t idx = static_cast<size_t>(source.sourceScenarioIndex);
+        camera_variation_ = (idx < init.cameraVariations.size())
+                                ? init.cameraVariations[idx]
+                                : autoc::eval::CameraDeltas{};
+    }
+
+    autoc::eval::resetPerceptionState(obs_ring_, sa_state_, perception_carry_);
     if (!source_->samples.empty()) {
         const SourceTickSample& first = source_->samples.front();
         for (int i = 0; i < TrackerObservationRing::kDepth; ++i) {
@@ -111,70 +129,61 @@ void CrrcsimTrackerHelper::projectAndShiftHistory(const SourceTickSample& target
     // (history_) is materialized at the R5 lag offsets at the end of this
     // function. (Pre-037: 6-slot shift-left register.)
 
-    // 030 V1 priming — cameras + beacons + airframe come from WorkerInit
-    // (sent once per worker; autoc-side parses autoc-tracker.ini at startup).
-    ProjectionInput proj;
-    proj.chase_position_world = chaseState.getPosition();
-    proj.chase_orientation_world = chaseState.getOrientation();
-    proj.target_position_world = target.position;
-    proj.target_orientation_world = target.orientation;
-    proj.camera_mount_chase_body = init.cameraConfig.mount_offset_body;
-    proj.camera_orientation_chase_body = init.cameraConfig.mount_orientation_body;
-    proj.camera = init.cameraConfig;
-    proj.chase_airframe = init.airframeProxy;
+    // 040 T011 (FR-031) — the projection + CEP-gated-separation rule now lives
+    // once in src/eval/tracker_tick_rule.cc, consumed identically by this
+    // PRODUCTION tick and by the test-only TrackerStepper reference. Config
+    // still arrives via WorkerInit (no ConfigManager on the crrcsim worker).
+    autoc::eval::TickRuleConfig rule_cfg;
+    rule_cfg.camera = init.cameraConfig;
+    rule_cfg.beacon_left = init.beaconLeftConfig;
+    rule_cfg.beacon_right = init.beaconRightConfig;
+    rule_cfg.airframe = init.airframeObstruction;
+    rule_cfg.cep_gate_threshold = static_cast<gp_scalar>(init.cepGateThreshold);
+    // 040 US4 — link budget + acquisition machine, both from WorkerInit. The
+    // worker has no ConfigManager, so these arrive over the RPC like every other
+    // scenario-invariant config.
+    rule_cfg.signal = init.signalConfig;
+    rule_cfg.acquisition = init.acquisitionConfig;
+    rule_cfg.control_interval_ms =
+        static_cast<gp_scalar>(init.controlIntervalMsec);
+    // Nominal until applyCameraVariation moves it (T074: obstruction only).
+    rule_cfg.obstruction_mount_offset = init.cameraConfig.mount_offset_body;
+    autoc::eval::applyCameraVariation(rule_cfg, camera_variation_);
 
-    // Left beacon.
-    proj.beacon_mount_target_body = init.beaconLeftConfig.mount_body;
-    proj.beacon_emission_axis_target_body = init.beaconLeftConfig.emission_axis_body;
-    proj.beacon = init.beaconLeftConfig;
-    BeaconObservation left = projectBeacon(proj);
+    const autoc::eval::PerceptionTickResult tick_result =
+        autoc::eval::projectPerceptionTick(chaseState, target, rule_cfg,
+                                           perception_carry_);
+    const BeaconObservation& left = tick_result.left;
+    const BeaconObservation& right = tick_result.right;
 
-    // Right beacon.
-    proj.beacon_mount_target_body = init.beaconRightConfig.mount_body;
-    proj.beacon_emission_axis_target_body = init.beaconRightConfig.emission_axis_body;
-    proj.beacon = init.beaconRightConfig;
-    BeaconObservation right = projectBeacon(proj);
-
-    TrackerObservationRing::Record rec;
-    rec.left_x = left.screen_x;       // raw-ok: NN-byte-format primitive
-    rec.left_y = left.screen_y;       // raw-ok: NN-byte-format primitive
-    rec.left_cep = left.cep;          // raw-ok: NN-byte-format primitive
-    rec.right_x = right.screen_x;     // raw-ok: NN-byte-format primitive
-    rec.right_y = right.screen_y;     // raw-ok: NN-byte-format primitive
-    rec.right_cep = right.cep;        // raw-ok: NN-byte-format primitive
-
-    // 032 PHASE 1 — Cache beacon-pair span at the current tick. CEP-gated:
-    // if EITHER beacon's CEP exceeds the configured threshold, substitute
-    // neutral 0.0. Mirrors src/eval/tracker_stepper.cc::projectAndShiftHistory
-    // exactly. cep_gate_threshold comes from init.cepGateThreshold (no
-    // ConfigManager on the crrcsim worker — value threaded via WorkerInit).
-    const float cep_gate_threshold = static_cast<float>(init.cepGateThreshold);
-    const bool cep_gated =
-        left.cep >= cep_gate_threshold ||
-        right.cep >= cep_gate_threshold;
-    if (cep_gated) {
-        rec.span = 0.0f;
-    } else {
-        rec.span = static_cast<float>(  // raw-ok: NN-byte-format slot write
-            autoc::eval::compute_pair_span(
-                static_cast<gp_scalar>(left.screen_x),
-                static_cast<gp_scalar>(left.screen_y),
-                static_cast<gp_scalar>(right.screen_x),
-                static_cast<gp_scalar>(right.screen_y)));
-    }
-    obs_ring_.push(rec);
+    obs_ring_.push(tick_result.record);
     obs_ring_.materialize(history_);
 
     // M2 dmp recording — mirror minisim's M8b populate.
     last_camera_view_.camera_pose_world_pos =
         chaseState.getPosition() + chaseState.getOrientation() *
         init.cameraConfig.mount_offset_body;
+    // 040 US6 FIX (2026-08-02) — record the VARIED orientation from rule_cfg,
+    // not the nominal one from WorkerInit.
+    //
+    // This recorded the nominal pose while the BEARINGS were being projected
+    // through the varied one, so the dmp claimed the camera pointed down the
+    // nominal boresight when it was actually up to 20 deg off. Two visible
+    // consequences: the renderer recovers mountQ = chase^-1 * (chase * nominal)
+    // = IDENTITY, so the POV reticle never moved between scenarios (operator:
+    // "each playback seems to show the same point of view"); and the 3D FOV
+    // pyramid drew the wrong cone. Training was never affected — the pose is
+    // dmp-only and never an NN input — but every downstream analysis of where
+    // the camera was pointing was wrong.
     last_camera_view_.camera_pose_world_orient =
-        chaseState.getOrientation() * init.cameraConfig.mount_orientation_body;
+        chaseState.getOrientation() * rule_cfg.camera.mount_orientation_body;
+    // 040 T029 — FOV is DERIVED from the sensor grid (FR-003), so the dmp
+    // records the derived value; there is no separately-configured field that
+    // could disagree with the grid it was rendered from.
     last_camera_view_.camera_fov_h_deg =
-        static_cast<float>(init.cameraConfig.fov_h_deg);   // raw-ok: cereal byte-format member
+        static_cast<float>(init.cameraConfig.fovHDeg());   // raw-ok: cereal byte-format member
     last_camera_view_.camera_fov_v_deg =
-        static_cast<float>(init.cameraConfig.fov_v_deg);   // raw-ok: cereal byte-format member
+        static_cast<float>(init.cameraConfig.fovVDeg());   // raw-ok: cereal byte-format member
     last_camera_view_.beacon_left = left;
     last_camera_view_.beacon_right = right;
 
@@ -205,8 +214,7 @@ CrashReason CrrcsimTrackerHelper::tick(AircraftState& chaseState,
     // Step 1b (038 P0-D FR-P0H): advance situational-awareness state from the
     // freshly-projected "now" beacon observation. Visibility uses the sentinel
     // threshold. Single-sourced update rule mirrored in TrackerStepper::stepOnce.
-    sa_state_.update(history_.left_cep[5], history_.right_cep[5],
-                     autoc::eval::kCepSentinelThreshold);
+    autoc::eval::advanceSituationalAwareness(history_, sa_state_);
 
     // Step 2: gather tracker NN inputs.
     TrackerInputs inputs = {};

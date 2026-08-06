@@ -30,6 +30,7 @@
 #include "autoc/eval/camera_projection.h"
 #include "autoc/eval/crash_hull.h"
 #include "autoc/eval/source_trajectory.h"
+#include "autoc/eval/tracker_tick_rule.h"  // 040 -- PerceptionCarryState
 #include "autoc/nn/evaluator.h"
 #include "autoc/rpc/protocol.h"
 
@@ -101,6 +102,18 @@ private:
     // 038 P0-D FR-P0H (A) — situational-awareness state; reset in initScenario,
     // advanced each tick(). Shared update rule with minisim TrackerStepper.
     SituationalAwarenessState sa_state_{};
+
+    // 040 T064 (FR-020a) — per-beacon acquisition state, carried across ticks
+    // within a scenario. Reset through resetPerceptionState() alongside the ring
+    // and the situational-awareness state; TrackerStepper holds the identical
+    // member, and the two MUST reset identically or the test-only reference
+    // certifies behaviour production does not have.
+    autoc::eval::PerceptionCarryState perception_carry_{};
+
+    // 040 US6 — this scenario's camera draw, captured in initScenario from
+    // ScenarioMetadata and baked into rule_cfg every tick. Default = the
+    // NOMINAL camera, so a variation-off run is bit-identical to pre-US6.
+    autoc::eval::CameraDeltas camera_variation_{};
     autoc::eval::CrashHull crash_hull_{};
     uint32_t prng_state_ = 0;
     int hull_fired_count_ = 0;
