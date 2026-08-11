@@ -85,6 +85,34 @@ public:
     // series came to start one tick apart.
     const CameraViewSample& lastCameraView() const { return last_camera_view_; }
     const CopiedTargetSample& lastTargetSample() const { return last_target_sample_; }
+
+    // 041 T037 — the tick's target geometry, readable BEFORE tick() runs.
+    //
+    // WHY THIS EXISTS. The step score has to be computed before the NN acts, so
+    // that `IN_ENVELOPE` describes the tick the policy is deciding rather than
+    // the one it already decided. In pathgen that was never in question — the
+    // rabbit is `path[pathIndex]`, a lookup. The tracker LOOKED like it had a
+    // genuine ordering problem, because the only published target was
+    // `lastTargetSample()`, written by tick().
+    //
+    // It does not: the tracker target is a PRELOADED trajectory indexed by a
+    // cursor (`source_->samples[cursor_]`), structurally identical to pathgen's
+    // `path[pathIndex]`. So the geometry for tick k is knowable before tick k
+    // acts, in BOTH modes, and neither needs a tick k−1 fallback.
+    //
+    // ⚠️ Const and non-advancing. The cursor moves in tick() and nowhere else.
+    //
+    // ⚠️ The clamp is not defensive padding — it reproduces exhaustion
+    // behaviour exactly. When the source runs out, tick() returns TimeLimit
+    // without re-projecting, so `lastTargetSample()` still holds
+    // `samples[size-1]`; clamping returns that same sample, which is what makes
+    // moving the computation a RELOCATION rather than a change in the value.
+    //
+    // Returns false only when there is no source at all, in which case the
+    // caller scores no geometry — the pre-existing behaviour for that case.
+    bool peekTargetGeometry(const WorkerInit& init,
+                            gp_vec3& rabbitPosition,
+                            gp_vec3& velocity) const;
     int hullFiredCount() const { return hull_fired_count_; }
     bool sourceExhausted() const { return source_ == nullptr || cursor_ >= source_->samples.size(); }
 
@@ -105,6 +133,12 @@ private:
     // 038 P0-D FR-P0H (A) — situational-awareness state; reset in initScenario,
     // advanced each tick(). Shared update rule with minisim TrackerStepper.
     SituationalAwarenessState sa_state_{};
+
+    // 041 T038 — envelope occupancy accumulator (M2 flag source: perception).
+    // Carried per-scenario state, so it MUST be reset at every scenario
+    // boundary alongside the ring and the SA state — unreset state leaks
+    // between scenarios and breaks the bitwise gate.
+    autoc::eval::EnvelopeState envelope_{};
 
     // 040 T064 (FR-020a) — per-beacon acquisition state, carried across ticks
     // within a scenario. Reset through resetPerceptionState() alongside the ring

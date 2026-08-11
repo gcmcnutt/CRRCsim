@@ -31,6 +31,7 @@
 #include "autoc/autoc.h"
 #include "autoc/nn/evaluator.h"
 #include "autoc/nn/serialization.h"
+#include "autoc/eval/envelope_state.h"
 #include "autoc/eval/sensor_math.h"
 #include "autoc/nn/nn_input_computation.h"
 #include "autoc/eval/variation_generator.h"
@@ -151,7 +152,10 @@ private:
   std::vector<float> envelopeSecsSteps_;   // raw-ok: recorded per-tick scalar
   // Rolling state for the two computations above, reset per scenario.
   gp_vec3 stepScorePrevTangent_ = gp_vec3::UnitX();
-  double envelopeAccumMsec_ = 0.0;         // raw-ok: worker-local accumulator
+  // 041 T037 — M1 envelope accumulator. Same type the M2 path uses, so the two
+  // modes cannot drift on reset condition, units, or normalization; only the
+  // source of the per-tick flag differs (M1 step score vs M2 perception).
+  autoc::eval::EnvelopeState envelope_{};
 
   std::vector<DebugSample> debugSamplesCurrentPath;
   double quatDotPast[4] = {0,0,0,0};

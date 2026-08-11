@@ -30,6 +30,7 @@
 #include "../../mod_windfield/windfield.h"
 #include "inputdev_autoc.h"
 #include "autoc/eval/scenario_meta_apply.h"  // 030 V1.5 — applyVariationScale
+#include "autoc/eval/specific_force.h"
 #include "autoc/eval/variation_generator.h"
 #include "autoc/util/scenario_prng.h"        // 033 — deriveClassSubSeeds
 #include "autoc/eval/fitness_computer.h"     // 041 T035 — score the tick in the tick path
@@ -770,7 +771,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       stepScoreSteps_.push_back(0.0f);
       envelopeSecsSteps_.push_back(0.0f);
       stepScorePrevTangent_ = gp_vec3::UnitX();
-      envelopeAccumMsec_ = 0.0;
+      envelope_.reset();
       if (debugSamplesCurrentPath.empty()) {
         DebugSample sample;
         sample.pathIndex = pathSelector;
@@ -1137,6 +1138,110 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     // they are caught at the second checkpoint after the NN tick block.
     if (finalizeScenarioOnCrash()) return;
 
+    // 041 T037/T039 (FR-018a) — SCORE THE TICK, HERE, ONCE, BEFORE THE NN.
+    //
+    // Moved above the eval at T037. The ordering question that made this look
+    // hard is SOLVED, and the answer is that it was never a real asymmetry:
+    // pathgen's rabbit is `path[pathIndex]` and the tracker's target is
+    // `source_->samples[cursor_]` — both are LOOKUPS into a preloaded
+    // trajectory, so the tick's geometry is knowable before the policy acts in
+    // BOTH modes. No tick k−1 fallback anywhere.
+    //
+    // Why it has to be before: `IN_ENVELOPE` must describe the tick the policy
+    // is DECIDING. Scored after the forward pass it would describe the tick the
+    // policy already decided — a value that looks correct in the dmp and was
+    // never available to the controller.
+    //
+    // Why the value does not change by moving: the NN eval writes only
+    // pitch/roll/throttle COMMANDS; position, orientation and the target lookup
+    // are all fixed before it runs. This is a relocation, and T036's
+    // determinism + materially-same gate is what proves it stayed one.
+    {
+      const FitnessComputer scorer(
+          init_.fitDistScaleBehind, init_.fitDistScaleAhead, init_.fitConeAngleDeg,
+          init_.fitStreakThreshold,
+          std::max(1, static_cast<int>(init_.fitStreakRampSec /
+                                       (gEvalUpdateIntervalMsec / 1000.0))),
+          1.0 /* multiplier unused: raw step score only */);
+
+      gp_vec3 rabbitPosition = gp_vec3::Zero();
+      gp_vec3 tangent = stepScorePrevTangent_;
+      bool haveGeometry = false;
+
+      if (init_.mode == Mode::TRACKER) {
+        gp_vec3 targetVel = gp_vec3::Zero();
+        if (trackerHelper_.peekTargetGeometry(init_, rabbitPosition, targetVel)) {
+          const double vn = targetVel.norm();
+          if (vn > 0.01) { tangent = targetVel / vn; stepScorePrevTangent_ = tangent; }
+          haveGeometry = true;
+        }
+      } else if (!path.empty()) {
+        const int pathIndex = std::clamp(aircraftState.getThisPathIndex(), 0,
+                                         static_cast<int>(path.size()) - 1);
+        rabbitPosition = path.at(pathIndex).start;
+        if (pathIndex + 1 < static_cast<int>(path.size())) {
+          gp_vec3 t = path.at(pathIndex + 1).start - path.at(pathIndex).start;
+          const double tn = t.norm();
+          if (tn > 0.01) { tangent = t / tn; stepScorePrevTangent_ = tangent; }
+        }
+        haveGeometry = true;
+      }
+
+      float stepScore = 0.0f;
+      if (haveGeometry) {
+        const gp_vec3 offset = aircraftState.getPosition() - rabbitPosition;
+        const double along = offset.dot(tangent);
+        const double lateralDist = (offset - along * tangent).norm();
+        stepScore = static_cast<float>(scorer.decomposeStepScore(along, lateralDist).score);
+      }
+
+      // The envelope accumulator. Mechanics are shared with M2
+      // (autoc/eval/envelope_state.h) — reset on envelope EXIT only, wall-clock
+      // milliseconds so a cadence change re-derives rather than silently
+      // rescales, LINEAR normalization against FitStreakRampSec.
+      envelope_.advance(stepScore >= static_cast<float>(init_.fitStreakThreshold),
+                        static_cast<double>(gEvalUpdateIntervalMsec));
+      const float envelopeSecs =
+          static_cast<float>(envelope_.normalizedSecs(init_.fitStreakRampSec));
+
+      // M1 only. In tracker mode the flag is NOT the step score — it is the
+      // direct-perception estimate, produced inside trackerHelper_.tick() from
+      // what the camera actually returned (T038). Writing the exact geometric
+      // answer here would hand M2 an oracle it has no way to compute in the
+      // air, which is the whole distinction the two tasks exist to preserve.
+      if (init_.mode != Mode::TRACKER && init_.enableEnvelopeInputs != 0) {
+        aircraftState.setInEnvelope(envelope_.in_envelope);
+        aircraftState.setEnvelopeSecs(static_cast<gp_scalar>(envelopeSecs));
+      }
+
+      // Body-frame SPECIFIC FORCE (T039) — mode-agnostic, both gathers copy it.
+      // Computed here, worker-side, because this is where FDM gravity is in
+      // scope; on hardware the equivalent value arrives finished over MSP and
+      // the gather likewise only copies.
+      //
+      // ⚠️ ft-based throughout: `getAccel()` is v_V_dot_local in ft/s² and
+      // `getGravity()` is the FDM's own gravity in ft/s². Dividing one by the
+      // other makes the result unit-free, so no ft→m conversion happens here
+      // and none can be forgotten.
+      if (init_.enableAccelInputs != 0 && eom01) {
+        CRRCMath::Vector3 aLocal = eom01->getAccel();
+        const gp_vec3 accWorld(static_cast<gp_scalar>(aLocal(0)),
+                               static_cast<gp_scalar>(aLocal(1)),
+                               static_cast<gp_scalar>(aLocal(2)));
+        const auto sf = autoc::eval::bodySpecificForce(
+            accWorld, aircraftState.getOrientation(),
+            static_cast<gp_scalar>(eom01->getGravity()));
+        aircraftState.setSpecificForceG(sf.g_units);
+      }
+
+      // ⚠️ Recording is UNCONDITIONAL — the ablation gates above suppress the
+      // NN INPUT, never the recorded column. An ablation run must still produce
+      // a truthful envelope trace, or the T068 matrix would be comparing arms
+      // it can no longer measure.
+      stepScoreSteps_.push_back(stepScore);
+      envelopeSecsSteps_.push_back(envelopeSecs);
+    }
+
     // 030 M11.preA — Mode-aware NN evaluation block.
     //   Tracker mode: helper.tick() projects beacons + shifts history,
     //     gathers TrackerInputs (45 floats including arena-distance), runs
@@ -1190,76 +1295,6 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
         VectorPathProvider pathProvider(path, aircraftState.getThisPathIndex());
         nnController_->evaluate(aircraftState, pathProvider);
       }
-    }
-
-    // 041 T035 (FR-018a) — SCORE THE TICK, HERE, ONCE.
-    //
-    // Mirrors computeScenarioScores' derivation exactly, and deliberately reads
-    // the SAME values it would: `aircraftState` is the very object about to be
-    // pushed, so its gp_scalar (float) members are bit-for-bit what the
-    // objective will later deserialize. That is what makes this a relocation
-    // rather than a second opinion — there is no double-precision live-state
-    // path to diverge from.
-    //
-    // ⚠️ Ordering: this runs AFTER the NN eval above, so the score recorded for
-    // tick k is not yet visible to the policy AT tick k. Wiring it into the
-    // input vector is T037/T038, where the per-mode ordering question is
-    // resolved (pathgen can compute pre-eval; tracker's target sample only
-    // exists once trackerHelper_.tick() has run).
-    {
-      const FitnessComputer scorer(
-          init_.fitDistScaleBehind, init_.fitDistScaleAhead, init_.fitConeAngleDeg,
-          init_.fitStreakThreshold,
-          std::max(1, static_cast<int>(init_.fitStreakRampSec /
-                                       (gEvalUpdateIntervalMsec / 1000.0))),
-          1.0 /* multiplier unused: raw step score only */);
-
-      gp_vec3 rabbitPosition = gp_vec3::Zero();
-      gp_vec3 tangent = stepScorePrevTangent_;
-      bool haveGeometry = false;
-
-      if (init_.mode == Mode::TRACKER) {
-        const CopiedTargetSample& target = trackerHelper_.lastTargetSample();
-        rabbitPosition = target.trail_rabbit_position;
-        const gp_vec3 vel = target.velocity;
-        const double vn = vel.norm();
-        if (vn > 0.01) { tangent = vel / vn; stepScorePrevTangent_ = tangent; }
-        haveGeometry = true;
-      } else if (!path.empty()) {
-        const int pathIndex = std::clamp(aircraftState.getThisPathIndex(), 0,
-                                         static_cast<int>(path.size()) - 1);
-        rabbitPosition = path.at(pathIndex).start;
-        if (pathIndex + 1 < static_cast<int>(path.size())) {
-          gp_vec3 t = path.at(pathIndex + 1).start - path.at(pathIndex).start;
-          const double tn = t.norm();
-          if (tn > 0.01) { tangent = t / tn; stepScorePrevTangent_ = tangent; }
-        }
-        haveGeometry = true;
-      }
-
-      float stepScore = 0.0f;
-      if (haveGeometry) {
-        const gp_vec3 offset = aircraftState.getPosition() - rabbitPosition;
-        const double along = offset.dot(tangent);
-        const double lateralDist = (offset - along * tangent).norm();
-        stepScore = static_cast<float>(scorer.decomposeStepScore(along, lateralDist).score);
-      }
-
-      // Envelope accumulator: milliseconds continuously at or above threshold,
-      // reset on EXIT only (research.md R2 — not on regime change), normalised
-      // LINEARLY against FitStreakRampSec and clamped to 1.
-      if (stepScore >= static_cast<float>(init_.fitStreakThreshold)) {
-        envelopeAccumMsec_ += static_cast<double>(gEvalUpdateIntervalMsec);
-      } else {
-        envelopeAccumMsec_ = 0.0;
-      }
-      const double rampMsec = init_.fitStreakRampSec * 1000.0;
-      const float envelopeSecs = (rampMsec > 0.0)
-          ? static_cast<float>(std::min(1.0, envelopeAccumMsec_ / rampMsec))
-          : 0.0f;
-
-      stepScoreSteps_.push_back(stepScore);
-      envelopeSecsSteps_.push_back(envelopeSecs);
     }
 
     // Save post-eval state for results
