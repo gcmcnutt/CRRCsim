@@ -78,8 +78,11 @@ public:
                      gp_scalar pCrashThisGen);
 
     // For M2 dmp recording — caller pushes these into
-    // evalResults.cameraViewList[scenario] / targetTrajectoryList[scenario]
-    // per tick, parallel to aircraftStateList push.
+    // 041 T020 — drained per scenario into EvalTick::cameraView /
+    // EvalTick::targetSample, one entry per STEPPED tick. They are no longer
+    // "parallel to the aircraftStateList push": that push included a pre-loop
+    // initial state these buffers never had, which is exactly how the two
+    // series came to start one tick apart.
     const CameraViewSample& lastCameraView() const { return last_camera_view_; }
     const CopiedTargetSample& lastTargetSample() const { return last_target_sample_; }
     int hullFiredCount() const { return hull_fired_count_; }

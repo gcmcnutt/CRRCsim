@@ -472,7 +472,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       priorPathSelector = -1;
       pathSelector = 0;
       gPendingCommand = PendingCommand{};
-      evalResults.aircraftStateList.clear();
+      evalResults.tickList.clear();
       evalResults.crashReasonList.clear();
 
       // Paths stay at canonical origin (Z=0). Aircraft position stored as virtual
@@ -1009,8 +1009,29 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       pathMeta.originOffset = pathOriginOffset;
       evalResults.scenarioList.push_back(pathMeta);
 
-      std::vector<AircraftState> aircraftStatesCopy = aircraftStates;
-      evalResults.aircraftStateList.push_back(aircraftStatesCopy);
+      // 041 T021 — emit the GROUPED record. `aircraftStates` still carries the
+      // pre-loop initial state at slot 0 (pushed once before the tick loop);
+      // that state now goes into its OWN NAMED FIELD and the stepped ticks
+      // become the series. This is the push site where the offset was born:
+      // the state list was pushed with slot 0 while the camera/target buffers
+      // were not, so they started one tick apart and every consumer had to
+      // know it. There is nothing left to know.
+      ScenarioTicks scenarioTicks;
+      if (!aircraftStates.empty()) {
+        scenarioTicks.initialState = aircraftStates.front();
+        scenarioTicks.ticks.reserve(aircraftStates.size() - 1);
+        for (size_t k = 1; k < aircraftStates.size(); ++k) {
+          EvalTick tick(aircraftStates[k]);
+          // Tracker members ride WITH their tick. Both buffers are appended
+          // once per stepped tick, so index k-1 is this tick's sample; in
+          // pathgen they are empty and the members stay absent.
+          const size_t j = k - 1;
+          if (j < trackerCameraViewSteps_.size())   tick.cameraView   = trackerCameraViewSteps_[j];
+          if (j < trackerTargetSampleSteps_.size()) tick.targetSample = trackerTargetSampleSteps_[j];
+          scenarioTicks.ticks.push_back(std::move(tick));
+        }
+      }
+      evalResults.tickList.push_back(std::move(scenarioTicks));
       aircraftStates.clear();
 
       // 033 troubleshooting 2026-05-22 — bug fix mirror of the same fix in
@@ -1023,10 +1044,13 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       // path render skipped. Pathgen workers leave the trackerCameraViewSteps_
       // / trackerTargetSampleSteps_ buffers empty all along; gating the
       // push restores the documented contract.
-      if (init_.mode == Mode::TRACKER) {
-        evalResults.cameraViewList.push_back(trackerCameraViewSteps_);
-        evalResults.targetTrajectoryList.push_back(trackerTargetSampleSteps_);
-      }
+      // 041 T021 — the mode gate that used to live here is gone with the lists
+      // it guarded. Its purpose was to stop pathgen runs from pushing EMPTY
+      // inner vectors, which made the outer vector non-empty and led the
+      // renderer (which dispatched on outer-vector emptiness) to mis-classify a
+      // pathgen dmp as tracker mode and skip the rabbit path. Mode is now read
+      // from whether a TICK carries a target sample, so an empty-vs-absent
+      // distinction at the scenario level no longer exists to be confused.
       trackerCameraViewSteps_.clear();
       trackerTargetSampleSteps_.clear();
       // Per-scenario telemetry counters (M7d.b). hullStrikeCount = hull
@@ -1072,18 +1096,18 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
         sendRPC(*socket_, evalResults);
         evalDataEmpty = true;
         evalResults.pathList.clear();
-        evalResults.aircraftStateList.clear();
+        evalResults.tickList.clear();
         evalResults.crashReasonList.clear();
         evalResults.scenarioList.clear();
         // 030 V1.5 fix (2026-05-08) — pre-existing M11.preA leak: tracker
         // mode + dmp recording vectors were appended each eval but never
         // cleared post-send. After N evals, this evalResults carried
-        // N-evals-worth of cameraViewList / targetTrajectoryList — at
-        // pop=5000 / 20 workers / 294 scenarios this hit ~140 GB across
-        // worker contexts on autoc before gen 1 completed. minisim
-        // already has these clears; mirror them here.
-        evalResults.cameraViewList.clear();
-        evalResults.targetTrajectoryList.clear();
+        // N-evals-worth of per-tick data — at pop=5000 / 20 workers / 294
+        // scenarios this hit ~140 GB across worker contexts on autoc before
+        // gen 1 completed. minisim already has these clears; mirror them here.
+        // 041 T021 — `tickList` is cleared above with the other per-scenario
+        // series; the camera/target clears it replaced are subsumed by it,
+        // since those samples now live inside the ticks.
         evalResults.arenaEgressCount.clear();
         evalResults.hullStrikeCount.clear();
         evalResults.debugSamples.clear();
