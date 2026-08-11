@@ -32,6 +32,7 @@
 #include "autoc/eval/scenario_meta_apply.h"  // 030 V1.5 — applyVariationScale
 #include "autoc/eval/variation_generator.h"
 #include "autoc/util/scenario_prng.h"        // 033 — deriveClassSubSeeds
+#include "autoc/eval/fitness_computer.h"     // 041 T035 — score the tick in the tick path
 #include <algorithm>
 #include <chrono>
 #include <stdio.h>
@@ -762,6 +763,14 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       }
 
       aircraftStates.push_back(aircraftState);
+      // 041 T035 — slot 0 mirrors the pre-loop initial state, which is NOT a
+      // scored tick. Kept index-aligned with aircraftStates so the zip at
+      // scenario end is a straight walk; the value is never read (the initial
+      // state becomes ScenarioTicks::initialState, which has no score).
+      stepScoreSteps_.push_back(0.0f);
+      envelopeSecsSteps_.push_back(0.0f);
+      stepScorePrevTangent_ = gp_vec3::UnitX();
+      envelopeAccumMsec_ = 0.0;
       if (debugSamplesCurrentPath.empty()) {
         DebugSample sample;
         sample.pathIndex = pathSelector;
@@ -1028,11 +1037,17 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
           const size_t j = k - 1;
           if (j < trackerCameraViewSteps_.size())   tick.cameraView   = trackerCameraViewSteps_[j];
           if (j < trackerTargetSampleSteps_.size()) tick.targetSample = trackerTargetSampleSteps_[j];
+          // 041 T035 — these two ARE index-aligned with aircraftStates (slot 0
+          // is the initial state in both), so they index by k, not k-1.
+          if (k < stepScoreSteps_.size())    tick.stepScore    = stepScoreSteps_[k];
+          if (k < envelopeSecsSteps_.size()) tick.envelopeSecs = envelopeSecsSteps_[k];
           scenarioTicks.ticks.push_back(std::move(tick));
         }
       }
       evalResults.tickList.push_back(std::move(scenarioTicks));
       aircraftStates.clear();
+      stepScoreSteps_.clear();
+      envelopeSecsSteps_.clear();
 
       // 033 troubleshooting 2026-05-22 — bug fix mirror of the same fix in
       // tools/minisim.cc: cameraViewList + targetTrajectoryList are
@@ -1175,6 +1190,76 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
         VectorPathProvider pathProvider(path, aircraftState.getThisPathIndex());
         nnController_->evaluate(aircraftState, pathProvider);
       }
+    }
+
+    // 041 T035 (FR-018a) — SCORE THE TICK, HERE, ONCE.
+    //
+    // Mirrors computeScenarioScores' derivation exactly, and deliberately reads
+    // the SAME values it would: `aircraftState` is the very object about to be
+    // pushed, so its gp_scalar (float) members are bit-for-bit what the
+    // objective will later deserialize. That is what makes this a relocation
+    // rather than a second opinion — there is no double-precision live-state
+    // path to diverge from.
+    //
+    // ⚠️ Ordering: this runs AFTER the NN eval above, so the score recorded for
+    // tick k is not yet visible to the policy AT tick k. Wiring it into the
+    // input vector is T037/T038, where the per-mode ordering question is
+    // resolved (pathgen can compute pre-eval; tracker's target sample only
+    // exists once trackerHelper_.tick() has run).
+    {
+      const FitnessComputer scorer(
+          init_.fitDistScaleBehind, init_.fitDistScaleAhead, init_.fitConeAngleDeg,
+          init_.fitStreakThreshold,
+          std::max(1, static_cast<int>(init_.fitStreakRampSec /
+                                       (gEvalUpdateIntervalMsec / 1000.0))),
+          1.0 /* multiplier unused: raw step score only */);
+
+      gp_vec3 rabbitPosition = gp_vec3::Zero();
+      gp_vec3 tangent = stepScorePrevTangent_;
+      bool haveGeometry = false;
+
+      if (init_.mode == Mode::TRACKER) {
+        const CopiedTargetSample& target = trackerHelper_.lastTargetSample();
+        rabbitPosition = target.trail_rabbit_position;
+        const gp_vec3 vel = target.velocity;
+        const double vn = vel.norm();
+        if (vn > 0.01) { tangent = vel / vn; stepScorePrevTangent_ = tangent; }
+        haveGeometry = true;
+      } else if (!path.empty()) {
+        const int pathIndex = std::clamp(aircraftState.getThisPathIndex(), 0,
+                                         static_cast<int>(path.size()) - 1);
+        rabbitPosition = path.at(pathIndex).start;
+        if (pathIndex + 1 < static_cast<int>(path.size())) {
+          gp_vec3 t = path.at(pathIndex + 1).start - path.at(pathIndex).start;
+          const double tn = t.norm();
+          if (tn > 0.01) { tangent = t / tn; stepScorePrevTangent_ = tangent; }
+        }
+        haveGeometry = true;
+      }
+
+      float stepScore = 0.0f;
+      if (haveGeometry) {
+        const gp_vec3 offset = aircraftState.getPosition() - rabbitPosition;
+        const double along = offset.dot(tangent);
+        const double lateralDist = (offset - along * tangent).norm();
+        stepScore = static_cast<float>(scorer.decomposeStepScore(along, lateralDist).score);
+      }
+
+      // Envelope accumulator: milliseconds continuously at or above threshold,
+      // reset on EXIT only (research.md R2 — not on regime change), normalised
+      // LINEARLY against FitStreakRampSec and clamped to 1.
+      if (stepScore >= static_cast<float>(init_.fitStreakThreshold)) {
+        envelopeAccumMsec_ += static_cast<double>(gEvalUpdateIntervalMsec);
+      } else {
+        envelopeAccumMsec_ = 0.0;
+      }
+      const double rampMsec = init_.fitStreakRampSec * 1000.0;
+      const float envelopeSecs = (rampMsec > 0.0)
+          ? static_cast<float>(std::min(1.0, envelopeAccumMsec_ / rampMsec))
+          : 0.0f;
+
+      stepScoreSteps_.push_back(stepScore);
+      envelopeSecsSteps_.push_back(envelopeSecs);
     }
 
     // Save post-eval state for results
