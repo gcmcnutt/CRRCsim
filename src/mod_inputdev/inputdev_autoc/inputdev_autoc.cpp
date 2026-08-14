@@ -523,6 +523,15 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       // init_.flightArena is primed once per worker from the parent's ini.
       nnController_ = std::make_unique<NNControllerBackend>(nnGenome, init_.flightArena);
 
+      // 041 T049 — the ablation mask, primed once per worker alongside the
+      // arena. Empty in every training run; set only by the ablation
+      // instrument. setInputMask fail-louds on a wrong-length mask, so a mask
+      // built against the other mode's slot count dies here rather than
+      // silently zeroing the wrong columns for a whole run.
+      nnController_->setInputMask(
+          init_.nnInputMask,
+          (init_.mode == Mode::TRACKER) ? TRACKER_NN_INPUT_COUNT : NN_INPUT_COUNT);
+
       // Cache quat dot past reset
       quatDotPast[0] = quatDotPast[1] = quatDotPast[2] = quatDotPast[3] = 0.0;
       return;
