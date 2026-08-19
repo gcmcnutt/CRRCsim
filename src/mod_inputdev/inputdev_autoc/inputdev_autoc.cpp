@@ -34,6 +34,8 @@
 #include "autoc/eval/variation_generator.h"
 #include "autoc/util/scenario_prng.h"        // 033 — deriveClassSubSeeds
 #include "autoc/eval/fitness_computer.h"     // 041 T035 — score the tick in the tick path
+#include "autoc/eval/arena.h"                // 041 P2-3 — ONE arena, both modes
+#include "autoc/eval/craft_observations.h"   // 041 P2-2 — Es + boundary closure, producer side
 #include <algorithm>
 #include <chrono>
 #include <stdio.h>
@@ -963,16 +965,20 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 
     CrashReason crashReason = CrashReason::None;
 
-    // 030 M11.preA — Pathgen uses legacy SIM_PATH_RADIUS_LIMIT bounds +
-    // RabbitComplete (chase reached path end). Tracker uses FlightArena
-    // bounds via helper.tick() (already includes arena-egress + hull-strike
-    // checks), and source-exhaustion via helper.sourceExhausted().
+    // 041 P2-3 — ONE arena. Pathgen used to terminate on a hardcoded
+    // 70 / 7 / 120 envelope (SIM_PATH_RADIUS_LIMIT + SIM_MIN/MAX_ELEVATION)
+    // while telling its own network about FlightArena's 80 / 5 / 100. Both
+    // modes now use `checkArenaBounds` against `init_.flightArena` — the same
+    // struct the gather reads — so what the policy is told and what ends the
+    // scenario are the same cylinder. Tracker still routes through
+    // helper.tick(), which calls the same function plus the hull-strike check.
+    //
+    // ⚠️ VIRTUAL position, not the raw FDM one. The old check used raw `p`
+    // because its constants were raw-frame; checkArenaBounds does the
+    // SIM_INITIAL_ALTITUDE conversion itself, from the state.
     if (!trackerActiveTick) {
-      // out of bounds? Use raw FDM position (not virtual from aircraftState)
-      gp_scalar distanceFromOrigin = std::sqrt(p[0] * p[0] + p[1] * p[1]);
-      if (p[2] < SIM_MAX_ELEVATION || // too high
-          p[2] > SIM_MIN_ELEVATION || // too low
-          distanceFromOrigin > SIM_PATH_RADIUS_LIMIT) {  // too far
+      if (autoc::eval::checkArenaBounds(aircraftState, init_.flightArena) !=
+          autoc::eval::ArenaEgressKind::NONE) {
         crashReason = CrashReason::Eval;
       }
     }
@@ -1197,11 +1203,32 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       }
 
       float stepScore = 0.0f;
+      gp_vec3 scoreGradBody = gp_vec3::Zero();
       if (haveGeometry) {
         const gp_vec3 offset = aircraftState.getPosition() - rabbitPosition;
         const double along = offset.dot(tangent);
         const double lateralDist = (offset - along * tangent).norm();
-        stepScore = static_cast<float>(scorer.decomposeStepScore(along, lateralDist).score);
+        const auto terms = scorer.decomposeStepScore(along, lateralDist);
+        stepScore = static_cast<float>(terms.score);
+
+        // 041 P2-2 (FR-039) — SCORE_GRAD_*: the improvement direction, from the
+        // SAME geometry and the SAME FitnessComputer instance that just
+        // produced the score. Computed here rather than in the gather for the
+        // producer/copier reason that governs every other new slot, and
+        // computed from `terms`' own inputs so the two can never describe
+        // different ticks.
+        //
+        // Weighted by the streak multiplier the tick would earn, because the
+        // gradient's DECISION value scales with how much reward is at stake:
+        // the same 0.1/m uphill matters five times more mid-streak than cold.
+        //
+        // ⚠️ `scorer` is constructed with multiplier 1.0 (raw step score only)
+        // and its streak state is not advanced here, so the multiplier is taken
+        // from the envelope accumulator that IS advanced below — one streak
+        // counter for the tick, not two.
+        const gp_vec3 gradWorld = scorer.scoreGradientWorld(offset, tangent);
+        // world → body, the same convention as inwardBodyDirection.
+        scoreGradBody = aircraftState.getOrientation().inverse() * gradWorld;
       }
 
       // The envelope accumulator. Mechanics are shared with M2
@@ -1213,15 +1240,43 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       const float envelopeSecs =
           static_cast<float>(envelope_.normalizedSecs(init_.fitStreakRampSec));
 
+      // 041 P2-2 — the streak multiplier this tick earns, from the SAME
+      // accumulator, using the SAME ramp the objective uses
+      // (FitnessComputer::applyStreak: 1 + (max−1)·count/stepsToMax, and
+      // envelopeSecs is already count/stepsToMax normalized and clamped).
+      // Derived from the one accumulator rather than a second streak counter —
+      // two counters that agree today is exactly the shape T036 was about.
+      const double scoreGradMultiplier =
+          1.0 + (init_.fitStreakMultiplierMax - 1.0) * static_cast<double>(envelopeSecs);
+
       // M1 only. In tracker mode the flag is NOT the step score — it is the
       // direct-perception estimate, produced inside trackerHelper_.tick() from
       // what the camera actually returned (T038). Writing the exact geometric
       // answer here would hand M2 an oracle it has no way to compute in the
       // air, which is the whole distinction the two tasks exist to preserve.
-      if (init_.mode != Mode::TRACKER && init_.enableEnvelopeInputs != 0) {
+      //
+      // ⚠️ 041 P2-2: IN_ENVELOPE and ENVELOPE_SECS are no longer NN INPUTS —
+      // ablation showed zeroing IN_ENVELOPE *improves* path-5 score by 0.3% and
+      // ENVELOPE_SECS costs 0.2%, both inside noise, for two slots. The state
+      // below is still carried and still RECORDED: M2's perception estimator is
+      // built on the same accumulator, and the envelope trace is what the
+      // tracking metrics are read from.
+      if (init_.mode != Mode::TRACKER) {
         aircraftState.setInEnvelope(envelope_.in_envelope);
         aircraftState.setEnvelopeSecs(static_cast<gp_scalar>(envelopeSecs));
       }
+
+      // 041 P2-2 — the score gradient, M1's exact closed form. Zero when there
+      // is no geometry this tick, which is the honest answer: no target, no
+      // uphill direction.
+      aircraftState.setScoreGradBody(
+          scoreGradBody * static_cast<gp_scalar>(scoreGradMultiplier));
+
+      // 041 P2-2 — Es and the boundary closure rate, mode-agnostic, both
+      // gathers copy them. Written from the SAME `init_.flightArena` the gather
+      // reads and the termination check enforces, so the energy datum and the
+      // containment floor cannot be two different heights.
+      autoc::eval::writeCraftObservations(aircraftState, init_.flightArena);
 
       // Body-frame SPECIFIC FORCE (T039) — mode-agnostic, both gathers copy it.
       // Computed here, worker-side, because this is where FDM gravity is in

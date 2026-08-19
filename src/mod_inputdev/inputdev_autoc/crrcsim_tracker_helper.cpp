@@ -11,6 +11,7 @@
 //   - Cursor starts at 0 (no pre-roll) per M11.preA "match M1 init" decision.
 
 #include "crrcsim_tracker_helper.h"
+#include "autoc/eval/craft_observations.h"  // 041 P2-2 — Es + boundary closure
 
 #include <algorithm>
 #include <cmath>
@@ -239,7 +240,11 @@ CrashReason CrrcsimTrackerHelper::tick(AircraftState& chaseState,
     // tick it is deciding). Both halves matter — reading the flag from a stale
     // slot, or writing it after the forward pass, each produce a value that
     // looks right in the dmp and was never actually available to the policy.
-    if (init.enableEnvelopeInputs != 0) {
+    // ⚠️ 041 P2-2: the EnableEnvelopeInputs gate is gone with the two slots it
+    // named. The estimator still runs unconditionally — the envelope trace is
+    // what the M2 tracking metrics are read from, and it is no longer an NN
+    // input to gate.
+    {
         const autoc::eval::EnvelopeEstimatorConfig envCfg{
             static_cast<gp_scalar>(init.cepGateThreshold),
             static_cast<gp_scalar>(init.envelopeSpanLo),
@@ -250,6 +255,27 @@ CrashReason CrrcsimTrackerHelper::tick(AircraftState& chaseState,
         chaseState.setInEnvelope(envelope_.in_envelope);
         chaseState.setEnvelopeSecs(envelope_.normalizedSecs(init.fitStreakRampSec));
     }
+
+    // 041 P2-2 — Es + boundary closure, from the same arena the gather and the
+    // egress check use. Same call M1 makes, same producer/copier split.
+    autoc::eval::writeCraftObservations(chaseState, init.flightArena);
+
+    // ⛔ 041 P2-2 — SCORE_GRAD_* IS DELIBERATELY ZERO IN M2, and the explicit
+    // write is here so the zero is a DECISION in the code rather than a
+    // default nobody looked at.
+    //
+    // The slot exists because the format break happens once and 043 will want
+    // it. It is not FILLED because M2 cannot legitimately have it yet: today's
+    // M2 tracks a RECORDED flight and perceives it only through the camera, so
+    // handing it the exact ∂score/∂position — which is computed from the true
+    // target geometry — would be an oracle it has no way to reproduce in the
+    // air. That is precisely what T038 refused for the M2 envelope estimator,
+    // and the same refusal applies here.
+    //
+    // 043 decides the source: phase 1 (virtual target + synthetic camera) can
+    // use the exact closed form legitimately; phase 2 (real craft, real
+    // beacons) must proxy it from span-based range estimation.
+    chaseState.setScoreGradBody(gp_vec3::Zero());
 
     // Step 2: gather tracker NN inputs.
     TrackerInputs inputs = {};
