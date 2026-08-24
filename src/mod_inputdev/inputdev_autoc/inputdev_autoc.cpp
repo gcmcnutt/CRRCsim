@@ -30,8 +30,12 @@
 #include "../../mod_windfield/windfield.h"
 #include "inputdev_autoc.h"
 #include "autoc/eval/scenario_meta_apply.h"  // 030 V1.5 — applyVariationScale
+#include "autoc/eval/specific_force.h"
 #include "autoc/eval/variation_generator.h"
 #include "autoc/util/scenario_prng.h"        // 033 — deriveClassSubSeeds
+#include "autoc/eval/fitness_computer.h"     // 041 T035 — score the tick in the tick path
+#include "autoc/eval/arena.h"                // 041 P2-3 — ONE arena, both modes
+#include "autoc/eval/craft_observations.h"   // 041 P2-2 — Es + boundary closure, producer side
 #include <algorithm>
 #include <chrono>
 #include <stdio.h>
@@ -472,7 +476,7 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       priorPathSelector = -1;
       pathSelector = 0;
       gPendingCommand = PendingCommand{};
-      evalResults.aircraftStateList.clear();
+      evalResults.tickList.clear();
       evalResults.crashReasonList.clear();
 
       // Paths stay at canonical origin (Z=0). Aircraft position stored as virtual
@@ -520,6 +524,15 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       // pathgen (M1) evaluate() path can populate the arena-awareness inputs.
       // init_.flightArena is primed once per worker from the parent's ini.
       nnController_ = std::make_unique<NNControllerBackend>(nnGenome, init_.flightArena);
+
+      // 041 T049 — the ablation mask, primed once per worker alongside the
+      // arena. Empty in every training run; set only by the ablation
+      // instrument. setInputMask fail-louds on a wrong-length mask, so a mask
+      // built against the other mode's slot count dies here rather than
+      // silently zeroing the wrong columns for a whole run.
+      nnController_->setInputMask(
+          init_.nnInputMask,
+          (init_.mode == Mode::TRACKER) ? TRACKER_NN_INPUT_COUNT : NN_INPUT_COUNT);
 
       // Cache quat dot past reset
       quatDotPast[0] = quatDotPast[1] = quatDotPast[2] = quatDotPast[3] = 0.0;
@@ -762,6 +775,14 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       }
 
       aircraftStates.push_back(aircraftState);
+      // 041 T035 — slot 0 mirrors the pre-loop initial state, which is NOT a
+      // scored tick. Kept index-aligned with aircraftStates so the zip at
+      // scenario end is a straight walk; the value is never read (the initial
+      // state becomes ScenarioTicks::initialState, which has no score).
+      stepScoreSteps_.push_back(0.0f);
+      envelopeSecsSteps_.push_back(0.0f);
+      stepScorePrevTangent_ = gp_vec3::UnitX();
+      envelope_.reset();
       if (debugSamplesCurrentPath.empty()) {
         DebugSample sample;
         sample.pathIndex = pathSelector;
@@ -944,16 +965,20 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 
     CrashReason crashReason = CrashReason::None;
 
-    // 030 M11.preA — Pathgen uses legacy SIM_PATH_RADIUS_LIMIT bounds +
-    // RabbitComplete (chase reached path end). Tracker uses FlightArena
-    // bounds via helper.tick() (already includes arena-egress + hull-strike
-    // checks), and source-exhaustion via helper.sourceExhausted().
+    // 041 P2-3 — ONE arena. Pathgen used to terminate on a hardcoded
+    // 70 / 7 / 120 envelope (SIM_PATH_RADIUS_LIMIT + SIM_MIN/MAX_ELEVATION)
+    // while telling its own network about FlightArena's 80 / 5 / 100. Both
+    // modes now use `checkArenaBounds` against `init_.flightArena` — the same
+    // struct the gather reads — so what the policy is told and what ends the
+    // scenario are the same cylinder. Tracker still routes through
+    // helper.tick(), which calls the same function plus the hull-strike check.
+    //
+    // ⚠️ VIRTUAL position, not the raw FDM one. The old check used raw `p`
+    // because its constants were raw-frame; checkArenaBounds does the
+    // SIM_INITIAL_ALTITUDE conversion itself, from the state.
     if (!trackerActiveTick) {
-      // out of bounds? Use raw FDM position (not virtual from aircraftState)
-      gp_scalar distanceFromOrigin = std::sqrt(p[0] * p[0] + p[1] * p[1]);
-      if (p[2] < SIM_MAX_ELEVATION || // too high
-          p[2] > SIM_MIN_ELEVATION || // too low
-          distanceFromOrigin > SIM_PATH_RADIUS_LIMIT) {  // too far
+      if (autoc::eval::checkArenaBounds(aircraftState, init_.flightArena) !=
+          autoc::eval::ArenaEgressKind::NONE) {
         crashReason = CrashReason::Eval;
       }
     }
@@ -1009,9 +1034,36 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       pathMeta.originOffset = pathOriginOffset;
       evalResults.scenarioList.push_back(pathMeta);
 
-      std::vector<AircraftState> aircraftStatesCopy = aircraftStates;
-      evalResults.aircraftStateList.push_back(aircraftStatesCopy);
+      // 041 T021 — emit the GROUPED record. `aircraftStates` still carries the
+      // pre-loop initial state at slot 0 (pushed once before the tick loop);
+      // that state now goes into its OWN NAMED FIELD and the stepped ticks
+      // become the series. This is the push site where the offset was born:
+      // the state list was pushed with slot 0 while the camera/target buffers
+      // were not, so they started one tick apart and every consumer had to
+      // know it. There is nothing left to know.
+      ScenarioTicks scenarioTicks;
+      if (!aircraftStates.empty()) {
+        scenarioTicks.initialState = aircraftStates.front();
+        scenarioTicks.ticks.reserve(aircraftStates.size() - 1);
+        for (size_t k = 1; k < aircraftStates.size(); ++k) {
+          EvalTick tick(aircraftStates[k]);
+          // Tracker members ride WITH their tick. Both buffers are appended
+          // once per stepped tick, so index k-1 is this tick's sample; in
+          // pathgen they are empty and the members stay absent.
+          const size_t j = k - 1;
+          if (j < trackerCameraViewSteps_.size())   tick.cameraView   = trackerCameraViewSteps_[j];
+          if (j < trackerTargetSampleSteps_.size()) tick.targetSample = trackerTargetSampleSteps_[j];
+          // 041 T035 — these two ARE index-aligned with aircraftStates (slot 0
+          // is the initial state in both), so they index by k, not k-1.
+          if (k < stepScoreSteps_.size())    tick.stepScore    = stepScoreSteps_[k];
+          if (k < envelopeSecsSteps_.size()) tick.envelopeSecs = envelopeSecsSteps_[k];
+          scenarioTicks.ticks.push_back(std::move(tick));
+        }
+      }
+      evalResults.tickList.push_back(std::move(scenarioTicks));
       aircraftStates.clear();
+      stepScoreSteps_.clear();
+      envelopeSecsSteps_.clear();
 
       // 033 troubleshooting 2026-05-22 — bug fix mirror of the same fix in
       // tools/minisim.cc: cameraViewList + targetTrajectoryList are
@@ -1023,10 +1075,13 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       // path render skipped. Pathgen workers leave the trackerCameraViewSteps_
       // / trackerTargetSampleSteps_ buffers empty all along; gating the
       // push restores the documented contract.
-      if (init_.mode == Mode::TRACKER) {
-        evalResults.cameraViewList.push_back(trackerCameraViewSteps_);
-        evalResults.targetTrajectoryList.push_back(trackerTargetSampleSteps_);
-      }
+      // 041 T021 — the mode gate that used to live here is gone with the lists
+      // it guarded. Its purpose was to stop pathgen runs from pushing EMPTY
+      // inner vectors, which made the outer vector non-empty and led the
+      // renderer (which dispatched on outer-vector emptiness) to mis-classify a
+      // pathgen dmp as tracker mode and skip the rabbit path. Mode is now read
+      // from whether a TICK carries a target sample, so an empty-vs-absent
+      // distinction at the scenario level no longer exists to be confused.
       trackerCameraViewSteps_.clear();
       trackerTargetSampleSteps_.clear();
       // Per-scenario telemetry counters (M7d.b). hullStrikeCount = hull
@@ -1072,18 +1127,18 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
         sendRPC(*socket_, evalResults);
         evalDataEmpty = true;
         evalResults.pathList.clear();
-        evalResults.aircraftStateList.clear();
+        evalResults.tickList.clear();
         evalResults.crashReasonList.clear();
         evalResults.scenarioList.clear();
         // 030 V1.5 fix (2026-05-08) — pre-existing M11.preA leak: tracker
         // mode + dmp recording vectors were appended each eval but never
         // cleared post-send. After N evals, this evalResults carried
-        // N-evals-worth of cameraViewList / targetTrajectoryList — at
-        // pop=5000 / 20 workers / 294 scenarios this hit ~140 GB across
-        // worker contexts on autoc before gen 1 completed. minisim
-        // already has these clears; mirror them here.
-        evalResults.cameraViewList.clear();
-        evalResults.targetTrajectoryList.clear();
+        // N-evals-worth of per-tick data — at pop=5000 / 20 workers / 294
+        // scenarios this hit ~140 GB across worker contexts on autoc before
+        // gen 1 completed. minisim already has these clears; mirror them here.
+        // 041 T021 — `tickList` is cleared above with the other per-scenario
+        // series; the camera/target clears it replaced are subsumed by it,
+        // since those samples now live inside the ticks.
         evalResults.arenaEgressCount.clear();
         evalResults.hullStrikeCount.clear();
         evalResults.debugSamples.clear();
@@ -1097,6 +1152,159 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     // Tracker arena egress / hull strike fire LATER (in helper.tick());
     // they are caught at the second checkpoint after the NN tick block.
     if (finalizeScenarioOnCrash()) return;
+
+    // 041 T037/T039 (FR-018a) — SCORE THE TICK, HERE, ONCE, BEFORE THE NN.
+    //
+    // Moved above the eval at T037. The ordering question that made this look
+    // hard is SOLVED, and the answer is that it was never a real asymmetry:
+    // pathgen's rabbit is `path[pathIndex]` and the tracker's target is
+    // `source_->samples[cursor_]` — both are LOOKUPS into a preloaded
+    // trajectory, so the tick's geometry is knowable before the policy acts in
+    // BOTH modes. No tick k−1 fallback anywhere.
+    //
+    // Why it has to be before: `IN_ENVELOPE` must describe the tick the policy
+    // is DECIDING. Scored after the forward pass it would describe the tick the
+    // policy already decided — a value that looks correct in the dmp and was
+    // never available to the controller.
+    //
+    // Why the value does not change by moving: the NN eval writes only
+    // pitch/roll/throttle COMMANDS; position, orientation and the target lookup
+    // are all fixed before it runs. This is a relocation, and T036's
+    // determinism + materially-same gate is what proves it stayed one.
+    {
+      const FitnessComputer scorer(
+          init_.fitDistScaleBehind, init_.fitDistScaleAhead, init_.fitConeAngleDeg,
+          init_.fitStreakThreshold,
+          std::max(1, static_cast<int>(init_.fitStreakRampSec /
+                                       (gEvalUpdateIntervalMsec / 1000.0))),
+          1.0 /* multiplier unused: raw step score only */);
+
+      gp_vec3 rabbitPosition = gp_vec3::Zero();
+      gp_vec3 tangent = stepScorePrevTangent_;
+      bool haveGeometry = false;
+
+      if (init_.mode == Mode::TRACKER) {
+        gp_vec3 targetVel = gp_vec3::Zero();
+        if (trackerHelper_.peekTargetGeometry(init_, rabbitPosition, targetVel)) {
+          const double vn = targetVel.norm();
+          if (vn > 0.01) { tangent = targetVel / vn; stepScorePrevTangent_ = tangent; }
+          haveGeometry = true;
+        }
+      } else if (!path.empty()) {
+        const int pathIndex = std::clamp(aircraftState.getThisPathIndex(), 0,
+                                         static_cast<int>(path.size()) - 1);
+        rabbitPosition = path.at(pathIndex).start;
+        if (pathIndex + 1 < static_cast<int>(path.size())) {
+          gp_vec3 t = path.at(pathIndex + 1).start - path.at(pathIndex).start;
+          const double tn = t.norm();
+          if (tn > 0.01) { tangent = t / tn; stepScorePrevTangent_ = tangent; }
+        }
+        haveGeometry = true;
+      }
+
+      float stepScore = 0.0f;
+      gp_vec3 scoreGradBody = gp_vec3::Zero();
+      if (haveGeometry) {
+        const gp_vec3 offset = aircraftState.getPosition() - rabbitPosition;
+        const double along = offset.dot(tangent);
+        const double lateralDist = (offset - along * tangent).norm();
+        const auto terms = scorer.decomposeStepScore(along, lateralDist);
+        stepScore = static_cast<float>(terms.score);
+
+        // 041 P2-2 (FR-039) — SCORE_GRAD_*: the improvement direction, from the
+        // SAME geometry and the SAME FitnessComputer instance that just
+        // produced the score. Computed here rather than in the gather for the
+        // producer/copier reason that governs every other new slot, and
+        // computed from `terms`' own inputs so the two can never describe
+        // different ticks.
+        //
+        // Weighted by the streak multiplier the tick would earn, because the
+        // gradient's DECISION value scales with how much reward is at stake:
+        // the same 0.1/m uphill matters five times more mid-streak than cold.
+        //
+        // ⚠️ `scorer` is constructed with multiplier 1.0 (raw step score only)
+        // and its streak state is not advanced here, so the multiplier is taken
+        // from the envelope accumulator that IS advanced below — one streak
+        // counter for the tick, not two.
+        const gp_vec3 gradWorld = scorer.scoreGradientWorld(offset, tangent);
+        // world → body, the same convention as inwardBodyDirection.
+        scoreGradBody = aircraftState.getOrientation().inverse() * gradWorld;
+      }
+
+      // The envelope accumulator. Mechanics are shared with M2
+      // (autoc/eval/envelope_state.h) — reset on envelope EXIT only, wall-clock
+      // milliseconds so a cadence change re-derives rather than silently
+      // rescales, LINEAR normalization against FitStreakRampSec.
+      envelope_.advance(stepScore >= static_cast<float>(init_.fitStreakThreshold),
+                        static_cast<double>(gEvalUpdateIntervalMsec));
+      const float envelopeSecs =
+          static_cast<float>(envelope_.normalizedSecs(init_.fitStreakRampSec));
+
+      // 041 P2-2 — the streak multiplier this tick earns, from the SAME
+      // accumulator, using the SAME ramp the objective uses
+      // (FitnessComputer::applyStreak: 1 + (max−1)·count/stepsToMax, and
+      // envelopeSecs is already count/stepsToMax normalized and clamped).
+      // Derived from the one accumulator rather than a second streak counter —
+      // two counters that agree today is exactly the shape T036 was about.
+      const double scoreGradMultiplier =
+          1.0 + (init_.fitStreakMultiplierMax - 1.0) * static_cast<double>(envelopeSecs);
+
+      // M1 only. In tracker mode the flag is NOT the step score — it is the
+      // direct-perception estimate, produced inside trackerHelper_.tick() from
+      // what the camera actually returned (T038). Writing the exact geometric
+      // answer here would hand M2 an oracle it has no way to compute in the
+      // air, which is the whole distinction the two tasks exist to preserve.
+      //
+      // ⚠️ 041 P2-2: IN_ENVELOPE and ENVELOPE_SECS are no longer NN INPUTS —
+      // ablation showed zeroing IN_ENVELOPE *improves* path-5 score by 0.3% and
+      // ENVELOPE_SECS costs 0.2%, both inside noise, for two slots. The state
+      // below is still carried and still RECORDED: M2's perception estimator is
+      // built on the same accumulator, and the envelope trace is what the
+      // tracking metrics are read from.
+      if (init_.mode != Mode::TRACKER) {
+        aircraftState.setInEnvelope(envelope_.in_envelope);
+        aircraftState.setEnvelopeSecs(static_cast<gp_scalar>(envelopeSecs));
+      }
+
+      // 041 P2-2 — the score gradient, M1's exact closed form. Zero when there
+      // is no geometry this tick, which is the honest answer: no target, no
+      // uphill direction.
+      aircraftState.setScoreGradBody(
+          scoreGradBody * static_cast<gp_scalar>(scoreGradMultiplier));
+
+      // 041 P2-2 — Es and the boundary closure rate, mode-agnostic, both
+      // gathers copy them. Written from the SAME `init_.flightArena` the gather
+      // reads and the termination check enforces, so the energy datum and the
+      // containment floor cannot be two different heights.
+      autoc::eval::writeCraftObservations(aircraftState, init_.flightArena);
+
+      // Body-frame SPECIFIC FORCE (T039) — mode-agnostic, both gathers copy it.
+      // Computed here, worker-side, because this is where FDM gravity is in
+      // scope; on hardware the equivalent value arrives finished over MSP and
+      // the gather likewise only copies.
+      //
+      // ⚠️ ft-based throughout: `getAccel()` is v_V_dot_local in ft/s² and
+      // `getGravity()` is the FDM's own gravity in ft/s². Dividing one by the
+      // other makes the result unit-free, so no ft→m conversion happens here
+      // and none can be forgotten.
+      if (init_.enableAccelInputs != 0 && eom01) {
+        CRRCMath::Vector3 aLocal = eom01->getAccel();
+        const gp_vec3 accWorld(static_cast<gp_scalar>(aLocal(0)),
+                               static_cast<gp_scalar>(aLocal(1)),
+                               static_cast<gp_scalar>(aLocal(2)));
+        const auto sf = autoc::eval::bodySpecificForce(
+            accWorld, aircraftState.getOrientation(),
+            static_cast<gp_scalar>(eom01->getGravity()));
+        aircraftState.setSpecificForceG(sf.g_units);
+      }
+
+      // ⚠️ Recording is UNCONDITIONAL — the ablation gates above suppress the
+      // NN INPUT, never the recorded column. An ablation run must still produce
+      // a truthful envelope trace, or the T068 matrix would be comparing arms
+      // it can no longer measure.
+      stepScoreSteps_.push_back(stepScore);
+      envelopeSecsSteps_.push_back(envelopeSecs);
+    }
 
     // 030 M11.preA — Mode-aware NN evaluation block.
     //   Tracker mode: helper.tick() projects beacons + shifts history,

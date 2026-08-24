@@ -10,7 +10,15 @@
     </resolution>
     <textures fUse_textures="1" fUse_mipmaps="0" />
   </video>
-  <launch altitude="82" velocity_rel="0.93" angle="0" sal="0" rel_to_player="0"
+  <!-- 041 P2-3: 82 -> 196.825 ft. FEET, and measured to the aircraft's LOWEST
+       POINT above the terrain: crrc_main.cpp computes
+       Altitude = launch.altitude + zLow + groundHeight, with hb1 zLow = 0.125 ft
+       and the Davis ground plane at -0.1 ft. So 55 m / 0.3048 - 0.125 + 0.1
+       = 180.421 ft puts the CG at exactly 55 m above the crrcsim datum.
+       ⛔ MUST equal -SIM_INITIAL_ALTITUDE (aircraft_state.h), or the craft stops
+       entering at the virtual origin. Measured chain:
+       specs/041-m2-depth/toolchain-datum-validation.md -->
+  <launch altitude="180.421" velocity_rel="0.93" angle="0" sal="0" rel_to_player="0"
      rel_front="21" rel_right="0" heading_deg="180">
     <preset name_en="hand" altitude="10" velocity_rel="1" angle="0" rel_to_player="1"
        rel_front="0" rel_right="2" />

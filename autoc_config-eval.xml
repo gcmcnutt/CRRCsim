@@ -10,7 +10,16 @@
     </resolution>
     <textures fUse_textures="1" fUse_mipmaps="0" />
   </video>
-  <launch altitude="82" velocity_rel="0.93" angle="0" sal="0" rel_to_player="0"
+  <!-- 041 P2-3: 82 -> 180.421 ft, mirroring autoc_config.xml. FEET, measured to
+       the aircraft's LOWEST POINT above the terrain, so 55 m / 0.3048 - zLow
+       (0.125 ft) + ground (0.1 ft) = 180.421 ft puts the CG at exactly 55 m.
+       ⛔ MUST equal -SIM_INITIAL_ALTITUDE and MUST match autoc_config.xml. This
+       file is the VISUAL worker's config (scripts/crrcsim-visual.sh); it was
+       missed when the training config moved, which launched the visual craft at
+       25.0012 m AGL against a 25 m hard deck -- 1.2 mm of clearance, so every
+       scenario egressed on the floor within a second and the policy looked
+       broken when it was the spawn point that was wrong. -->
+  <launch altitude="180.421" velocity_rel="0.93" angle="0" sal="0" rel_to_player="0"
      rel_front="21" rel_right="0" heading_deg="180">
     <preset name_en="hand" altitude="10" velocity_rel="1" angle="0" rel_to_player="1"
        rel_front="0" rel_right="2" />

@@ -31,6 +31,7 @@
 #include "autoc/autoc.h"
 #include "autoc/nn/evaluator.h"
 #include "autoc/nn/serialization.h"
+#include "autoc/eval/envelope_state.h"
 #include "autoc/eval/sensor_math.h"
 #include "autoc/nn/nn_input_computation.h"
 #include "autoc/eval/variation_generator.h"
@@ -136,6 +137,25 @@ private:
   EvalData evalData;
   EvalResults evalResults;
   std::vector<AircraftState> aircraftStates;
+  // 041 T035 (FR-018a) — the per-tick step score and envelope accumulator,
+  // computed IN the tick path so the reward and the observation are the same
+  // number. Appended at the same site as the aircraftStates tick push, one line
+  // apart, single producer.
+  //
+  // ⚠️ Yes, these are parallel buffers — the shape US1 just retired, one scope
+  // inward. The clean fix is making this whole buffer a std::vector<EvalTick>
+  // (which would also absorb trackerCameraViewSteps_ / trackerTargetSampleSteps_
+  // below); that is filed in specs/BACKLOG.md as "Reorganise EvalResults BY
+  // TIME" and is deliberately not being done inside the A1 bundle.
+  // Index convention matches aircraftStates: [0] is the pre-loop initial state.
+  std::vector<float> stepScoreSteps_;      // raw-ok: recorded per-tick scalar
+  std::vector<float> envelopeSecsSteps_;   // raw-ok: recorded per-tick scalar
+  // Rolling state for the two computations above, reset per scenario.
+  gp_vec3 stepScorePrevTangent_ = gp_vec3::UnitX();
+  // 041 T037 — M1 envelope accumulator. Same type the M2 path uses, so the two
+  // modes cannot drift on reset condition, units, or normalization; only the
+  // source of the per-tick flag differs (M1 step score vs M2 perception).
+  autoc::eval::EnvelopeState envelope_{};
 
   std::vector<DebugSample> debugSamplesCurrentPath;
   double quatDotPast[4] = {0,0,0,0};

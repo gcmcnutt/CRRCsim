@@ -1,11 +1,20 @@
 # Claude Code Instructions for crrcsim
 
 ## Build and Test Policy
-DO NOT run builds or tests yourself. After making code changes, inform the user that:
-- The code needs to be rebuilt: `cd build && make -j8`
-- Testing can be done with: `cd /home/gmcnutt/autoc && timeout 300 build/autoc -c autoc_diag.cfg`
 
-The user will run these commands and share results.
+**Updated 2026-08-10 (operator).** The previous blanket *"DO NOT run builds or tests yourself"* was
+situational — it dates from the `simTimeMsec` divergence session noted below, when an assistant-run build
+could muddy the evidence. It is superseded by the same split the parent repo already uses:
+
+- **Build and iterate freely.** Incremental builds (`cd build && make -j8`) and `ctest` are fine, and
+  running them is preferred over handing back unverified code.
+- **The GATES stay with the operator**: a clean `scripts/rebuild-perf.sh` (Constitution IV —
+  determinism-affecting), the eval-vs-training bitwise check, and every training bake
+  (Constitution IX; the operator drives the regression gate).
+
+Commands:
+- Rebuild: `cd build && make -j8`
+- Smoke: `cd /home/gmcnutt/autoc && timeout 300 build/autoc -c autoc_diag.cfg`
 
 ## Key Files
 - `src/SimStateHandler.cpp` - Simulation time management, `getSimulationTimeSinceReset()`
