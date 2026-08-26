@@ -112,6 +112,12 @@ void CRRC_AirplaneSim_Larcsim::initAirplaneState(double dRelVel,
   Cm_de   = nominal_Cm_de   * (static_cast<SCALAR>(1.0) + static_cast<SCALAR>(Global::craftPitchEffDelta));
   CL_de   = nominal_CL_de   * (static_cast<SCALAR>(1.0) + static_cast<SCALAR>(Global::craftPitchEffDelta));
   Cl_da   = nominal_Cl_da   * (static_cast<SCALAR>(1.0) + static_cast<SCALAR>(Global::craftRollEffDelta));
+  // 043 US5 (FR-052b) — craftCmQ is an ABSOLUTE pitch-damping coefficient (not
+  // a delta), already center+clamped autoc-side to [-5.0, -3.6]. Default -4.2 ==
+  // hb1_streamer.xml nominal Cm_q, so a σ=0 run overwrites Cm_q with the same
+  // value it was loaded with — bit-identical no-op. This is the DYNAMIC
+  // pitch-damping side; the static-margin side is craftCGDelta above.
+  Cm_q    = static_cast<SCALAR>(Global::craftCmQ);
 
   // 037 actuator dynamics (operator decision: in-FDM, substep dt). Reset the
   // persistent actuator-filter state at scenario reset so a fresh scenario

@@ -173,4 +173,20 @@
     <f3a enabled="0" />
     <f3f enabled="0" />
   </game>
+  <!-- 043 US2 — INAV fixed-wing ACRO rate controller (eval config; must match
+       autoc_config.xml so eval replays training bit-for-bit). Loaded from this
+       global config by CRRC_FDM_Env. Constants = contracts/inav-fw-rate-loop.md.
+       ⛔ RATE control only — no attitude term (FR-019a). -->
+  <controllers>
+    <InavFwRate>
+      <roll  kP="0.484" kI="0.750" kD="0.003675" kFF="1.613" maxRate="360"
+             gyroLpfHz="25" dtermLpfHz="10" itermLockRateThresholdPct="40"
+             engageThresholdPct="10" lockTimeMaxMs="500" itermLimitPct="33"
+             pidSumLimit="500" />
+      <pitch kP="0.484" kI="1.250" kD="0.002625" kFF="2.258" maxRate="120"
+             gyroLpfHz="25" dtermLpfHz="10" itermLockRateThresholdPct="40"
+             engageThresholdPct="10" lockTimeMaxMs="500" itermLimitPct="33"
+             pidSumLimit="500" />
+    </InavFwRate>
+  </controllers>
 </crrcsimConfig>

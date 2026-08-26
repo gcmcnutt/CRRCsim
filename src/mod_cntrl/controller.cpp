@@ -26,6 +26,7 @@
 #include "cntrl_phugoid/cntrl_phugoid.h"
 #include "cntrl_setuserinput/cntrl_setuserinput.h"
 #include "cntrl_omega/cntrl_omega.h"
+#include "cntrl_inavfwrate/cntrl_inavfwrate.h"   // 043 US2
 #include "cntrl_mcopter01/cntrl_mcopter01.h"
 #include "cntrl_scalethrottle/scalethrottle.h"
 #include "cntrl_limitflipthr/limitflipthrottle.h"
@@ -59,6 +60,8 @@ void Controller::LoadList(SimpleXMLTransfer*       cfg,
         cntrl = new Cntrl_Phugoid(cntrldescr);
       else if (name.compare("Omega") == 0)
         cntrl = new Cntrl_Omega(cntrldescr);
+      else if (name.compare("InavFwRate") == 0)   // 043 US2
+        cntrl = new Cntrl_InavFwRate(cntrldescr);
       else if (name.compare("MCopter01") == 0)
         cntrl = new Cntrl_MCopter01(cntrldescr);
       else if (name.compare("ScaleThrottle") == 0)

@@ -600,6 +600,22 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       // dead-time); consumed by the fdm_larcsim latch when
       // Global::servoModelEnabled.
       Global::servoPwmPhase      = static_cast<double>(activeScenario.craftServoPwmPhase);
+      // 043 US5 -- pitch damping (absolute Cm_q, consumed in fdm_larcsim) + IMU
+      // imperfection axes (consumed in the NN observation path). NOT ramped
+      // (FR-055), so these are the full-magnitude draws.
+      Global::craftCmQ             = static_cast<double>(activeScenario.craftCmQ);
+      Global::craftImuMisalignRoll  = static_cast<double>(activeScenario.craftImuMisalignRoll);
+      Global::craftImuMisalignPitch = static_cast<double>(activeScenario.craftImuMisalignPitch);
+      Global::craftImuMisalignYaw   = static_cast<double>(activeScenario.craftImuMisalignYaw);
+      Global::craftGyroScaleX      = static_cast<double>(activeScenario.craftGyroScaleX);
+      Global::craftGyroScaleY      = static_cast<double>(activeScenario.craftGyroScaleY);
+      Global::craftGyroScaleZ      = static_cast<double>(activeScenario.craftGyroScaleZ);
+      Global::craftAccelScaleX     = static_cast<double>(activeScenario.craftAccelScaleX);
+      Global::craftAccelScaleY     = static_cast<double>(activeScenario.craftAccelScaleY);
+      Global::craftAccelScaleZ     = static_cast<double>(activeScenario.craftAccelScaleZ);
+      Global::craftAccelBiasX      = static_cast<double>(activeScenario.craftAccelBiasX);
+      Global::craftAccelBiasY      = static_cast<double>(activeScenario.craftAccelBiasY);
+      Global::craftAccelBiasZ      = static_cast<double>(activeScenario.craftAccelBiasZ);
 
 #ifdef DETAILED_LOGGING
       std::cerr << "VARIATIONS1: heading=" << (Global::entryHeadingOffset * 180.0/M_PI)

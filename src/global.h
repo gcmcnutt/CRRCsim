@@ -123,6 +123,25 @@ class Global
     // ini knob) so A/B run pairs differ by ini only.
     static bool servoModelEnabled;       ///< master switch for the in-FDM servo block
     static double servoPwmPhase;         ///< s, per-scenario PWM latch phase, [0, 0.020)
+
+    // 043 US5 -- pitch-damping (absolute Cm_q; consumed in fdm_larcsim
+    // initAirplaneState) + IMU imperfection axes (misalignment / scale / bias;
+    // consumed in the NN observation path). Set per-scenario by inputdev_autoc.
+    // Defaults = nominal (Cm_q = -4.2 = hb1_streamer XML nominal; misalign 0,
+    // scale 1, bias 0) so a no-craft / sigma=0 run is a bit-identical no-op.
+    static double craftCmQ;              ///< pitch-damping coefficient (absolute; default -4.2)
+    static double craftImuMisalignRoll;  ///< deg, IMU mount roll error
+    static double craftImuMisalignPitch; ///< deg, IMU mount pitch error
+    static double craftImuMisalignYaw;   ///< deg, IMU mount yaw error
+    static double craftGyroScaleX;       ///< per-axis gyro scale (1.0 = nominal)
+    static double craftGyroScaleY;
+    static double craftGyroScaleZ;
+    static double craftAccelScaleX;      ///< per-axis accel scale (1.0 = nominal)
+    static double craftAccelScaleY;
+    static double craftAccelScaleZ;
+    static double craftAccelBiasX;       ///< g, per-axis accel bias
+    static double craftAccelBiasY;
+    static double craftAccelBiasZ;
 };
 
 

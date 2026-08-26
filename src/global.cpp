@@ -82,3 +82,19 @@ double            Global::servoSlew = 24.0;   // /s (autoc [-1,1] command units,
 double            Global::thrustTau = 0.150;  // s
 bool              Global::servoModelEnabled = false;  // 037 servo v2 switch (WorkerInit)
 double            Global::servoPwmPhase = 0.0;        // s, per-scenario PWM latch phase
+
+// 043 US5 -- pitch damping + IMU imperfection carriers. Defaults = nominal so a
+// no-craft / sigma=0 run is a bit-identical no-op.
+double            Global::craftCmQ = -4.2;            // = hb1_streamer.xml nominal Cm_q
+double            Global::craftImuMisalignRoll = 0.0;
+double            Global::craftImuMisalignPitch = 0.0;
+double            Global::craftImuMisalignYaw = 0.0;
+double            Global::craftGyroScaleX = 1.0;
+double            Global::craftGyroScaleY = 1.0;
+double            Global::craftGyroScaleZ = 1.0;
+double            Global::craftAccelScaleX = 1.0;
+double            Global::craftAccelScaleY = 1.0;
+double            Global::craftAccelScaleZ = 1.0;
+double            Global::craftAccelBiasX = 0.0;
+double            Global::craftAccelBiasY = 0.0;
+double            Global::craftAccelBiasZ = 0.0;
