@@ -156,6 +156,30 @@ Extra drag and slightly softer pitch authority to match the mushy feel seen in r
         </battery>
       </automagic>
     </power>
+    <!-- 043 US2 — INAV fixed-wing ACRO rate controller, the inner loop this
+         airframe actually flies behind. MODEL-LOCAL (the fdm_mcopter01 pattern):
+         fdm_larcsim loads this node from its own <config>, so the FC tune lives
+         with the airframe it was tuned for, loading a different model cannot
+         silently inherit hb1's gains, and per-scenario gain variation stays
+         reachable. Constants change WITHOUT a rebuild (FR-014); values are the
+         flying config per specs/043-acro-dual-loop/contracts/inav-fw-rate-loop.md
+         (derived from xiao/inav-hb1.cfg).
+         ⛔ RATE control only — no attitude/self-levelling term (FR-019a).
+         ⚠️ Roll and pitch run materially different effective controllers: the
+         Gaussian P/D attenuation width scales with maxRate, so sigma is 61.2 deg/s
+         on roll vs 20.4 on pitch (research.md R8). -->
+    <controllers>
+      <InavFwRate>
+        <roll  kP="0.484" kI="0.750" kD="0.003675" kFF="1.613" maxRate="360"
+               gyroLpfHz="25" dtermLpfHz="10" itermLockRateThresholdPct="40"
+               engageThresholdPct="10" lockTimeMaxMs="500" itermLimitPct="33"
+               pidSumLimit="500" />
+        <pitch kP="0.484" kI="1.250" kD="0.002625" kFF="2.258" maxRate="120"
+               gyroLpfHz="25" dtermLpfHz="10" itermLockRateThresholdPct="40"
+               engageThresholdPct="10" lockTimeMaxMs="500" itermLimitPct="33"
+               pidSumLimit="500" />
+      </InavFwRate>
+    </controllers>
   </config>
   <graphics version="1" model="zagi-xs.ac">
     <descr_long>

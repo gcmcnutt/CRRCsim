@@ -70,6 +70,11 @@
  * @author Bruce Jackson
  * @author Jens Wilhelm Wulf
  */
+// 043 US2 — model-local controllers (see the `controllers` member below).
+// Forward-declared so this header does not pull in mod_cntrl; the .cpp
+// includes controller.h.
+class Controller;
+
 class CRRC_AirplaneSim_Larcsim : public EOM01
 {
    friend class ModFDMInterface;
@@ -285,6 +290,21 @@ class CRRC_AirplaneSim_Larcsim : public EOM01
     * Propulsion system: batteries, shafts, engines, propellers.
     */
    Power::Power* power;
+
+   /**
+    * 043 US2 — MODEL-LOCAL controllers, loaded from this airplane's own
+    * <config><controllers> node (the fdm_mcopter01 pattern), NOT from the
+    * global config. The INAV fixed-wing ACRO rate loop lives here: the FC tune
+    * belongs to the airframe it was tuned for, so loading a different model
+    * cannot silently inherit this one's gains, and a per-scenario gain
+    * variation stays reachable (the list is per-FDM-instance).
+    *
+    * Owned: deleted in the destructor, rebuilt on every LoadFromXML (so
+    * ReloadParams does not duplicate), Reset() at each scenario init for
+    * determinism, and run per substep in update() AFTER the global
+    * env->ControllerCallback and BEFORE the 037 servo model.
+    */
+   std::vector<Controller*> controllers;
    
    /**
     * Velocity in trimmed flight; dead air [ft/s].

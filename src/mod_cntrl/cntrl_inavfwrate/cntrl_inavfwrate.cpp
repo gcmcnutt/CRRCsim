@@ -13,7 +13,7 @@ autoc::control::InavFwRateGains
 Cntrl_InavFwRate::readAxis(SimpleXMLTransfer* cfg)
 {
   // No defaults on getDouble → a missing key fail-louds (Constitution VII). All
-  // constants come from the global config's <controllers> node (FR-014), so they
+  // constants come from the MODEL's <config><controllers> node (FR-014), so they
   // change without a rebuild.
   autoc::control::InavFwRateGains g;
   g.kP                        = cfg->getDouble("kP");

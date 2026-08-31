@@ -38,6 +38,7 @@
 #include "../../mod_misc/lib_conversions.h"
 #include "../../mod_misc/crrc_rand.h"
 #include "../xmlmodelfile.h"
+#include "../../mod_cntrl/controller.h"   // 043 US2 — model-local controllers
 #include "../../global.h"
 #include "../../SimStateHandler.h"
 
@@ -118,6 +119,13 @@ void CRRC_AirplaneSim_Larcsim::initAirplaneState(double dRelVel,
   // value it was loaded with — bit-identical no-op. This is the DYNAMIC
   // pitch-damping side; the static-margin side is craftCGDelta above.
   Cm_q    = static_cast<SCALAR>(Global::craftCmQ);
+
+  // 043 US2 — reset model-local controller state (integrators, filter states,
+  // I-lock timers) at every scenario init. ⛔ Determinism: without this, a
+  // worker's second scenario would start from the previous scenario's loop
+  // state and the run would not be replayable.
+  for (unsigned int n = 0; n < controllers.size(); n++)
+    controllers[n]->Reset();
 
   // 037 actuator dynamics (operator decision: in-FDM, substep dt). Reset the
   // persistent actuator-filter state at scenario reset so a fresh scenario
@@ -250,6 +258,18 @@ void CRRC_AirplaneSim_Larcsim::update(TSimInputs* inputs,
     ls_aux(v_V_local_airmass, v_V_gust_body);
 
     env->ControllerCallback(dt, this, inputs, &myInputs);
+
+    // 043 US2 — MODEL-LOCAL controllers (the INAV fw ACRO rate loop), after the
+    // global ones and BEFORE the 037 servo model below, so servo lag lands
+    // INSIDE the rate loop. Each controller gets a stable snapshot of the
+    // current inputs and writes into myInputs, so a chain composes and no
+    // controller has to be alias-safe.
+    for (unsigned int n = 0; n < controllers.size(); n++)
+    {
+      TSimInputs ctrlIn;
+      ctrlIn.CopyFrom(&myInputs);
+      controllers[n]->Calc(dt, this, &ctrlIn, &myInputs);
+    }
 
     // 037 servo model v2 (operator 2026-06-11, post-t6/t7 A/B — see
     // specs/037-20hz-control-loop/outcome.md + the DSM-44 datasheet check in
@@ -580,6 +600,42 @@ void CRRC_AirplaneSim_Larcsim::LoadFromXML(SimpleXMLTransfer* xml, int nVerbosit
   else if (cfg->indexOfChild("power") >= 0)
     power->ReloadParams(cfg, nVerbosity);    
 
+  // 043 US2 — MODEL-LOCAL controllers, from THIS airplane's <config><controllers>
+  // (the fdm_mcopter01 pattern). Rebuilt from scratch so ReloadParams cannot
+  // duplicate or leak the previous list.
+  //
+  // The node is OPTIONAL: every stock crrcsim model has none, and "no
+  // controllers" is their correct, pre-043 behaviour (direct stick→surface) —
+  // not a silent fallback default. But for a model that is SUPPOSED to have an
+  // inner loop, a missing/malformed node would silently fly MANUAL, so the
+  // outcome is logged either way and a parse failure is FATAL rather than
+  // warn-and-continue (Constitution VII).
+  for (unsigned int n = 0; n < controllers.size(); n++)
+    delete controllers[n];
+  controllers.clear();
+  if (cfg->indexOfChild("controllers") >= 0)
+  {
+    Controller::LoadList(cfg->getChild("controllers"), controllers);
+    if (controllers.empty())
+    {
+      // LoadList swallows an XMLException and can also silently skip an
+      // unknown controller name; either way the node was present but produced
+      // nothing, which would fly MANUAL without saying so.
+      throw std::runtime_error(
+        "fdm_larcsim: model has a <controllers> node but no controller was "
+        "constructed — unknown controller name, or a missing/misspelled gain "
+        "key (Controller::LoadList prints the XMLException above).");
+    }
+    std::cerr << "[FDM] model-local controllers loaded: " << controllers.size()
+              << std::endl;
+  }
+  else
+  {
+    std::cerr << "[FDM] model-local controllers: none "
+                 "(no <config><controllers> node) — direct stick→surface"
+              << std::endl;
+  }
+
   if (nVerbosity > 1)
   {
     std::cout << "--- Airplane description: ---------------------------------------\n";
@@ -593,6 +649,10 @@ void CRRC_AirplaneSim_Larcsim::LoadFromXML(SimpleXMLTransfer* xml, int nVerbosit
 CRRC_AirplaneSim_Larcsim::~CRRC_AirplaneSim_Larcsim()
 {
   delete power;
+  // 043 US2 — model-local controllers are owned here.
+  for (unsigned int n = 0; n < controllers.size(); n++)
+    delete controllers[n];
+  controllers.clear();
 }
 
 /** \brief Calculate influence of gear and hardpoints

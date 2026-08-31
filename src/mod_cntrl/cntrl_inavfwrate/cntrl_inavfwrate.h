@@ -11,10 +11,12 @@
  * ⛔ ACRO = RATE control — NO attitude term (FR-019a). The core has no attitude
  * input at all, so that is structurally guaranteed.
  *
- * Loaded from the GLOBAL config's <controllers> node (crrc_fdm.cpp reads the
- * global cfg, model-independent — NOT the model XML; see data-model.md §3). It
- * runs per FDM substep BEFORE the 037 servo model, so servo lag lands inside the
- * rate loop.
+ * Loaded MODEL-LOCALLY from the airplane's own <config><controllers> node
+ * (crrcsim/models/hb1_streamer.xml) by fdm_larcsim, following the fdm_mcopter01
+ * pattern — the FC tune belongs to the airframe it was tuned for, so another
+ * model cannot inherit these gains and per-scenario gain variation stays
+ * reachable. It runs per FDM substep BEFORE the 037 servo model, so servo lag
+ * lands inside the rate loop.
  */
 #ifndef CNTRL_INAVFWRATE_H
 #define CNTRL_INAVFWRATE_H
