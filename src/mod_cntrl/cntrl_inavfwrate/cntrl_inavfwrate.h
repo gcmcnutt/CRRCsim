@@ -48,6 +48,24 @@ private:
   autoc::control::InavFwRateGains gainsPitch_;
   autoc::control::InavFwRateState stateRoll_;
   autoc::control::InavFwRateState statePitch_;
+
+  // 043 — ACTION-SPACE scale: full command (|cmd| = 1) maps to
+  // commandScale x maxRate instead of maxRate. This is OURS (FR-016), not an
+  // INAV parameter, which is why it lives in the adapter and NOT in the
+  // validated inav_fw_rate.h core (that core matches real flight data to
+  // r = 0.9999 and is deliberately left alone).
+  //
+  // WHY IT EXISTS (measured 2026-08-30 against the 041-t7 ACRO flight): the
+  // P/D attenuation depends ONLY on the commanded fraction of maxRate,
+  // aP = aD = exp(-17.33 f^2), so f = 1 gives aP ~ 0 REGARDLESS of `rates`.
+  // The human pilot flies f ~ 0.05-0.11 (aP 0.82-0.91, loop closed and
+  // damping); the gen-63 policy pegged at f ~ 0.87-0.90 (aP ~ 0.035, loop
+  // degenerate to pure feed-forward). Since 043 exists to let the inner loop
+  // damp the 2-5 Hz oscillation, and that damping IS P/D, the policy must be
+  // able to reach the regime where P/D survive. 1.0 = pre-043-A/B behaviour
+  // (exactly: x1.0 is bit-exact in IEEE754).
+  double cmdScaleRoll_;
+  double cmdScalePitch_;
 };
 
 #endif

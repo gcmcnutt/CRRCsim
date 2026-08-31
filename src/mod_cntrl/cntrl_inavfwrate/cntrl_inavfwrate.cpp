@@ -8,6 +8,7 @@
 
 #include <algorithm>  // std::clamp
 #include <cmath>      // M_PI
+#include <iostream>   // startup log of the action-space scale
 
 autoc::control::InavFwRateGains
 Cntrl_InavFwRate::readAxis(SimpleXMLTransfer* cfg)
@@ -35,6 +36,16 @@ Cntrl_InavFwRate::Cntrl_InavFwRate(SimpleXMLTransfer* cfg)
 {
   gainsRoll_  = readAxis(cfg->getChild("roll"));
   gainsPitch_ = readAxis(cfg->getChild("pitch"));
+  // 043 action-space scale (see header). No default: a missing attribute
+  // fail-louds, so every config must state which arm it is (Constitution VII).
+  cmdScaleRoll_  = cfg->getChild("roll")->getDouble("commandScale");
+  cmdScalePitch_ = cfg->getChild("pitch")->getDouble("commandScale");
+  std::cerr << "[InavFwRate] commandScale roll=" << cmdScaleRoll_
+            << " pitch=" << cmdScalePitch_
+            << "  => full command commands "
+            << (cmdScaleRoll_ * gainsRoll_.maxRate) << " / "
+            << (cmdScalePitch_ * gainsPitch_.maxRate) << " deg/s"
+            << std::endl;
   Reset();
 }
 
@@ -57,8 +68,10 @@ void Cntrl_InavFwRate::Calc(double      dt,
   //   aileron  = +rollCmd / 2      (so rollCmd  =  2·aileron)
   //   elevator = -pitchCmd / 2     (so pitchCmd = -2·elevator; the pitch sign
   //                                 flip is the existing crrcsim convention)
-  const double rollCmd  =  2.0 * static_cast<double>(pInputsFromUser->aileron);
-  const double pitchCmd = -2.0 * static_cast<double>(pInputsFromUser->elevator);
+  // 043 action-space scale applied HERE (adapter side, FR-016): full command
+  // maps to commandScale x maxRate. At 1.0 this is a bit-exact no-op.
+  const double rollCmd  =  2.0 * static_cast<double>(pInputsFromUser->aileron)  * cmdScaleRoll_;
+  const double pitchCmd = -2.0 * static_cast<double>(pInputsFromUser->elevator) * cmdScalePitch_;
 
   const double outRoll  = autoc::control::inavFwRateStep(
       gainsRoll_,  stateRoll_,  dt, rollCmd,  omega(0) * RAD2DEG);

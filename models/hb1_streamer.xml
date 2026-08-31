@@ -168,13 +168,36 @@ Extra drag and slightly softer pitch authority to match the mushy feel seen in r
          ⚠️ Roll and pitch run materially different effective controllers: the
          Gaussian P/D attenuation width scales with maxRate, so sigma is 61.2 deg/s
          on roll vs 20.4 on pitch (research.md R8). -->
+    <!-- ⭐ commandScale = the 043 A/B knob (action space, FR-016 — ours, not an
+         INAV parameter). Full NN/stick command maps to commandScale x maxRate.
+           1.00 = arm A: full cmd -> 360/120 deg/s  (aP ~ 0 at full stick)
+           0.25 = arm B: full cmd ->  90/ 30 deg/s  (aP >= 0.34, loop stays closed)
+         Measured against the 041-t7 ACRO flight: aP = exp(-17.33 f^2) depends
+         ONLY on the commanded fraction f of maxRate, so lowering `rates` cannot
+         fix it. Human pilot flew f ~ 0.05-0.11; the gen-63 policy pegged at
+         f ~ 0.9 and ran the loop as pure feed-forward. See outcome.md. -->
     <controllers>
       <InavFwRate>
-        <roll  kP="0.484" kI="0.750" kD="0.003675" kFF="1.613" maxRate="360"
+        <roll  commandScale="1.0"
+               kP="0.484" kI="0.750" kD="0.003675" kFF="1.613" maxRate="360"
                gyroLpfHz="25" dtermLpfHz="10" itermLockRateThresholdPct="40"
                engageThresholdPct="10" lockTimeMaxMs="500" itermLimitPct="33"
                pidSumLimit="500" />
-        <pitch kP="0.484" kI="1.250" kD="0.002625" kFF="2.258" maxRate="120"
+        <!-- ⚠️ ARM C (2026-08-30): maxRate 120 -> 240, i.e. INAV pitch_rate 12 -> 24.
+             ⛔ SIM-ONLY SO FAR — xiao/inav-hb1.cfg still says pitch_rate = 12. If arm C
+             wins, the real aircraft MUST get the identical change + a bench check before
+             any flight (FR-012a), and it is a deviation from "rates stay as-is".
+             WHY: pitch_rate 12 is BELOW INAV's own default of 20 and was the whole
+             problem. It capped full-stick elevator at 54% (FF 120x2.258 = 271 of the
+             fixed +-500 budget) AND, because sigma scales with maxRate, put any useful
+             pitch rate at a large commanded fraction where P/D attenuate away
+             (58 deg/s => f 0.49 => aP 0.016). At 24 the SAME 58 deg/s is f 0.24 =>
+             aP 0.36, and full stick now reaches 100% elevator. More authority AND more
+             damping - the two are only coupled through maxRate.
+             Roll is deliberately UNCHANGED: at 360 deg/s a useful 95 deg/s is already
+             f 0.26 => aP 0.30. Roll was never the broken axis. -->
+        <pitch commandScale="1.0"
+               kP="0.484" kI="1.250" kD="0.002625" kFF="2.258" maxRate="240"
                gyroLpfHz="25" dtermLpfHz="10" itermLockRateThresholdPct="40"
                engageThresholdPct="10" lockTimeMaxMs="500" itermLimitPct="33"
                pidSumLimit="500" />
