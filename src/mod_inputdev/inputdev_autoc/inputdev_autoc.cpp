@@ -31,7 +31,6 @@
 #include "inputdev_autoc.h"
 #include "autoc/eval/scenario_meta_apply.h"  // 030 V1.5 — applyVariationScale
 #include "autoc/eval/specific_force.h"
-#include "autoc/eval/sensor_lpf.h"    // 043 §6 — the NN sensor path the article actually has
 #include "autoc/eval/variation_generator.h"
 #include "autoc/util/scenario_prng.h"        // 033 — deriveClassSubSeeds
 #include "autoc/eval/fitness_computer.h"     // 041 T035 — score the tick in the tick path
@@ -98,16 +97,7 @@ ScenarioMetadata makePerEvalMeta(const WorkerInit& init,
 // WorkerInit.controlIntervalMsec (single source of truth). No silent default.
 unsigned long gEvalUpdateIntervalMsec = 0;   // sensor/NN cadence (set from WorkerInit)
 unsigned long gComputeLatencyMsec = COMPUTE_LATENCY_MSEC_DEFAULT;
-
-// 043 §6 — the flight article low-passes the gyro (25 Hz PT1) and the
-// accelerometer (15 Hz biquad) BEFORE the policy sees them; the sim used to
-// hand the NN raw FDM state. Un-modelled group delay was ~6.4 ms gyro and
-// ~21.2 ms accel, the latter 42% of a 20 Hz tick. Reset per scenario.
-static autoc::eval::Pt1Filter    gGyroLpf[3];
-static autoc::eval::BiquadFilter gAccelLpf[3];
-static void resetSensorLpf() {
-  for (int i = 0; i < 3; i++) { gGyroLpf[i].reset(); gAccelLpf[i].reset(); }
-}           // simulated NN compute latency (sensor→output)
+           // simulated NN compute latency (sensor→output)
 
 static bool gInDeterministicTest = false;
 
@@ -713,7 +703,6 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       gTraceEvalCounter = evalCounter;
       gTracePathIndex = pathSelector;
       gPhysicsStepCounter = 0;  // Reset step counter for new path
-      resetSensorLpf();         // 043 §6 — sensor filters restart per scenario
       gTraceIsEliteReeval = evalData.isEliteReeval;  // Only collect trace for elite reeval
 
 #ifdef DETAILED_LOGGING
@@ -985,14 +974,18 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     // Body angular rates from FDM (rad/s, standard aerospace RHR)
     if (eom01) {
       CRRCMath::Vector3 omega = eom01->getOmegaBody();
-      // 043 §6 — through the article's 25 Hz PT1, as gyro.gyroADCf is.
-      const double dtF = static_cast<double>(SIM_TIME_STEP_MSEC) / 1000.0;
-      if (!gGyroLpf[0].ready())
-        for (int i = 0; i < 3; i++) gGyroLpf[i].configure(autoc::eval::kGyroLpfHz, dtF);
+      // ⛔ 043 §6 — the article's 25 Hz gyro PT1 is NOT modelled here, and an
+      // attempt to add it was BACKED OUT 2026-09-07. This gather runs only on
+      // the 20 Hz eval cadence (`shouldEval` above), so a 25 Hz filter would sit
+      // far above the 10 Hz Nyquist: measured k = 0.887, i.e. near pass-through
+      // contributing ~6 ms of delay by accident rather than by design.
+      // The real chain is filter-at-2-kHz-then-sample-at-20-Hz, whose effect on
+      // the sampled value is a GROUP DELAY (~6.4 ms), not a filter that can be
+      // re-run at the sample rate. See sensor_lpf.h for the correct approach.
       aircraftState.setGyroRates(gp_vec3{
-          static_cast<gp_scalar>(gGyroLpf[0].apply(omega(0))),   // p (roll rate)
-          static_cast<gp_scalar>(gGyroLpf[1].apply(omega(1))),   // q (pitch rate)
-          static_cast<gp_scalar>(gGyroLpf[2].apply(omega(2)))}); // r (yaw rate)
+          static_cast<gp_scalar>(omega(0)),   // p (roll rate)
+          static_cast<gp_scalar>(omega(1)),   // q (pitch rate)
+          static_cast<gp_scalar>(omega(2))}); // r (yaw rate)
     }
 
     CrashReason crashReason = CrashReason::None;
@@ -1327,14 +1320,10 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
         const auto sf = autoc::eval::bodySpecificForce(
             accWorld, aircraftState.getOrientation(),
             static_cast<gp_scalar>(eom01->getGravity()));
-        // 043 §6 — through the article's 15 Hz biquad, as acc.accADCf is.
-        const double dtA = static_cast<double>(SIM_TIME_STEP_MSEC) / 1000.0;
-        if (!gAccelLpf[0].ready())
-          for (int i = 0; i < 3; i++) gAccelLpf[i].configure(autoc::eval::kAccelLpfHz, dtA);
-        aircraftState.setSpecificForceG(gp_vec3{
-            static_cast<gp_scalar>(gAccelLpf[0].apply(sf.g_units.x())),
-            static_cast<gp_scalar>(gAccelLpf[1].apply(sf.g_units.y())),
-            static_cast<gp_scalar>(gAccelLpf[2].apply(sf.g_units.z()))});
+        // ⛔ Same as the gyro above: the article's 15 Hz accel biquad (~21.2 ms
+        // group delay, 42% of a 20 Hz tick) is NOT modelled. Backed out
+        // 2026-09-07 for the Nyquist reason -- see sensor_lpf.h.
+        aircraftState.setSpecificForceG(sf.g_units);
       }
 
       // ⚠️ Recording is UNCONDITIONAL — the ablation gates above suppress the
