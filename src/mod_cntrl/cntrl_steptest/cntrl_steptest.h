@@ -50,9 +50,22 @@ private:
   // ramp is deliberate: an ideal step would make the sim look artificially fast
   // against a measurement that never saw one.
   double rampSec_    = 0.085;
-  double settleSec_  = 3.0;   // reach steady flight at this power/attitude
+  double trimSec_    = 0.0;   // ⭐ auto-trim: drive vertical speed to 0 first
+  double settleSec_  = 3.0;   // hold the trimmed state so transients die
   double holdSec_    = 0.8;   // long enough to see the short period ring out
   double recoverSec_ = 1.5;
+
+  // ⛔ WHY AUTO-TRIM EXISTS. First run of this harness flew into the ground in
+  // 6.75 s: with elevator at neutral the airframe is NOT in trim, so it pitched
+  // to -34 deg and dove 180 ft. An open-loop step test has nothing holding the
+  // aircraft — the real MANUAL flight had a PILOT doing exactly that between
+  // steps. So each cell first drives vertical speed to zero with a slow
+  // integrator, then FREEZES that elevator as the cell's trim datum. The cell's
+  // own elevatorTrim is applied as an OFFSET to it, so "attitude" in the matrix
+  // means "relative to level", which is the only definition that transfers
+  // across throttle settings.
+  double trimGain_   = 0.0;   // elevator units per (m/s of vertical speed) per s
+  double elevTrimmed_ = 0.0;  // integrator state, frozen at end of trim
 
   std::vector<Cell> cells_;
   size_t cellIdx_    = 0;

@@ -11,6 +11,8 @@ Cntrl_StepTest::Cntrl_StepTest(SimpleXMLTransfer* cfg)
   // measurement. Schedule timings and the matrix must be stated in the XML, so
   // a run is reproducible from the model file alone.
   rampSec_    = cfg->getDouble("rampSec");
+  trimSec_    = cfg->getDouble("trimSec");
+  trimGain_   = cfg->getDouble("trimGain");
   settleSec_  = cfg->getDouble("settleSec");
   holdSec_    = cfg->getDouble("holdSec");
   recoverSec_ = cfg->getDouble("recoverSec");
@@ -37,7 +39,7 @@ Cntrl_StepTest::Cntrl_StepTest(SimpleXMLTransfer* cfg)
   } else {
     writeHeader();
   }
-  const double per = settleSec_ + rampSec_ + holdSec_ + recoverSec_;
+  const double per = trimSec_ + settleSec_ + rampSec_ + holdSec_ + recoverSec_;
   std::cerr << "[StepTest] " << cells_.size() << " cells x " << per << " s = "
             << cells_.size() * per << " s -> " << csvPath_ << std::endl;
 }
@@ -57,7 +59,7 @@ void Cntrl_StepTest::writeHeader()
   // Native SI, unconverted — the analysis converts, so the raw file stays honest.
   // rate_* are rad/s (multiply by 57.2958 for the deg/s the blackbox reports).
   csv_ << "t_s,cell,phase,throttle,elevator_trim,axis,amplitude,"
-       << "cmd_aileron,cmd_elevator,cmd_throttle,"
+       << "cmd_aileron,cmd_elevator,cmd_throttle,elev_trimmed,"
        << "rate_p,rate_q,rate_r,"
        << "phi,theta,psi,"
        << "vel_x,vel_y,vel_z,v_rel_airmass,"
@@ -71,17 +73,30 @@ void Cntrl_StepTest::Calc(double dt, FDMBase* fdm,
   if (done_ || cells_.empty()) return;
 
   const Cell& c = cells_[cellIdx_];
-  const double tRampEnd  = settleSec_ + rampSec_;
+  const double tTrimEnd  = trimSec_;
+  const double tSettleEnd = tTrimEnd + settleSec_;
+  const double tRampEnd  = tSettleEnd + rampSec_;
   const double tHoldEnd  = tRampEnd + holdSec_;
   const double tCellEnd  = tHoldEnd + recoverSec_;
 
-  // Fraction of the commanded amplitude currently applied.
+  // ⭐ AUTO-TRIM phase: integrate elevator against vertical speed until the
+  // aircraft holds altitude, then freeze. getVel()(2) is z-DOWN, so positive
+  // means descending and the elevator must move nose-up.
   double frac = 0.0;
-  const char* phase = "settle";
-  if (tCell_ < settleSec_) {
+  const char* phase = "trim";
+  if (tCell_ < tTrimEnd) {
+    const double w = fdm->getVel()(2);          // ft/s, +down
+    elevTrimmed_ += trimGain_ * w * dt;
+    // Clamp the trim datum so trim + amplitude still fits inside the +-0.5
+    // surface limit: a clipped cell is not a clean step (see the warning below).
+    const double trimRoom = 0.5 - std::fabs(c.amplitude);
+    if (elevTrimmed_ >  trimRoom) elevTrimmed_ =  trimRoom;
+    if (elevTrimmed_ < -trimRoom) elevTrimmed_ = -trimRoom;
+    frac = 0.0; phase = "trim";
+  } else if (tCell_ < tSettleEnd) {
     frac = 0.0; phase = "settle";
   } else if (tCell_ < tRampEnd) {
-    frac = (tCell_ - settleSec_) / rampSec_;   // the pilot-ramp match
+    frac = (tCell_ - tSettleEnd) / rampSec_;   // the pilot-ramp match
     phase = "ramp";
   } else if (tCell_ < tHoldEnd) {
     frac = 1.0; phase = "hold";
@@ -89,9 +104,9 @@ void Cntrl_StepTest::Calc(double dt, FDMBase* fdm,
     frac = 0.0; phase = "recover";
   }
 
-  // Trim, then the pulse on the axis under test.
+  // Trim datum, the cell's attitude OFFSET, then the pulse on the axis.
   double ail = 0.0;
-  double ele = c.elevatorTrim;
+  double ele = elevTrimmed_ + c.elevatorTrim;
   if (c.axis == 0) ail += frac * c.amplitude;
   else             ele += frac * c.amplitude;
 
@@ -120,6 +135,7 @@ void Cntrl_StepTest::Calc(double dt, FDMBase* fdm,
          << tTotal_ << ',' << cellIdx_ << ',' << phase << ','
          << c.throttle << ',' << c.elevatorTrim << ',' << c.axis << ',' << c.amplitude << ','
          << pInputsToFDM->aileron << ',' << pInputsToFDM->elevator << ',' << pInputsToFDM->throttle << ','
+         << elevTrimmed_ << ','
          << pqr(0) << ',' << pqr(1) << ',' << pqr(2) << ','
          << fdm->getPhi() << ',' << fdm->getTheta() << ',' << fdm->getPsi() << ','
          << vel(0) << ',' << vel(1) << ',' << vel(2) << ',' << fdm->getVRelAirmass() << ','
@@ -130,6 +146,7 @@ void Cntrl_StepTest::Calc(double dt, FDMBase* fdm,
   tTotal_ += dt;
   if (tCell_ >= tCellEnd) {
     tCell_ = 0.0;
+    elevTrimmed_ = 0.0;   // each cell re-trims from scratch: its throttle differs
     if (++cellIdx_ >= cells_.size()) {
       done_ = true;
       csv_.flush();

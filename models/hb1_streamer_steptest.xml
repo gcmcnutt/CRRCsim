@@ -196,26 +196,28 @@ Extra drag and slightly softer pitch authority to match the mushy feel seen in r
            for the ~3 Hz short period to ring out. -->
       <StepTest csv="/tmp/steptest.csv"
                 rampSec="0.085"
-                settleSec="3.0"
+                trimSec="4.0"
+                trimGain="0.010"
+                settleSec="1.0"
                 holdSec="0.8"
-                recoverSec="1.5">
+                recoverSec="0.7">
         <!-- low power -->
-        <cell throttle="0.25" elevatorTrim="0.0"  axis="0" amplitude="0.4"/>
-        <cell throttle="0.25" elevatorTrim="0.0"  axis="1" amplitude="0.4"/>
-        <cell throttle="0.25" elevatorTrim="0.0"  axis="1" amplitude="-0.4"/>
+        <cell throttle="0.45" elevatorTrim="0.0"  axis="0" amplitude="0.15"/>
+        <cell throttle="0.45" elevatorTrim="0.0"  axis="1" amplitude="0.15"/>
+        <cell throttle="0.45" elevatorTrim="0.0"  axis="1" amplitude="-0.15"/>
         <!-- mid power -->
-        <cell throttle="0.55" elevatorTrim="0.0"  axis="0" amplitude="0.4"/>
-        <cell throttle="0.55" elevatorTrim="0.0"  axis="1" amplitude="0.4"/>
-        <cell throttle="0.55" elevatorTrim="0.0"  axis="1" amplitude="-0.4"/>
+        <cell throttle="0.65" elevatorTrim="0.0"  axis="0" amplitude="0.15"/>
+        <cell throttle="0.65" elevatorTrim="0.0"  axis="1" amplitude="0.15"/>
+        <cell throttle="0.65" elevatorTrim="0.0"  axis="1" amplitude="-0.15"/>
         <!-- high power -->
-        <cell throttle="0.90" elevatorTrim="0.0"  axis="0" amplitude="0.4"/>
-        <cell throttle="0.90" elevatorTrim="0.0"  axis="1" amplitude="0.4"/>
-        <cell throttle="0.90" elevatorTrim="0.0"  axis="1" amplitude="-0.4"/>
+        <cell throttle="0.85" elevatorTrim="0.0"  axis="0" amplitude="0.15"/>
+        <cell throttle="0.85" elevatorTrim="0.0"  axis="1" amplitude="0.15"/>
+        <cell throttle="0.85" elevatorTrim="0.0"  axis="1" amplitude="-0.15"/>
         <!-- attitude sweep at mid power: climbing and descending trim -->
-        <cell throttle="0.55" elevatorTrim="-0.10" axis="1" amplitude="0.4"/>
-        <cell throttle="0.55" elevatorTrim="0.10"  axis="1" amplitude="0.4"/>
-        <cell throttle="0.55" elevatorTrim="-0.10" axis="0" amplitude="0.4"/>
-        <cell throttle="0.55" elevatorTrim="0.10"  axis="0" amplitude="0.4"/>
+        <cell throttle="0.65" elevatorTrim="-0.10" axis="1" amplitude="0.15"/>
+        <cell throttle="0.65" elevatorTrim="0.10"  axis="1" amplitude="0.15"/>
+        <cell throttle="0.65" elevatorTrim="-0.10" axis="0" amplitude="0.15"/>
+        <cell throttle="0.65" elevatorTrim="0.10"  axis="0" amplitude="0.15"/>
       </StepTest>
     </controllers>
   </config>
