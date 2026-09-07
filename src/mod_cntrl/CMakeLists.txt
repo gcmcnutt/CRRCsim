@@ -5,6 +5,7 @@ set(MOD_CNTRL_SRCS
   cntrl_initinputs/cntrl_initinputs.cpp
   cntrl_omega/cntrl_omega.cpp
   cntrl_inavfwrate/cntrl_inavfwrate.cpp
+  cntrl_steptest/cntrl_steptest.cpp   # 043 T046 — responsiveness sanity test
   cntrl_phugoid/cntrl_phugoid.cpp
   cntrl_rateofclimb/cntrl_rateofclimb.cpp
   cntrl_setuserinput/cntrl_setuserinput.cpp
