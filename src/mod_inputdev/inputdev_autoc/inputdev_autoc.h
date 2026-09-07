@@ -54,7 +54,16 @@ using namespace std;
 // 037 T001 -- no EVAL_UPDATE_INTERVAL_MSEC_DEFAULT: the NN/sensor cadence has no
 // default. It is the single-source ControlIntervalMsec, validated by the autoc
 // parent and delivered via WorkerInit priming (see inputdev_autoc.cpp init()).
-#define COMPUTE_LATENCY_MSEC_DEFAULT 30         // Bench-measured: consolidated MSP fetch(12)+eval(5)+send(12)=29ms
+// 043 §6 (2026-09-05) — RE-MEASURED IN FLIGHT, and the old value was 3x high.
+// The 30 ms came from a bench measurement predating the current firmware
+// ("fetch 12 + eval 5 + send 12"). The 2026-09-05 bench on the flight article
+// measured fetch 2.9 / eval 1.6 / send 5.4 = TOTAL 9.9 ms avg, after
+// setpoint_kalman_enabled was turned OFF (which alone took the MSP round-trip
+// from 13.0 to 2.9 ms by freeing F722 CPU). A policy trained against 30 ms of
+// latency and flown with 10 ms is trained on a sluggish plant and flown on a
+// snappier one -- under-damped, which is the 2-5 Hz problem 043 exists to fix.
+// ⚠️ This is a DETERMINISM-AFFECTING constant: changing it changes every bake.
+#define COMPUTE_LATENCY_MSEC_DEFAULT 10         // Flight-measured 2026-09-05: fetch(2.9)+eval(1.6)+send(5.4)=9.9ms
 #define ENGAGE_DELAY_MSEC_DEFAULT 750           // Measured INAV MANUAL→autoc handoff delay (2026-04-07 flight)
 
 // Max angular rates — used only to express NN rate-equivalent command in
