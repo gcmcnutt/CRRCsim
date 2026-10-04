@@ -30,6 +30,7 @@
 #include "../../mod_windfield/windfield.h"
 #include "inputdev_autoc.h"
 #include "autoc/eval/scenario_meta_apply.h"  // 030 V1.5 — applyVariationScale
+#include "autoc/eval/wind_variation.h"       // 043 t4 — per-scenario wind envelope
 #include "autoc/eval/specific_force.h"
 #include "autoc/eval/variation_generator.h"
 #include "autoc/util/scenario_prng.h"        // 033 — deriveClassSubSeeds
@@ -650,6 +651,39 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       const uint32_t drawnWindSeed = windPRNG.next();
       const uint32_t windSimSeed = init_.enableWindVariations
           ? drawnWindSeed : kDisabledWindSeed;
+
+      // 043 t4 (T087/T087a/T087b/T088) — per-scenario WIND ENVELOPE. The four
+      // draws are taken from the SAME wind-class PRNG, strictly AFTER
+      // drawnWindSeed, so the thermal/gust seed above is byte-identical to
+      // pre-t4 whether or not any envelope key is set (draw-and-discard).
+      // With every WorkerInit range at its default the realization IS the
+      // sim's base wind — that is what keeps t3's tier0 bitwise. Applied BEFORE
+      // Simulation->reset() so thermal spawn/drift, scenery wind and Dryden σ
+      // (= 0.1·V) all see the per-scenario speed through T_Wind's single global.
+      // Base values are captured once: setVelocity() is absolute, never cumulative.
+      {
+        static bool   windBaseCaptured = false;
+        static double windBaseFtps = 0.0;   // T_Wind stores ft/s with no conversion
+        static double windBaseTurb = 1.0;
+        if (!windBaseCaptured) {
+          windBaseFtps = cfg->wind->getVelocity();
+          windBaseTurb = cfg->wind->getTurbulence();
+          windBaseCaptured = true;
+        }
+        const auto draws = autoc::eval::drawWindVariation(windPRNG);
+        const auto wr = autoc::eval::realizeWindVariation(
+            init_.windVariation, draws,
+            windBaseFtps * FEET_TO_METERS, windBaseTurb,
+            static_cast<double>(evalData.variationScale),
+            init_.enableWindVariations);
+        cfg->wind->setVelocity(wr.windSpeedMps / FEET_TO_METERS);
+        cfg->wind->setTurbulence(wr.turbIntensity);
+        Global::gustLengthScale       = wr.gustLengthScale;
+        Global::thermalStrengthScale  = wr.thermalStrengthScale;
+        Global::thermalCountMaxTarget = wr.thermalCountMaxTarget;
+        Global::thermalCountRamp      = wr.rampScale;
+      }
+
       Global::Simulation->reset(windSimSeed);
       simCrashed = false;
       lastUpdateTimeMsec = 0;

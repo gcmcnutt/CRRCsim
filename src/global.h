@@ -88,6 +88,12 @@ class Global
     static double entryPitchOffset;      ///< radians, offset from config pitch
     static double entrySpeedFactor;      ///< multiplier on config velocity
     static double windDirectionOffset;   ///< radians, offset from config wind dir
+    // 043 t4 (T087a/T087b/T088) -- per-scenario wind-envelope realizations, set by
+    // inputdev_autoc BEFORE Simulation->reset(). Defaults = no change.
+    static double gustLengthScale;       ///< x Dryden L_u/L_v/L_w (windfield.cpp calculate_gust)
+    static double thermalStrengthScale;  ///< x arena-thermal strength_mean/sigma at spawn
+    static int    thermalCountMaxTarget; ///< 0 = keep XML count_max; else ramp XML->target
+    static double thermalCountRamp;      ///< variationScale used for the count ramp [0..1]
 
     // Entry position offsets (see specs/005-entry-fitness-ramp)
     static double entryNorthOffset;      ///< meters, NED North position offset

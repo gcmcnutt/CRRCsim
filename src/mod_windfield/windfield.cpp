@@ -896,6 +896,13 @@ void calculate_gust(double dt, double altitude, double V_rel_wind, double b,
   double Lu = alt*pow(factor,1.2);
   double Lv = 0.5*Lu;
   double Lw = 0.5*alt;
+  // 043 t4 (T088) -- per-scenario length-scale factor. MIL-HDBK low-altitude
+  // L_u is ~211 m at 55 m AGL: at 13 m/s that is a 0.010 Hz corner, i.e. a
+  // gust that is effectively CONSTANT over a 20-40 s scenario. 0.25x brings the
+  // corner to ~0.04 Hz so gusts change within a run. 1.0 = unchanged.
+  Lu *= Global::gustLengthScale;
+  Lv *= Global::gustLengthScale;
+  Lw *= Global::gustLengthScale;
   
   double pid4b = M_PI/(4.0*b);
   double pid3b = M_PI/(3.0*b);

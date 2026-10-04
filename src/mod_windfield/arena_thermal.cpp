@@ -384,6 +384,18 @@ void initialize_arena_thermals(SimpleXMLTransfer* locCfg)
         config.loadFromXML(arenaCfg);
     }
 
+    // 043 t4 (T087b) -- per-scenario thermal envelope. config is re-read from
+    // XML on every reset, so these multiply the XML base and never accumulate.
+    // Defaults (1.0 / 0) leave the XML field untouched.
+    config.strength_mean  *= static_cast<float>(Global::thermalStrengthScale);
+    config.strength_sigma *= static_cast<float>(Global::thermalStrengthScale);
+    if (Global::thermalCountMaxTarget > 0) {
+        const double ramp = std::min(1.0, std::max(0.0, Global::thermalCountRamp));
+        const double v = config.count_max + (Global::thermalCountMaxTarget - config.count_max) * ramp;
+        config.count_max = std::min(ArenaThermalField::MAX_THERMALS, static_cast<int>(std::lround(v)));
+        config.count_min = std::min(config.count_min, config.count_max);
+    }
+
     g_arenaThermalField->initialize(config);
 }
 

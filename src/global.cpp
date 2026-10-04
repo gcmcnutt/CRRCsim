@@ -60,6 +60,10 @@ double            Global::entryRollOffset = 0.0;
 double            Global::entryPitchOffset = 0.0;
 double            Global::entrySpeedFactor = 1.0;
 double            Global::windDirectionOffset = 0.0;
+double            Global::gustLengthScale = 1.0;       // 043 t4
+double            Global::thermalStrengthScale = 1.0;  // 043 t4
+int               Global::thermalCountMaxTarget = 0;   // 043 t4
+double            Global::thermalCountRamp = 1.0;      // 043 t4
 
 // Entry position offsets (defaults = no offset)
 double            Global::entryNorthOffset = 0.0;
