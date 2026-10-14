@@ -25,6 +25,7 @@
  * Boston, MA 02111-1307, USA.
  *
  */
+#include <cmath>
 #include "fdm_larcsim.h"
 
 #include <math.h>
@@ -44,6 +45,10 @@
 
 // 0, 1, 2
 #define EOM_TEST 0
+
+// 043 t6 (T111/T112a) -- sub-step latency hook from inputdev_autoc: applies the pending NN
+// command at the sub-step whose start time passes its ready time. No-op outside autoc mode.
+extern "C" void autoc_apply_pending_substep(double subStepTimeMsec, TSimInputs* inputs);
 
 // Forward declaration of physics trace capture function from inputdev_autoc
 extern "C" void capturePhysicsTrace(
@@ -114,11 +119,11 @@ void CRRC_AirplaneSim_Larcsim::initAirplaneState(double dRelVel,
   CL_de   = nominal_CL_de   * (static_cast<SCALAR>(1.0) + static_cast<SCALAR>(Global::craftPitchEffDelta));
   Cl_da   = nominal_Cl_da   * (static_cast<SCALAR>(1.0) + static_cast<SCALAR>(Global::craftRollEffDelta));
   // 043 US5 (FR-052b) — craftCmQ is an ABSOLUTE pitch-damping coefficient (not
-  // a delta), already center+clamped autoc-side to [-5.0, -3.6]. Default -4.2 ==
+  // a delta), already center+clamped autoc-side to [-2.0, -0.2] (043 t6; was [-5.0, -3.6]). Default -1.0 ==
   // hb1_streamer.xml nominal Cm_q, so a σ=0 run overwrites Cm_q with the same
   // value it was loaded with — bit-identical no-op. This is the DYNAMIC
   // pitch-damping side; the static-margin side is craftCGDelta above.
-  Cm_q    = static_cast<SCALAR>(Global::craftCmQ);
+  Cm_q    = std::isnan(Global::craftCmQ) ? nominal_Cm_q : static_cast<SCALAR>(Global::craftCmQ);   // 043 t6: xml value unless autoc set the carrier
 
   // 043 US2 — reset model-local controller state (integrators, filter states,
   // I-lock timers) at every scenario init. ⛔ Determinism: without this, a
@@ -223,8 +228,16 @@ void CRRC_AirplaneSim_Larcsim::update(TSimInputs* inputs,
   // Reset sub-frame time at start of each update() call
   gSubFrameTime = 0.0;
 
+  // 043 t6 -- SimStateHandler::idle() advances the sim clock by the whole frame BEFORE
+  // calling update(), so the clock already reads the END of this frame; the start of
+  // sub-step n is therefore (now - frame) + n*dt. The NN staged its command (ready =
+  // stage time + compute latency) at the previous frame's end == this frame's start.
+  const double frameEndMsec   = static_cast<double>(Global::Simulation->getSimulationTimeSinceReset());
+  const double frameStartMsec = frameEndMsec - 1000.0 * dt * multiloop;
+
   for (int n=0; n<multiloop; n++)
   {
+    autoc_apply_pending_substep(frameStartMsec + 1000.0 * dt * n, inputs);
     logNewline();
     
 #if FDM_LOG_POS != 0
@@ -487,6 +500,7 @@ void CRRC_AirplaneSim_Larcsim::LoadFromXML(SimpleXMLTransfer* xml, int nVerbosit
   // simplify to `X = nominal_X`.
   nominal_Cm_0    = Cm_0;
   nominal_Cm_de   = Cm_de;
+  nominal_Cm_q    = Cm_q;    // 043 t6
   nominal_CL_de   = CL_de;
   nominal_CD_prof = CD_prof;
   nominal_CG_arm  = CG_arm;

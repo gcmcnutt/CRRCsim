@@ -46,7 +46,7 @@ Extra drag and slightly softer pitch authority to match the mushy feel seen in r
          The pitch trim gap is NOT a simple Cm_0 offset — likely involves
          alpha regime, launch dynamics, or CG_arm interaction.
          Reverted to original +0.015.  Keep drag/thrust changes only. -->
-    <m Cm_0="0.015" Cm_a="-0.55" Cm_q="-4.2" Cm_de="-0.36" />
+    <m Cm_0="0.015" Cm_a="-0.55" Cm_q="-1.0" Cm_de="-0.36" />
     <!-- Lift/stall tuning (019 step 2):
          CL_max=1.2 + CL_drop=0.1 + CD_stall=0 meant the wing barely stalls.
          Full pitch just mushes through — NN exploits this for survivable looping.
@@ -107,7 +107,7 @@ Extra drag and slightly softer pitch authority to match the mushy feel seen in r
          -0.05: close to original.  Motor mount height + vertical fin give
          real effective dihedral despite flat wing planform.  The fin behind
          the motor acts like a low dihedral equivalent. -->
-    <l Cl_b="-0.05" Cl_p="-0.47" Cl_r="0.05" Cl_dr="0" Cl_da="0.22" />
+    <l Cl_b="-0.0144" Cl_p="-0.135" Cl_r="0.0144" Cl_dr="0" Cl_da="0.0633" />
     <!-- 023: Cn_b 0.03→0.07, Cn_r -0.015→-0.04.  Real HB1 has vertical fin
          behind motor — significantly more yaw stability than a pure flying wing.
          Comparable to sailplanes with fin (F3F=0.038, Pilatus=0.044). -->
@@ -123,8 +123,8 @@ Extra drag and slightly softer pitch authority to match the mushy feel seen in r
          Revised: Cn_da=-0.010 (original), Cn_p=-0.008 (slight increase
          from -0.005), Cl_b=-0.03 (moderate dihedral correction).
          Target yaw/roll ratio ~0.08-0.12. -->
-    <n Cn_b="0.07" Cn_p="-0.008" Cn_r="-0.04" Cn_dr="0"
-       Cn_da="-0.010" />
+    <n Cn_b="0.043" Cn_p="-0.0049" Cn_r="-0.0246" Cn_dr="0"
+       Cn_da="-0.0062" />
   </aero>
   <config version="1">
     <descr_long>
@@ -134,8 +134,8 @@ Extra drag and slightly softer pitch authority to match the mushy feel seen in r
       <en>Streamer tuned</en>
     </descr_short>
     <!-- Slightly heavier to include streamer hardware -->
-    <mass_inertia version="1" units="1" Mass="0.515" I_xx="0.024"
-       I_yy="0.0013" I_zz="0.026" I_xz="0" />
+    <mass_inertia version="1" units="1" Mass="0.510" I_xx="0.0069"
+       I_yy="0.0094" I_zz="0.016" I_xz="0" />
     <sound version="1">
       <sample filename="electric.wav" type="1" pitchfactor="0.007" maxvolume="1" />
     </sound>
@@ -196,8 +196,8 @@ Extra drag and slightly softer pitch authority to match the mushy feel seen in r
            for the ~3 Hz short period to ring out. -->
       <StepTest csv="/tmp/steptest.csv"
                 rampSec="0.085"
-                trimSec="4.0"
-                trimGain="0.010"
+                trimSec="6.0"
+                trimGain="0.004"
                 settleSec="1.0"
                 holdSec="0.8"
                 recoverSec="0.7">

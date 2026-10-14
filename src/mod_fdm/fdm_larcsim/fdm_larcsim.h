@@ -207,6 +207,7 @@ class CRRC_AirplaneSim_Larcsim : public EOM01
    // re-init without craft variations falls back exactly to the nominal.
    SCALAR nominal_Cm_0;
    SCALAR nominal_Cm_de;
+   SCALAR nominal_Cm_q;    // 043 t6: xml Cm_q, used when Global::craftCmQ is unset (non-autoc runs)
    SCALAR nominal_CL_de;
    SCALAR nominal_CD_prof;
    SCALAR nominal_CG_arm;

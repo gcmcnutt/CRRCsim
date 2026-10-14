@@ -106,6 +106,14 @@ public:
    * is not overwritten.
    */
   void getInputData(TSimInputs *inputs);
+  // 043 t6 (T111/T112a) -- apply the pending NN command at PHYSICS SUB-STEP resolution.
+  // Called by fdm_larcsim::update() at the top of every sub-step with the absolute sim
+  // time of that sub-step; when it passes readyTimeMsec the command is written into the
+  // frame's TSimInputs (and cached) right there, so a 10 ms compute latency is honoured
+  // as 10 ms. Before this the apply ran only at frame top, so every latency < 50 ms was
+  // silently one full tick and the gyro saw a command two ticks after the sample that
+  // produced it (flight: ~one). No-op when nothing is pending.
+  void applyPendingSubstep(double subStepTimeMsec, TSimInputs *inputs);
 
 private:
   unsigned short int callbackPort;

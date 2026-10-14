@@ -233,6 +233,10 @@ struct PendingCommand {
   gp_scalar throttle = 0;
 };
 static PendingCommand gPendingCommand;
+// 043 t6 -- the live interface, so the FDM's sub-step hook (a C shim, see the bottom of
+// this file) can reach the pending command and the cached outputs without the FDM
+// including this header. Set in the constructor; there is exactly one instance.
+static T_TX_InterfaceAUTOC* gAutocInterface = nullptr;
 
 
 #ifdef DETAILED_LOGGING
@@ -269,6 +273,7 @@ T_TX_InterfaceAUTOC::T_TX_InterfaceAUTOC()
 #endif
   workerPid = static_cast<int>(getpid());
   workerIndex = 0;
+  gAutocInterface = this;   // 043 t6 -- sub-step latency hook target
 }
 
 T_TX_InterfaceAUTOC::~T_TX_InterfaceAUTOC()
@@ -1672,4 +1677,25 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
            simTimeMsec, shouldEval ? "Y" : "N", gPendingCommand.valid ? "Y" : "N");
   }
 #endif
+}
+
+// 043 t6 (T111/T112a) -- see the header. Identical scaling to getInputData() above.
+void T_TX_InterfaceAUTOC::applyPendingSubstep(double subStepTimeMsec, TSimInputs *inputs)
+{
+  if (!gPendingCommand.valid) return;
+  if (subStepTimeMsec + 1e-6 < static_cast<double>(gPendingCommand.readyTimeMsec)) return;
+  pitchCommand    = gPendingCommand.pitch;
+  rollCommand     = gPendingCommand.roll;
+  throttleCommand = gPendingCommand.throttle;
+  gPendingCommand.valid = false;
+  if (inputs) {
+    inputs->elevator = -pitchCommand / 2.0;
+    inputs->aileron  = rollCommand / 2.0;
+    inputs->throttle = throttleCommand / 2.0 + 0.5;
+  }
+}
+
+extern "C" void autoc_apply_pending_substep(double subStepTimeMsec, TSimInputs *inputs)
+{
+  if (gAutocInterface) gAutocInterface->applyPendingSubstep(subStepTimeMsec, inputs);
 }
