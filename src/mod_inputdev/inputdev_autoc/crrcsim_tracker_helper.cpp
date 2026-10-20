@@ -277,7 +277,9 @@ CrashReason CrrcsimTrackerHelper::tick(AircraftState& chaseState,
     // beacons) must proxy it from span-based range estimation.
     chaseState.setScoreGradBody(gp_vec3::Zero());
 
-    // Step 2: gather tracker NN inputs.
+    // Step 2: gather tracker NN inputs. 044 FR-001: the shared craft block's
+    // history ring is recorded here, once per tick, from this tick's sensors.
+    chaseState.recordCraftHistory(chaseState.craftSampleNow());
     TrackerInputs inputs = {};
     gather_tracker_inputs(chaseState, history_, init.flightArena,
                           static_cast<float>(init.cepGateThreshold), sa_state_, inputs);

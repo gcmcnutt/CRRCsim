@@ -1410,7 +1410,8 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
 
         gp_vec3 dir = computeTargetDir(target_local, distance, tangent_body);
         aircraftState.setRabbitPosition(targetPos);
-        aircraftState.recordErrorHistory(dir, distance, simTimeMsec);
+        aircraftState.recordErrorHistory(dir, distance, simTimeMsec,
+                                         aircraftState.craftSampleNow());  // 044 FR-002
       }
 
       // Evaluate pathgen NN controller. Use the per-span member
