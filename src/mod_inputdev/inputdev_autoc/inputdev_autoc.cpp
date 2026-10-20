@@ -611,6 +611,11 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       // imperfection axes (consumed in the NN observation path). NOT ramped
       // (FR-055), so these are the full-magnitude draws.
       Global::craftCmQ             = static_cast<double>(activeScenario.craftCmQ);
+      // 044 FR-006 -- roll damping (absolute Cl_p; fdm_larcsim scales Cl_da with it).
+      Global::craftClP             = static_cast<double>(activeScenario.craftClP);
+      // 044 FR-008 -- FC sensor filters start fresh each scenario; the first
+      // sample seeds them (no transient, no memory of the previous scenario).
+      if (fcSensors_) fcSensors_->reset();
       Global::craftImuMisalignRoll  = static_cast<double>(activeScenario.craftImuMisalignRoll);
       Global::craftImuMisalignPitch = static_cast<double>(activeScenario.craftImuMisalignPitch);
       Global::craftImuMisalignYaw   = static_cast<double>(activeScenario.craftImuMisalignYaw);
@@ -1010,21 +1015,19 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
     aircraftState.setRabbitOdometer(rabbitOdometer);
     aircraftState.setRabbitSpeed(crrcsimRabbitSpeed);
 
-    // Body angular rates from FDM (rad/s, standard aerospace RHR)
+    // Body angular rates (rad/s, standard aerospace RHR) AS THE FC DELIVERS THEM:
+    // 044 FR-008 -- the 25 Hz gyro PT1 runs at the 5 ms FDM sub-step
+    // (sensorSubstep) and this 20 Hz gather READS it -- filter at the FC rate,
+    // then sample. (Filtering here, at 20 Hz, was the 2026-09-07 Nyquist failure.)
+    // Before the first sub-step of a scenario the chain is seeded from the raw
+    // sample, so the first read is the raw value, never zero.
     if (eom01) {
-      CRRCMath::Vector3 omega = eom01->getOmegaBody();
-      // ⛔ 043 §6 — the article's 25 Hz gyro PT1 is NOT modelled here, and an
-      // attempt to add it was BACKED OUT 2026-09-07. This gather runs only on
-      // the 20 Hz eval cadence (`shouldEval` above), so a 25 Hz filter would sit
-      // far above the 10 Hz Nyquist: measured k = 0.887, i.e. near pass-through
-      // contributing ~6 ms of delay by accident rather than by design.
-      // The real chain is filter-at-2-kHz-then-sample-at-20-Hz, whose effect on
-      // the sampled value is a GROUP DELAY (~6.4 ms), not a filter that can be
-      // re-run at the sample rate. See sensor_lpf.h for the correct approach.
-      aircraftState.setGyroRates(gp_vec3{
-          static_cast<gp_scalar>(omega(0)),   // p (roll rate)
-          static_cast<gp_scalar>(omega(1)),   // q (pitch rate)
-          static_cast<gp_scalar>(omega(2))}); // r (yaw rate)
+      if (!fcSensors_) { fcSensors_.emplace(Global::dt); fcSensorsDtSec_ = Global::dt; }
+      if (!fcSensors_->seeded()) {
+        gp_vec3 g0, sf0;
+        if (rawImuSample(g0, sf0)) fcSensors_->step(g0, sf0);
+      }
+      aircraftState.setGyroRates(fcSensors_->gyro());
     }
 
     CrashReason crashReason = CrashReason::None;
@@ -1352,17 +1355,9 @@ void T_TX_InterfaceAUTOC::getInputData(TSimInputs *inputs)
       // other makes the result unit-free, so no ft→m conversion happens here
       // and none can be forgotten.
       if (init_.enableAccelInputs != 0 && eom01) {
-        CRRCMath::Vector3 aLocal = eom01->getAccel();
-        const gp_vec3 accWorld(static_cast<gp_scalar>(aLocal(0)),
-                               static_cast<gp_scalar>(aLocal(1)),
-                               static_cast<gp_scalar>(aLocal(2)));
-        const auto sf = autoc::eval::bodySpecificForce(
-            accWorld, aircraftState.getOrientation(),
-            static_cast<gp_scalar>(eom01->getGravity()));
-        // ⛔ Same as the gyro above: the article's 15 Hz accel biquad (~21.2 ms
-        // group delay, 42% of a 20 Hz tick) is NOT modelled. Backed out
-        // 2026-09-07 for the Nyquist reason -- see sensor_lpf.h.
-        aircraftState.setSpecificForceG(sf.g_units);
+        // 044 FR-008 -- the FC's 15 Hz accel biquad (~15 ms group delay) runs at
+        // the sub-step with the gyro filter; this gather reads it (seeded above).
+        aircraftState.setSpecificForceG(fcSensors_->accel());
       }
 
       // ⚠️ Recording is UNCONDITIONAL — the ablation gates above suppress the
@@ -1698,4 +1693,44 @@ void T_TX_InterfaceAUTOC::applyPendingSubstep(double subStepTimeMsec, TSimInputs
 extern "C" void autoc_apply_pending_substep(double subStepTimeMsec, TSimInputs *inputs)
 {
   if (gAutocInterface) gAutocInterface->applyPendingSubstep(subStepTimeMsec, inputs);
+}
+
+// 044 FR-008 -- the raw IMU the FC would sample: FDM body rates and body specific
+// force (unit-free g: FDM accel / FDM gravity, both ft/s^2 -- see the gather).
+bool T_TX_InterfaceAUTOC::rawImuSample(gp_vec3& gyroRadS, gp_vec3& specificForceG) const
+{
+  EOM01* eom01 = dynamic_cast<EOM01*>(Global::aircraft->getFDM());
+  if (!eom01) return false;
+  const CRRCMath::Vector3 omega = eom01->getOmegaBody();
+  gyroRadS = gp_vec3(static_cast<gp_scalar>(omega(0)),
+                     static_cast<gp_scalar>(omega(1)),
+                     static_cast<gp_scalar>(omega(2)));
+  gp_quat q(eom01->getQuatW(), eom01->getQuatX(), eom01->getQuatY(), eom01->getQuatZ());
+  q.normalize();
+  const CRRCMath::Vector3 aLocal = eom01->getAccel();
+  const gp_vec3 accWorld(static_cast<gp_scalar>(aLocal(0)),
+                         static_cast<gp_scalar>(aLocal(1)),
+                         static_cast<gp_scalar>(aLocal(2)));
+  specificForceG = autoc::eval::bodySpecificForce(
+      accWorld, q, static_cast<gp_scalar>(eom01->getGravity())).g_units;
+  return true;
+}
+
+void T_TX_InterfaceAUTOC::sensorSubstep(double dtSec)
+{
+  if (!fcSensors_) {
+    fcSensors_.emplace(dtSec);
+    fcSensorsDtSec_ = dtSec;
+  } else if (dtSec != fcSensorsDtSec_) {
+    std::cerr << "FATAL: FDM sub-step dt changed (" << fcSensorsDtSec_ << " -> " << dtSec
+              << " s); the FC sensor filters are configured for one dt" << std::endl;
+    exit(1);
+  }
+  gp_vec3 gyro, sf;
+  if (rawImuSample(gyro, sf)) fcSensors_->step(gyro, sf);
+}
+
+extern "C" void autoc_sensor_substep(double dtSec)
+{
+  if (gAutocInterface) gAutocInterface->sensorSubstep(dtSec);
 }

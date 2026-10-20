@@ -212,6 +212,7 @@ class CRRC_AirplaneSim_Larcsim : public EOM01
    SCALAR nominal_CD_prof;
    SCALAR nominal_CG_arm;
    SCALAR nominal_Cl_da;
+   SCALAR nominal_Cl_p;    // 044 FR-006: xml Cl_p, the reference for craftClP's Cl_da scaling
 
    // 037 actuator dynamics (operator decision: in-FDM, substep dt).
    // Persistent per-substep actuator-filter state, RESET at initAirplaneState

@@ -35,6 +35,7 @@
 #include "autoc/eval/sensor_math.h"
 #include "autoc/nn/nn_input_computation.h"
 #include "autoc/eval/variation_generator.h"
+#include "autoc/eval/sensor_lpf.h"   // 044 FR-008 FcSensorFilterChain
 #include "autoc/util/socket_wrapper.h"
 
 #include "crrcsim_tracker_helper.h"   // 030 M11.preA
@@ -44,6 +45,7 @@
 #include <cmath>
 #include <array>
 #include <memory>
+#include <optional>
 #include <unistd.h>
 
 using namespace std;
@@ -114,8 +116,21 @@ public:
   // silently one full tick and the gyro saw a command two ticks after the sample that
   // produced it (flight: ~one). No-op when nothing is pending.
   void applyPendingSubstep(double subStepTimeMsec, TSimInputs *inputs);
+  // 044 FR-008 -- step the flight controller's sensor filters on this sub-step's
+  // integrated state (called by fdm_larcsim::update() after every 5 ms sub-step).
+  // The 20 Hz gather reads the filtered gyro / specific force -- filter at the FC
+  // rate, then sample, as the real chain does (see sensor_lpf.h).
+  void sensorSubstep(double dtSec);
 
 private:
+  // 044 FR-008 -- per-scenario FC sensor filters; constructed on the first
+  // sub-step (its dt), reset at every scenario start, seeded by the first sample.
+  std::optional<autoc::eval::FcSensorFilterChain> fcSensors_;
+  double fcSensorsDtSec_ = 0.0;
+  // Raw body rates (rad/s) and body specific force (g) from the FDM, the inputs
+  // to fcSensors_ (shared by the sub-step hook and the gather's seed path).
+  bool rawImuSample(gp_vec3& gyroRadS, gp_vec3& specificForceG) const;
+
   unsigned short int callbackPort;
   TcpSocket *socket_ = nullptr;
 

@@ -31,6 +31,7 @@
 #include <math.h>
 #include <algorithm>        // 037 std::min for the in-FDM actuator lag blend
 #include "../../global.h"   // 034 US4 — Global::craft* per-scenario carriers
+#include "autoc/eval/craft_variation.h"  // 044 FR-006 — craftRollCoefficients (Cl_p / Cl_da)
 #include <iostream>
 
 #include "../../mod_misc/ls_constants.h"
@@ -49,6 +50,9 @@
 // 043 t6 (T111/T112a) -- sub-step latency hook from inputdev_autoc: applies the pending NN
 // command at the sub-step whose start time passes its ready time. No-op outside autoc mode.
 extern "C" void autoc_apply_pending_substep(double subStepTimeMsec, TSimInputs* inputs);
+// 044 FR-008 -- FC sensor-filter hook: steps the per-scenario gyro/accel filters
+// on each sub-step's integrated state. No-op outside autoc mode.
+extern "C" void autoc_sensor_substep(double dtSec);
 
 // Forward declaration of physics trace capture function from inputdev_autoc
 extern "C" void capturePhysicsTrace(
@@ -117,7 +121,17 @@ void CRRC_AirplaneSim_Larcsim::initAirplaneState(double dRelVel,
   Cm_0    = nominal_Cm_0    + static_cast<SCALAR>(Global::craftTrimDelta);
   Cm_de   = nominal_Cm_de   * (static_cast<SCALAR>(1.0) + static_cast<SCALAR>(Global::craftPitchEffDelta));
   CL_de   = nominal_CL_de   * (static_cast<SCALAR>(1.0) + static_cast<SCALAR>(Global::craftPitchEffDelta));
-  Cl_da   = nominal_Cl_da   * (static_cast<SCALAR>(1.0) + static_cast<SCALAR>(Global::craftRollEffDelta));
+  // 044 FR-006 — roll damping is a craft class (absolute Cl_p) and aileron
+  // authority scales with it, so the steady roll rate per aileron is the model's
+  // for every draw; craftRollEffDelta applies on top. One helper owns the formula
+  // (unit-tested in craft_variation_tests); NaN craftClP keeps the xml pair.
+  {
+    const autoc::eval::RollCoefficients rc = autoc::eval::craftRollCoefficients(
+        Global::craftClP, Global::craftRollEffDelta,
+        static_cast<double>(nominal_Cl_p), static_cast<double>(nominal_Cl_da));
+    Cl_p  = static_cast<SCALAR>(rc.Cl_p);
+    Cl_da = static_cast<SCALAR>(rc.Cl_da);
+  }
   // 043 US5 (FR-052b) — craftCmQ is an ABSOLUTE pitch-damping coefficient (not
   // a delta), already center+clamped autoc-side to [-2.0, -0.2] (043 t6; was [-5.0, -3.6]). Default -1.0 ==
   // hb1_streamer.xml nominal Cm_q, so a σ=0 run overwrites Cm_q with the same
@@ -269,6 +283,10 @@ void CRRC_AirplaneSim_Larcsim::update(TSimInputs* inputs,
     dbg_R_omega_gust_body = v_R_omega_gust_body;
 
     ls_aux(v_V_local_airmass, v_V_gust_body);
+
+    // 044 FR-008 -- the FC samples (and filters) its IMU at its own rate; the
+    // 5 ms sub-step is the sim's nearest. Sample the state this sub-step produced.
+    autoc_sensor_substep(dt);
 
     env->ControllerCallback(dt, this, inputs, &myInputs);
 
@@ -505,6 +523,7 @@ void CRRC_AirplaneSim_Larcsim::LoadFromXML(SimpleXMLTransfer* xml, int nVerbosit
   nominal_CD_prof = CD_prof;
   nominal_CG_arm  = CG_arm;
   nominal_Cl_da   = Cl_da;
+  nominal_Cl_p    = Cl_p;    // 044 FR-006
 
   // 037 actuator dynamics (operator decision: in-FDM, substep dt). Initialize
   // the persistent actuator-filter state at LOAD so any pre-scenario trim call

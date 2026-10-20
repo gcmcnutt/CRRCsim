@@ -135,7 +135,8 @@ class Global
     // consumed in the NN observation path). Set per-scenario by inputdev_autoc.
     // Defaults = nominal (Cm_q = -4.2 = hb1_streamer XML nominal; misalign 0,
     // scale 1, bias 0) so a no-craft / sigma=0 run is a bit-identical no-op.
-    static double craftCmQ;              ///< pitch-damping coefficient (absolute; default -4.2)
+    static double craftCmQ;              ///< pitch-damping coefficient (absolute; NaN = unset → model xml)
+    static double craftClP;              ///< 044 roll-damping coefficient (absolute; NaN = unset → model xml)
     static double craftImuMisalignRoll;  ///< deg, IMU mount roll error
     static double craftImuMisalignPitch; ///< deg, IMU mount pitch error
     static double craftImuMisalignYaw;   ///< deg, IMU mount yaw error

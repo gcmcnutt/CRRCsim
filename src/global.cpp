@@ -91,6 +91,7 @@ double            Global::servoPwmPhase = 0.0;        // s, per-scenario PWM lat
 // 043 US5 -- pitch damping + IMU imperfection carriers. Defaults = nominal so a
 // no-craft / sigma=0 run is a bit-identical no-op.
 double            Global::craftCmQ = std::numeric_limits<double>::quiet_NaN(); // 043 t6: UNSET until inputdev_autoc sets it per scenario; the FDM then keeps the model xml's Cm_q (was a hard-coded -4.2 that silently overrode the xml in every non-autoc run, e.g. the step test)
+double            Global::craftClP = std::numeric_limits<double>::quiet_NaN(); // 044 FR-006: UNSET until inputdev_autoc sets it per scenario; the FDM then keeps the model xml's Cl_p/Cl_da pair
 double            Global::craftImuMisalignRoll = 0.0;
 double            Global::craftImuMisalignPitch = 0.0;
 double            Global::craftImuMisalignYaw = 0.0;
